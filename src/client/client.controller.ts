@@ -1,25 +1,43 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Controller, Post, Body, Get,
+  Param, UseGuards, Request
+} from '@nestjs/common';
+import {
+  ApiTags, ApiOperation, ApiBearerAuth
+} from '@nestjs/swagger';
 import { ClientService } from './client.service';
+import { CreateClientProfileDto } from './dto/create-client-profile.dto';
+import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
 import { Client } from './client.entity';
-import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('clients')
 @Controller('clients')
 export class ClientController {
-  constructor(private readonly clientService: ClientService) {}
+  constructor(private readonly svc: ClientService) {}
 
-  @Post()
-  create(@Body() client: Partial<Client>) {
-    return this.clientService.create(client);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer-jwt')
+  @Post('profile')
+  @ApiOperation({ summary: 'Completa o actualiza perfil de cliente' })
+  createProfile(
+    @Body() dto: CreateClientProfileDto,
+    @Request() req,
+  ): Promise<Client> {
+    dto.identityId = req.user.id;
+    return this.svc.createProfile(dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'Listado de clientes' })
   findAll(): Promise<Client[]> {
-    return this.clientService.findAll();
+    return this.svc.findAll();
   }
 
   @Get(':id')
-  findById(@Param('id') id: number): Promise<Client | null> {
-    return this.clientService.findById(id);
+  @ApiOperation({ summary: 'Detalle de un cliente' })
+  findById(
+    @Param('id') id: number
+  ): Promise<Client | null> {
+    return this.svc.findById(id);
   }
 }

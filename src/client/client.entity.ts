@@ -1,16 +1,29 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity, PrimaryGeneratedColumn, Column,
+  ManyToOne, JoinColumn
+} from 'typeorm';
+import { Identity } from '../identity/identity.entity';
 
 @Entity()
 export class Client {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @ManyToOne(() => Identity, { eager: true })
+  @JoinColumn({ name: 'identityId' })
+  identity: Identity;
   @Column()
-  userId: number;
+  identityId: number;
 
-  @Column()
-  address: string;
+  @Column({ length: 100 })
+  fullName: string;
 
-  @Column()
+  @Column({ unique: true, length: 20 })
+  cedula: string;
+
+  @Column('date')
+  birthDate: Date;
+
+  @Column({ length: 30 })
   phone: string;
 }

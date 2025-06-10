@@ -13,7 +13,15 @@ async function bootstrap() {
     .setTitle('API MyHomeTech')
     .setDescription('Documentación de todos los endpoints')
     .setVersion('1.0')
-    // .addBearerAuth()   // Habilita autorización JWT en Swagger UI
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Pon aquí tu token JWT obtenido con /auth/login',
+      },
+      'bearer-jwt', // nombre del esquema
+    )   // Habilita autorización JWT en Swagger UI
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

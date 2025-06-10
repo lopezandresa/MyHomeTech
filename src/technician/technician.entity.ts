@@ -1,20 +1,31 @@
-
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity, PrimaryGeneratedColumn, Column,
+  ManyToMany, JoinTable
+} from 'typeorm';
+import { Appliance } from '../appliance/appliance.entity';
 
 @Entity()
 export class Technician {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // FK hacia Identity
   @Column()
-  userId: number;
+  identityId: number;
 
-  @Column()
-  specialization: string;
+  @Column({ length: 100 })
+  cedula: string;
 
-  @Column()
+  @Column('date')
+  birthDate: Date;
+
+  @Column('int')
   experienceYears: number;
 
-  @Column({ type: 'float', default: 0 })
-  rating: number;
+  @Column()
+  idPhotoUrl: string;
+
+  @ManyToMany(() => Appliance, { eager: true })
+  @JoinTable({ name: 'technician_appliances' })
+  appliances: Appliance[];
 }

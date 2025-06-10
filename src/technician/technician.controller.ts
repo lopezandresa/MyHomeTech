@@ -1,25 +1,39 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Controller, Post, Body, Get, Param, UseGuards, Request
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TechnicianService } from './technician.service';
+import { CreateTechnicianProfileDto } from './dto/create-technician-profile.dto';
+import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
 import { Technician } from './technician.entity';
-import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('technicians')
 @Controller('technicians')
 export class TechnicianController {
-  constructor(private readonly technicianService: TechnicianService) {}
+  constructor(private readonly svc: TechnicianService) {}
 
-  @Post()
-  async create(@Body() technician: Partial<Technician>) {
-    return this.technicianService.create(technician);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer-jwt')
+  @Post('profile')
+  @ApiOperation({ summary: 'Completa o actualiza perfil de técnico' })
+  createProfile(
+    @Body() dto: CreateTechnicianProfileDto,
+    @Request() req,
+  ): Promise<Technician> {
+    // si quieres forzar identityId desde el token:
+    // dto.identityId = req.user.id;
+    return this.svc.createProfile(dto);
   }
 
   @Get()
-  async findAll(): Promise<Technician[]> {
-    return this.technicianService.findAll();
+  @ApiOperation({ summary: 'Listado de técnicos y sus especialidades' })
+  findAll(): Promise<Technician[]> {
+    return this.svc.findAll();
   }
 
   @Get(':id')
-  async findById(@Param('id') id: number): Promise<Technician | null> {
-    return this.technicianService.findById(id);
+  @ApiOperation({ summary: 'Detalle de un técnico' })
+  findById(@Param('id') id: number): Promise<Technician | null> {
+    return this.svc.findById(id);
   }
 }
