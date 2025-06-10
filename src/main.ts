@@ -18,9 +18,11 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Pon aquí tu token JWT obtenido con /auth/login',
+        in: 'header',
+        name: 'Authorization',
+        description: 'Pon aquí tu token JWT (Bearer <token>)'
       },
-      'bearer-jwt', // nombre del esquema
+      'JWT',
     )   // Habilita autorización JWT en Swagger UI
     .build();
 

@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { TechnicianModule } from './technician/technician.module';
@@ -10,19 +8,25 @@ import { ScheduleModule } from './schedule/schedule.module';
 import { RatingModule } from './rating/rating.module';
 import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
-import { ApplianceModuleModule } from './appliance/appliance.module';
+import { ApplianceModule } from './appliance/appliance.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-    type: 'postgres',
-    host: 'localhost',
-    port: 5432,
-    username: 'postgres',
-    password: 'alopez',
-    database: 'myhometech',
-    autoLoadEntities: true,
-    synchronize: true,
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('DB_HOST'),
+        port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
+        username: config.get<string>('DB_USER'),
+        password: config.get<string>('DB_PASS'),
+        database: config.get<string>('DB_NAME'),
+        synchronize: true,
+        autoLoadEntities: true
+      }),
   }),
     AuthModule,
     TechnicianModule,
@@ -32,9 +36,9 @@ import { ApplianceModuleModule } from './appliance/appliance.module';
     RatingModule,
     NotificationModule,
     IdentityModule,
-    ApplianceModuleModule],
-  controllers: [AppController],
-  providers: [AppService],
+    ApplianceModule],
+  controllers: [],
+  providers: [],
   
 })
 export class AppModule {}

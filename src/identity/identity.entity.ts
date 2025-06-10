@@ -16,6 +16,9 @@ export class Identity {
   @Column()
   password: string;
 
+  @Column({default: true})
+  status: boolean;
+
   @Column({ type: 'enum', enum: ['client', 'technician', 'admin'], default: 'client' })
   role: Role;
 }

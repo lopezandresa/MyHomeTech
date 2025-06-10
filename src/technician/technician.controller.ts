@@ -1,6 +1,4 @@
-import {
-  Controller, Post, Body, Get, Param, UseGuards, Request
-} from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TechnicianService } from './technician.service';
 import { CreateTechnicianProfileDto } from './dto/create-technician-profile.dto';
