@@ -16,4 +16,7 @@ export class Rating {
 
   @Column({ nullable: true })
   comment: string;
+
+  @Column()
+  serviceRequestId: number;
 }

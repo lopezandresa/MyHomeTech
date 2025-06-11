@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from './client.entity';
@@ -28,5 +28,12 @@ export class ClientService {
 
   findById(id: number): Promise<Client | null> {
     return this.clientRepo.findOne({ where: { id } });
+  }
+
+  async updateProfileByIdentityId(identityId: number, profile: Partial<Client>): Promise<Client> {
+    const client = await this.clientRepo.findOne({ where: { identityId } });
+    if (!client) throw new NotFoundException('Perfil de cliente no encontrado');
+    Object.assign(client, profile);
+    return this.clientRepo.save(client);
   }
 }

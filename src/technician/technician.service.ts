@@ -37,4 +37,11 @@ export class TechnicianService {
   findById(id: number): Promise<Technician | null> {
     return this.techRepo.findOne({ where: { id } });
   }
+
+  async updateProfileByIdentityId(identityId: number, profile: Partial<Technician>): Promise<Technician> {
+    const tech = await this.techRepo.findOne({ where: { identityId } });
+    if (!tech) throw new Error('Perfil de técnico no encontrado');
+    Object.assign(tech, profile);
+    return this.techRepo.save(tech);
+  }
 }

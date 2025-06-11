@@ -20,4 +20,8 @@ export class CreateRatingDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+  @ApiProperty({ description: 'ID de la solicitud de servicio', example: 10 })
+  @IsInt()
+  serviceRequestId: number;
 }

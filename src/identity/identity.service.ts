@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Identity } from './identity.entity';
 import { CreateIdentityDto } from './dto/create-identity.dto';
+import { UpdateIdentityDto } from './dto/update-identity.dto';
 
 @Injectable()
 export class IdentityService {
@@ -51,6 +52,27 @@ export class IdentityService {
     const user = await this.repo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
     const { password, ...rest } = user;
+    return rest;
+  }
+
+  async updateUser(id: number, dto: UpdateIdentityDto): Promise<Omit<Identity, 'password'>> {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    if (dto.password) {
+      const salt = await bcrypt.genSalt();
+      dto.password = await bcrypt.hash(dto.password, salt);
+    }    Object.assign(user, dto);
+    const saved = await this.repo.save(user);
+    const { password, ...rest } = saved;
+    return rest;
+  }
+
+  async toggleStatus(id: number): Promise<Omit<Identity, 'password'>> {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    user.status = !user.status;
+    const saved = await this.repo.save(user);
+    const { password, ...rest } = saved;
     return rest;
   }
 }

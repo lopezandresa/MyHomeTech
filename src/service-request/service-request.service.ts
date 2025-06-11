@@ -119,6 +119,36 @@ export class ServiceRequestService {
     return this.srRepo.save(req);
   }
 
+  /** Cliente marca como completada la solicitud */
+  async completeByClient(id: number, clientId: number): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({
+      where: [
+        { id, clientId, status: ServiceRequestStatus.SCHEDULED },
+        { id, clientId, status: ServiceRequestStatus.IN_PROGRESS },
+      ],
+    });
+    if (!req) throw new NotFoundException('No se puede finalizar esta solicitud');
+    req.status = ServiceRequestStatus.COMPLETED;
+    req.completedAt = new Date();
+    return this.srRepo.save(req);
+  }
+
+  /** Técnico rechaza la solicitud */
+  async rejectByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({
+      where: { id, status: ServiceRequestStatus.PENDING },
+    });
+    if (!req) {
+      throw new NotFoundException('Solicitud no disponible para rechazar');
+    }
+
+    req.technicianId = technicianId;
+    req.status = ServiceRequestStatus.CANCELLED;
+    req.cancelledAt = new Date();
+
+    return this.srRepo.save(req);
+  }
+
   // métodos auxiliares:
   async findById(id: number): Promise<ServiceRequest | null> {
     return this.srRepo.findOne({ where: { id } });

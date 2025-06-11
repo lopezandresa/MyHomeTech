@@ -6,6 +6,7 @@ import { Identity } from './identity.entity';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from '../common/roles.decorator';
+import { UpdateIdentityDto } from './dto/update-identity.dto';
 
 export type IdentityResponse = Omit<Identity, 'password'>;
 
@@ -30,6 +31,14 @@ export class IdentityController {
     return req.user;
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
+  @Post('me/update')
+  @ApiOperation({ summary: 'Actualiza los datos del usuario autenticado' })
+  async updateMe(@Request() req, @Body() dto: UpdateIdentityDto): Promise<IdentityResponse> {
+    return this.svc.updateUser(req.user.id, dto);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')
   @Roles('admin')
@@ -46,5 +55,14 @@ export class IdentityController {
   @ApiOperation({ summary: 'Obtiene un usuario por ID' })
   findById(@Param('id') id: number): Promise<IdentityResponse | null> {
     return this.svc.findById(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
+  @Roles('admin')
+  @Post(':id/toggle-status')
+  @ApiOperation({ summary: 'Activa o inactiva un usuario por ID' })
+  async toggleStatus(@Param('id') id: number): Promise<IdentityResponse> {
+    return this.svc.toggleStatus(id);
   }
 }

@@ -1,31 +1,118 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# MyHomeTech - API Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API Backend para plataforma de servicios de mantenimiento de electrodomésticos desarrollada con NestJS, TypeScript y PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📋 Descripción
 
-## Description
+MyHomeTech es una aplicación web que conecta clientes que necesitan servicios de mantenimiento de electrodomésticos con técnicos especializados. El sistema permite solicitar, gestionar y calificar servicios de manera rápida y eficiente.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### ✨ Características Principales
 
-## Project setup
+- **Sistema de Autenticación JWT** con roles diferenciados
+- **Gestión de Usuarios** (Clientes, Técnicos, Administradores)
+- **Solicitudes de Servicio** con sistema de ofertas/contraofertas
+- **Sistema de Calificaciones** al finalizar servicios
+- **Notificaciones** en tiempo real
+- **Gestión de Electrodomésticos** y especialidades técnicas
+- **API RESTful** completamente documentada con Swagger
+- **Control de Acceso Basado en Roles** (RBAC)
+- **Base de Datos PostgreSQL** con TypeORM
+
+### 👥 Tipos de Usuario
+
+- **Clientes**: Pueden solicitar servicios, aceptar ofertas y calificar técnicos
+- **Técnicos**: Pueden ver solicitudes, hacer contraofertas, aceptar trabajos
+- **Administradores**: Gestión completa del sistema y usuarios
+
+## 🏗️ Arquitectura
+
+El proyecto sigue una arquitectura modular basada en NestJS con los siguientes módulos:
+
+- **Identity Module**: Gestión de usuarios base
+- **Auth Module**: Autenticación JWT y autorización
+- **Client Module**: Funcionalidades específicas de clientes
+- **Technician Module**: Funcionalidades específicas de técnicos
+- **Service Request Module**: Gestión de solicitudes de servicio
+- **Appliance Module**: Gestión de electrodomésticos
+- **Rating Module**: Sistema de calificaciones
+- **Notification Module**: Sistema de notificaciones
+
+## 📊 Modelo de Datos
+
+### Entidades Principales
+
+- **Identity**: Usuario base con autenticación
+- **Client**: Extensión de Identity para clientes
+- **Technician**: Extensión de Identity para técnicos
+- **ServiceRequest**: Solicitudes de servicio con estados
+- **Appliance**: Catálogo de electrodomésticos
+- **Rating**: Calificaciones de servicios completados
+- **Notification**: Sistema de mensajería
+
+### Estados de Solicitud de Servicio
+
+- `pending`: Solicitud creada, esperando ofertas
+- `offered`: Técnico ha hecho una oferta
+- `accepted`: Cliente acepta la oferta
+- `scheduled`: Servicio programado
+- `in_progress`: Servicio en progreso
+- `completed`: Servicio completado
+- `cancelled`: Solicitud cancelada
+
+## 🚀 Tecnologías Utilizadas
+
+- **Backend Framework**: NestJS 11.x
+- **Lenguaje**: TypeScript 5.x
+- **Base de Datos**: PostgreSQL
+- **ORM**: TypeORM 0.3.x
+- **Autenticación**: JWT + Passport
+- **Validación**: Class Validator + Class Transformer
+- **Documentación**: Swagger/OpenAPI
+- **Testing**: Jest
+- **Linting**: ESLint + Prettier
+
+## ⚙️ Instalación y Configuración
+
+### Prerrequisitos
+
+- **Node.js** >= 18.x
+- **npm** >= 9.x
+- **PostgreSQL** >= 13.x
+
+### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/tu-usuario/MyHomeTech.git
+cd MyHomeTech
+```
+
+### 2. Instalar Dependencias
+
+```bash
+npm install
+```
+
+### 3. Configurar Base de Datos
+
+Crear una base de datos PostgreSQL y configurar las variables de entorno:
+
+```bash
+# Crear archivo .env en la raíz del proyecto
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_DATABASE=myhometech_db
+
+JWT_SECRET=tu_jwt_secret_muy_seguro
+JWT_EXPIRES_IN=24h
+```
+
+### 4. Ejecutar Migraciones
+
+TypeORM creará automáticamente las tablas al iniciar la aplicación con `synchronize: true` en desarrollo.
+
+Project setup
 
 ```bash
 $ npm install
@@ -44,6 +131,68 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## 📚 Documentación de la API
+
+Una vez que la aplicación esté ejecutándose, puedes acceder a la documentación interactiva de Swagger en:
+
+**[http://localhost:3000/docs](http://localhost:3000/docs)**
+
+### 🔐 Endpoints de Autenticación
+
+- `POST /auth/login` - Iniciar sesión
+- `POST /auth/logout` - Cerrar sesión
+- `GET /auth/profile` - Obtener perfil del usuario autenticado
+
+### 👤 Endpoints de Gestión de Usuarios
+
+- `POST /identity/register` - Registrar nuevo usuario
+- `GET /identity/profile` - Obtener perfil actual
+- `PUT /identity/profile` - Actualizar perfil
+- `POST /identity/admin/toggle-status/:id` - Activar/desactivar usuario (Admin)
+
+### 🔧 Endpoints de Solicitudes de Servicio
+
+- `GET /service-requests` - Listar solicitudes (con filtros por rol)
+- `POST /service-requests` - Crear nueva solicitud (Cliente)
+- `GET /service-requests/:id` - Obtener detalles de solicitud
+- `PUT /service-requests/:id/offer` - Hacer oferta (Técnico)
+- `PUT /service-requests/:id/counter-offer` - Hacer contraoferta (Técnico)
+- `PUT /service-requests/:id/accept` - Aceptar oferta (Cliente)
+- `PUT /service-requests/:id/reject` - Rechazar oferta (Cliente)
+- `PUT /service-requests/:id/schedule` - Programar servicio (Técnico)
+- `PUT /service-requests/:id/start` - Iniciar servicio (Técnico)
+- `PUT /service-requests/:id/complete` - Completar servicio (Técnico)
+- `PUT /service-requests/:id/complete-by-client` - Confirmar completado (Cliente)
+- `PUT /service-requests/:id/cancel` - Cancelar solicitud
+
+### 🏠 Endpoints de Electrodomésticos
+
+- `GET /appliances` - Listar electrodomésticos
+- `POST /appliances` - Crear electrodoméstico (Admin)
+- `GET /appliances/:id` - Obtener detalles
+- `PUT /appliances/:id` - Actualizar electrodoméstico (Admin)
+- `DELETE /appliances/:id` - Eliminar electrodoméstico (Admin)
+
+### ⭐ Endpoints de Calificaciones
+
+- `GET /ratings` - Listar calificaciones
+- `POST /ratings` - Crear calificación (Cliente)
+- `GET /ratings/technician/:id` - Calificaciones de técnico
+- `GET /ratings/service-request/:id` - Calificación de servicio
+
+### 📧 Endpoints de Notificaciones
+
+- `GET /notifications` - Listar notificaciones del usuario
+- `PUT /notifications/:id/read` - Marcar como leída
+- `PUT /notifications/mark-all-read` - Marcar todas como leídas
+
+### 🛠️ Autenticación
+
+La API utiliza JWT Bearer tokens. Para acceder a endpoints protegidos:
+
+1. Obtén un token mediante `POST /auth/login`
+2. Incluye el token en el header Authorization: `Bearer <tu_token>`
+
 ## Run tests
 
 ```bash
@@ -57,42 +206,197 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-## Deployment
+## 📁 Estructura del Proyecto
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```
+src/
+├── appliance/           # Módulo de electrodomésticos
+├── auth/               # Módulo de autenticación
+├── client/             # Módulo específico de clientes
+├── common/             # Utilidades compartidas
+│   ├── decorators/     # Decoradores personalizados
+│   ├── guards/         # Guards de autorización
+│   └── pipes/          # Pipes de validación
+├── identity/           # Módulo de gestión de usuarios
+├── notification/       # Módulo de notificaciones
+├── rating/            # Módulo de calificaciones
+├── service-request/   # Módulo de solicitudes de servicio
+├── technician/        # Módulo específico de técnicos
+├── app.module.ts      # Módulo principal
+└── main.ts           # Punto de entrada
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 🔒 Seguridad
 
-## Resources
+- **JWT Authentication**: Tokens seguros con expiración configurable
+- **Role-Based Access Control**: Diferentes permisos por tipo de usuario
+- **Password Hashing**: Contraseñas encriptadas con bcrypt
+- **Request Validation**: Validación estricta de datos de entrada
+- **CORS Configuration**: Configuración de CORS para diferentes entornos
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🚀 Funcionalidades Clave
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Flujo de Trabajo de Servicios
 
-## Support
+1. **Cliente** crea una solicitud de servicio
+2. **Técnicos** pueden ver solicitudes pendientes y hacer ofertas
+3. **Cliente** recibe notificaciones y puede aceptar/rechazar ofertas
+4. **Técnico** programa y ejecuta el servicio
+5. **Cliente** confirma la finalización y califica el servicio
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Sistema de Notificaciones
 
-## Stay in touch
+- Notificaciones automáticas en cada cambio de estado
+- Historial completo de comunicaciones
+- Marcado de leído/no leído
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Sistema de Calificaciones
 
-## License
+- Solo se pueden calificar servicios completados
+- Prevención de calificaciones duplicadas
+- Promedio automático de calificaciones por técnico
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 🔧 Variables de Entorno
+
+Crear un archivo `.env` con las siguientes variables:
+
+```env
+# Base de Datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_DATABASE=myhometech_db
+
+# JWT
+JWT_SECRET=tu_jwt_secret_muy_seguro_y_largo
+JWT_EXPIRES_IN=24h
+
+# Aplicación
+PORT=3000
+NODE_ENV=development
+```
+
+## 🧪 Testing
+
+El proyecto incluye tests unitarios y de integración:
+
+```bash
+# Ejecutar todos los tests
+npm run test
+
+# Tests en modo watch
+npm run test:watch
+
+# Coverage report
+npm run test:cov
+
+# Tests end-to-end
+npm run test:e2e
+```
+
+## 📈 Desarrollo y Contribución
+
+### Estándares de Código
+
+- **ESLint**: Linting de código TypeScript
+- **Prettier**: Formateo automático de código
+- **Husky**: Git hooks para validación pre-commit
+
+### Comandos de Desarrollo
+
+```bash
+# Formatear código
+npm run format
+
+# Linting
+npm run lint
+
+# Build para producción
+npm run build
+```
+
+## Deployment
+
+## 🚀 Deployment
+
+### Preparación para Producción
+
+1. **Configurar variables de entorno de producción**
+2. **Build de la aplicación**:
+   ```bash
+   npm run build
+   ```
+3. **Ejecutar en modo producción**:
+   ```bash
+   npm run start:prod
+   ```
+
+### Consideraciones de Producción
+
+- Configurar `synchronize: false` en TypeORM para producción
+- Usar variables de entorno seguras
+- Configurar reverse proxy (nginx/Apache)
+- Implementar logs apropiados
+- Configurar monitoreo y alertas
+
+### Deployment con Docker
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist ./dist
+EXPOSE 3000
+CMD ["npm", "run", "start:prod"]
+```
+
+## 🛠️ Solución de Problemas Comunes
+
+### Error de Conexión a Base de Datos
+- Verificar que PostgreSQL esté ejecutándose
+- Validar credenciales en archivo `.env`
+- Comprobar que la base de datos existe
+
+### Errores de JWT
+- Verificar que `JWT_SECRET` esté configurado
+- Comprobar formato del token en headers
+
+### Errores de TypeORM
+- Verificar entidades y relaciones
+- Comprobar sincronización de esquema
+
+## 📝 Próximas Funcionalidades
+
+- [ ] Sistema de archivos/fotos para técnicos
+- [ ] Notificaciones push en tiempo real
+- [ ] Sistema de pagos integrado
+- [ ] Chat en tiempo real entre usuarios
+- [ ] Sistema de reportes y analytics
+- [ ] API para aplicación móvil
+- [ ] Sistema de geolocalización
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`) 
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 👨‍💻 Autor
+
+**Equipo MyHomeTech**
+- GitHub: [@tu-usuario](https://github.com/tu-usuario)
+- Email: contact@myhometech.com
+
+## 🙏 Agradecimientos
+
+- [NestJS](https://nestjs.com/) - Framework backend increíble
+- [TypeORM](https://typeorm.io/) - ORM para TypeScript
+- [PostgreSQL](https://postgresql.org/) - Base de datos robusta

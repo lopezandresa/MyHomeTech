@@ -142,4 +142,30 @@ export class ServiceRequestController {
   ): Promise<ServiceRequest[]> {
     return this.svc.findByTechnician(techId);
   }
+
+  // 7) Cliente marca como finalizado
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('client')
+  @Post(':id/complete')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Cliente marca la solicitud como finalizada' })
+  async complete(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ServiceRequest> {
+    return this.svc.completeByClient(id, req.user.id);
+  }
+
+  // 8) Técnico rechaza solicitud
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('technician')
+  @Post(':id/reject')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Técnico rechaza la solicitud' })
+  async reject(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ServiceRequest> {
+    return this.svc.rejectByTechnician(id, req.user.id);
+  }
 }
