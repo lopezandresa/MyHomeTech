@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ServiceRequest } from './service-request.entity';
+import { Repository, LessThan, MoreThan } from 'typeorm';
+import { ServiceRequest, ServiceRequestStatus } from './service-request.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
+import { OfferPriceDto } from './dto/offer-price.dto';
+import { AcceptRequestDto } from './dto/accept-request.dto';
+import { ScheduleRequestDto } from './dto/schedule-request.dto';
 
-// src/service-request/service-request.service.ts
 @Injectable()
 export class ServiceRequestService {
   constructor(
@@ -12,27 +18,117 @@ export class ServiceRequestService {
     private readonly srRepo: Repository<ServiceRequest>,
   ) {}
 
-  async create(dto: CreateServiceRequestDto): Promise<ServiceRequest> {
-    // Mapear el DTO al tipo exacto de la entidad
-    const data: Partial<ServiceRequest> = {
-      clientId: dto.clientId,
-      technicianId: dto.technicianId,
-      description: dto.description,
-      // forzamos el tipo literal para que coincida
-      status: dto.status as ServiceRequest['status'],
-      // convertimos el ISO-string a Date
-      scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : undefined,
-    };
+  async create(clientId: number, dto: CreateServiceRequestDto): Promise<ServiceRequest> {
+    // calcula expiresAt
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + dto.validMinutes * 60000);
 
-    const req = this.srRepo.create(data);
+    const req = this.srRepo.create({
+      clientId,
+      applianceId: dto.applianceId,
+      description: dto.description,
+      clientPrice: dto.clientPrice,
+      expiresAt,
+      status: ServiceRequestStatus.PENDING,
+    });
     return this.srRepo.save(req);
   }
 
-  async findAll(): Promise<ServiceRequest[]> {
-    return this.srRepo.find();
+  /** Técnicos: solicitudes pendientes y no expiradas */
+  async findPending(): Promise<ServiceRequest[]> {
+    return this.srRepo.find({
+      where: {
+        status: ServiceRequestStatus.PENDING,
+        expiresAt: MoreThan(new Date()),
+      },
+    });
   }
 
+  /** Técnico contraoferta */
+  async offerPrice(
+    id: number,
+    technicianId: number,
+    dto: OfferPriceDto,
+  ): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({ where: { id, status: ServiceRequestStatus.PENDING }});
+    if (!req) throw new NotFoundException('Solicitud no disponible para oferta');
+    req.technicianId = technicianId;
+    req.technicianPrice = dto.technicianPrice;
+    req.status = ServiceRequestStatus.OFFERED;
+    return this.srRepo.save(req);
+  }
+
+  /** Cliente acepta precio */
+  async accept(
+    id: number,
+    clientId: number,
+    dto: AcceptRequestDto,
+  ): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({
+      where: [
+        { id, clientId, status: ServiceRequestStatus.PENDING },
+        { id, clientId, status: ServiceRequestStatus.OFFERED },
+      ],
+    });
+    if (!req) throw new NotFoundException('Solicitud no disponible para aceptar');
+    req.status = ServiceRequestStatus.ACCEPTED;
+    req.acceptedAt = new Date();
+    // deja technicianPrice o clientPrice según dto.acceptClientPrice
+    return this.srRepo.save(req);
+  }
+
+  /** Agenda la solicitud */
+  async schedule(
+    id: number,
+    technicianId: number,
+    dto: ScheduleRequestDto,
+  ): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({
+      where: {
+        id,
+        technicianId,
+        status: ServiceRequestStatus.ACCEPTED,
+      },
+    });
+    if (!req) throw new NotFoundException('Solicitud no disponible para agendar');
+    req.scheduledAt = new Date(dto.scheduledAt);
+    req.status = ServiceRequestStatus.SCHEDULED;
+    return this.srRepo.save(req);
+  }
+  
+  /**
+   * El técnico acepta directamente la solicitud pendiente y la agenda
+   */
+  async acceptByTechnician(
+    id: number,
+    technicianId: number,
+  ): Promise<ServiceRequest> {
+    const req = await this.srRepo.findOne({
+      where: { id, status: ServiceRequestStatus.PENDING },
+    });
+    if (!req) {
+      throw new NotFoundException('Solicitud no disponible para aceptar');
+    }
+
+    req.technicianId = technicianId;
+    req.acceptedAt = new Date();
+    // la agendamos al momento de aceptar
+    req.scheduledAt = new Date();
+    req.status = ServiceRequestStatus.SCHEDULED;
+
+    return this.srRepo.save(req);
+  }
+
+  // métodos auxiliares:
   async findById(id: number): Promise<ServiceRequest | null> {
     return this.srRepo.findOne({ where: { id } });
+  }
+
+  async findByClient(clientId: number): Promise<ServiceRequest[]> {
+    return this.srRepo.find({ where: { clientId } });
+  }
+
+  async findByTechnician(technicianId: number): Promise<ServiceRequest[]> {
+    return this.srRepo.find({ where: { technicianId } });
   }
 }

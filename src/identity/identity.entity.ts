@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-
+import { Exclude } from 'class-transformer';
 export type Role = 'client' | 'technician' | 'admin';
 
 @Entity()
@@ -13,6 +13,7 @@ export class Identity {
   @Column({ unique: true })
   email: string;
 
+  @Exclude()
   @Column()
   password: string;
 

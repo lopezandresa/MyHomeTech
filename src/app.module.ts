@@ -4,7 +4,6 @@ import { AuthModule } from './auth/auth.module';
 import { TechnicianModule } from './technician/technician.module';
 import { ClientModule } from './client/client.module';
 import { ServiceRequestModule } from './service-request/service-request.module';
-import { ScheduleModule } from './schedule/schedule.module';
 import { RatingModule } from './rating/rating.module';
 import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
@@ -32,7 +31,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     TechnicianModule,
     ClientModule,
     ServiceRequestModule,
-    ScheduleModule,
     RatingModule,
     NotificationModule,
     IdentityModule,

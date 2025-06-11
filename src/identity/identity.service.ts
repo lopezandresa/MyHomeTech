@@ -28,8 +28,17 @@ export class IdentityService {
     return rest;
   }
 
-  findByEmail(email: string): Promise<Identity | null> {
-    return this.repo.findOne({ where: { email } });
+  async findByEmail(email: string): Promise<Identity> {
+    if (!email) throw new NotFoundException(`User email was not specified`);
+    const user = await this.repo.findOne({ where: { email } });
+    if (!user) throw new NotFoundException(`User with email ${email} not found`);
+    return user;
+  }
+
+  async findByEmailNoPass(email: string): Promise<Omit<Identity,'password'>>{
+    const user = await this.findByEmail(email);
+    const { password, ...rest } = user;
+    return rest;
   }
 
   async findAll(): Promise<Omit<Identity,'password'>[]> {
@@ -38,6 +47,7 @@ export class IdentityService {
   }
 
   async findById(id: number): Promise<Omit<Identity,'password'>> {
+    if (!id) throw new NotFoundException(`User id was not specified`);
     const user = await this.repo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
     const { password, ...rest } = user;

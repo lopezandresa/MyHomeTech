@@ -17,9 +17,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any): Promise<Omit<import("../identity/identity.entity").Identity,'password'>> {
-    const user = await this.idSvc.findById(payload.sub);
-    if (!user) throw new UnauthorizedException();
-    return user;
+  async validate(payload: any) {
+    const user = await this.idSvc.findByEmailNoPass(payload.email);
+    if (!user) {
+      throw new UnauthorizedException('Token inválido');
+    }
+    return user; // req.user = Identity sin password
   }
 }
