@@ -39,7 +39,7 @@ async function testEndpoints() {
 
     const loginResponse = await axios.post(`${BASE_URL}/auth/login`, loginData);
     console.log('✅ Login successful');
-    authToken = loginResponse.data.token;
+    authToken = loginResponse.data.access_token;
 
     const authHeaders = {
       'Authorization': `Bearer ${authToken}`,

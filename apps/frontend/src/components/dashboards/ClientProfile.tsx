@@ -25,7 +25,8 @@ const ClientProfile: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null)
   const [profile, setProfile] = useState<ClientProfileType | null>(null)
   const [hasProfile, setHasProfile] = useState(false)
-  const [activeTab, setActiveTab] = useState<'user' | 'password'>('user')
+  const [activeTab, setActiveTab] = useState<'user'>('user')
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   // Form data
   const [formData, setFormData] = useState({
@@ -174,8 +175,7 @@ const ClientProfile: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-lg">
-        <div className="border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow-lg">        <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('user')}
@@ -190,23 +190,8 @@ const ClientProfile: React.FC = () => {
                 <span>Información Personal</span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('password')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'password'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <LockClosedIcon className="h-4 w-4" />
-                <span>Cambiar Contraseña</span>
-              </div>
-            </button>
           </nav>
-        </div>
-
-        {/* Tab Content */}
+        </div>        {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'user' && (
             <UserInfoTab
@@ -218,18 +203,12 @@ const ClientProfile: React.FC = () => {
               error={error}
               success={success}
               isLoading={isLoading}
+              showChangePassword={showChangePassword}
               onInputChange={handleInputChange}
               onEdit={() => setIsEditing(true)}
               onSave={handleSave}
               onCancel={handleCancel}
-            />
-          )}
-          
-          {activeTab === 'password' && (
-            <ChangePassword
-              onSuccess={() => {
-                setActiveTab('user')
-              }}
+              setShowChangePassword={setShowChangePassword}
             />
           )}
         </div>
@@ -248,15 +227,17 @@ interface UserInfoTabProps {
   error: string | null
   success: string | null
   isLoading: boolean
+  showChangePassword: boolean
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onEdit: () => void
   onSave: () => void
   onCancel: () => void
+  setShowChangePassword: (show: boolean) => void
 }
 
 const UserInfoTab: React.FC<UserInfoTabProps> = ({
-  user, profile, hasProfile, isEditing, formData, error, success, isLoading,
-  onInputChange, onEdit, onSave, onCancel
+  user, profile, hasProfile, isEditing, formData, error, success, isLoading, showChangePassword,
+  onInputChange, onEdit, onSave, onCancel, setShowChangePassword
 }) => {
   return (
     <>
@@ -426,15 +407,45 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
                 <span>{hasProfile ? 'Guardar Cambios' : 'Crear Perfil'}</span>
               </button>
             </div>
-          )}
-
-          {/* Profile Status */}
+          )}          {/* Profile Status */}
           {hasProfile && !isEditing && (
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="flex items-center space-x-2 text-sm text-green-600">
                 <CheckIcon className="h-4 w-4" />
                 <span>Perfil completado</span>
               </div>
+            </div>
+          )}
+
+          {/* Change Password Section */}
+          {!isEditing && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <LockClosedIcon className="h-5 w-5 mr-2" />
+                    Cambiar Contraseña
+                  </h3>
+                  <p className="text-sm text-gray-600">Actualiza tu contraseña para mantener tu cuenta segura</p>
+                </div>
+                <button
+                  onClick={() => setShowChangePassword(!showChangePassword)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors"
+                >
+                  <LockClosedIcon className="h-4 w-4" />
+                  <span>{showChangePassword ? 'Ocultar' : 'Cambiar Contraseña'}</span>
+                </button>
+              </div>
+              
+              {showChangePassword && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <ChangePassword
+                    onSuccess={() => {
+                      setShowChangePassword(false)
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

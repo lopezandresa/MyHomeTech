@@ -58,7 +58,7 @@ async function testCompleteFlow() {
       email: testTechnician.email,
       password: testTechnician.password
     });
-    const techToken = techLoginResponse.data.token;
+    const techToken = techLoginResponse.data.access_token;
     const techHeaders = { 'Authorization': `Bearer ${techToken}` };
     console.log('✅ Technician logged in successfully');
 
@@ -67,7 +67,7 @@ async function testCompleteFlow() {
       email: testClient.email,
       password: testClient.password
     });
-    const clientToken = clientLoginResponse.data.token;
+    const clientToken = clientLoginResponse.data.access_token;
     const clientHeaders = { 'Authorization': `Bearer ${clientToken}` };
     console.log('✅ Client logged in successfully');
 

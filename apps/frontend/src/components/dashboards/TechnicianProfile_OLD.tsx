@@ -12,12 +12,15 @@ import {
   PhotoIcon,
   PlusIcon,
   TrashIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  MapPinIcon,
+  CloudArrowUpIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { technicianService } from '../../services/technicianService'
 import { authService } from '../../services/authService'
-import type { TechnicianProfile as TechnicianProfileType, CreateTechnicianProfileRequest, ApplianceType } from '../../types/index'
+import { addressService } from '../../services/addressService'
+import type { TechnicianProfile as TechnicianProfileType, CreateTechnicianProfileRequest, ApplianceType, Address } from '../../types/index'
 import ChangePassword from './ChangePassword'
 
 const TechnicianProfile: React.FC = () => {
@@ -29,19 +32,24 @@ const TechnicianProfile: React.FC = () => {
   const [profile, setProfile] = useState<TechnicianProfileType | null>(null)
   const [hasProfile, setHasProfile] = useState(false)
   const [activeTab, setActiveTab] = useState<'user' | 'professional'>('user')
-  const [showChangePassword, setShowChangePassword] = useState(false)
-  const [availableSpecialties, setAvailableSpecialties] = useState<ApplianceType[]>([])
+  const [showChangePassword, setShowChangePassword] = useState(false)  const [availableSpecialties, setAvailableSpecialties] = useState<ApplianceType[]>([])
   const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false)
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [showAddressModal, setShowAddressModal] = useState(false)
 
   // Form data
   const [formData, setFormData] = useState({
-    fullName: user?.name || '',
+    firstName: user?.firstName || '',
+    secondName: user?.secondName || '',
+    firstLastName: user?.firstLastName || '',
+    secondLastName: user?.secondLastName || '',
     email: user?.email || '',
     cedula: '',
     birthDate: '',
     experienceYears: 0,
-    idPhotoUrl: '',
-    specialties: [] as number[]
+    idPhotoFile: null as File | null,
+    specialties: [] as number[],
+    selectedAddressId: undefined as number | undefined
   })
 
   useEffect(() => {
