@@ -26,6 +26,11 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
     validMinutes: '60'
   })
 
+  // Validación temprana - si no es cliente autenticado, no renderizar nada
+  if (!isAuthenticated || !user || user.role !== 'client') {
+    return null
+  }
+
   // Cargar electrodomésticos disponibles
   useEffect(() => {
     if (isOpen) {
@@ -117,32 +122,6 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
   }
 
   if (!isOpen) return null
-
-  // Si no está autenticado o no es cliente
-  if (!isAuthenticated || !user || user.role !== 'client') {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center"
-        >
-          <h3 className="text-xl font-bold text-gray-900 mb-4">
-            Acceso Restringido
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Solo los clientes registrados pueden solicitar servicios técnicos.
-          </p>
-          <button
-            onClick={handleClose}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Entendido
-          </button>
-        </motion.div>
-      </div>
-    )
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon, UserIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './auth/AuthModal'
 import UserMenu from './auth/UserMenu'
@@ -11,7 +11,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const { isAuthenticated } = useAuth()
 
   const navigation = [
@@ -21,8 +20,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
     { name: 'Contacto', href: '#contact', action: () => onNavigate?.('home') },
   ]
 
-  const handleAuthClick = (mode: 'login' | 'register') => {
-    setAuthMode(mode)
+  const handleAuthClick = () => {
     setAuthModalOpen(true)
   }
 
@@ -76,14 +74,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               {isAuthenticated ? (
                 <UserMenu onNavigate={onNavigate} />
               ) : (
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => handleAuthClick('login')}
-                    className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
-                  >
-                    Iniciar Sesión
-                  </button>
-                </div>
+                <button
+                  onClick={handleAuthClick}
+                  className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                >
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Iniciar Sesión / Registrarse
+                </button>
               )}
             </div>
 
@@ -125,24 +122,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                     <UserMenu onNavigate={onNavigate} />
                   </div>
                 ) : (
-                  <div className="pt-4 border-t border-gray-200 space-y-2">
+                  <div className="pt-4 border-t border-gray-200">
                     <button
                       onClick={() => {
-                        handleAuthClick('login')
+                        handleAuthClick()
                         setMobileMenuOpen(false)
                       }}
-                      className="block w-full text-left rounded-lg px-3 py-2 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                      className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
                     >
-                      Iniciar Sesión
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleAuthClick('register')
-                        setMobileMenuOpen(false)
-                      }}
-                      className="block w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 text-base font-medium text-white shadow-lg"
-                    >
-                      Únete Ahora
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      Iniciar Sesión / Registrarse
                     </button>
                   </div>
                 )}
@@ -155,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
       <AuthModal 
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        initialMode={authMode}
+        initialMode="login"
       />
     </>
   )

@@ -1,20 +1,119 @@
-import { ChevronRightIcon, PlayIcon } from '@heroicons/react/24/outline'
+import { ChevronRightIcon, PlayIcon, UserIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ServiceRequestModal from './auth/ServiceRequestModal'
+import AuthModal from './auth/AuthModal'
 
 const Hero = () => {
   const { isAuthenticated, user } = useAuth()
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
 
   const handleServiceRequest = () => {
-    if (isAuthenticated && user?.role === 'client') {
-      setServiceModalOpen(true)
-    } else {
-      // Scroll to contact form for non-authenticated users
-      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+    setServiceModalOpen(true)
+  }
+
+  const handleOpenAuth = () => {
+    setAuthModalOpen(true)
+  }
+
+  const handleGoToDashboard = () => {
+    // Scroll to appropriate dashboard section or navigate
+    if (user?.role === 'client') {
+      window.location.hash = '#client-dashboard'
+    } else if (user?.role === 'technician') {
+      window.location.hash = '#technician-dashboard'
     }
+  }
+
+  const renderActionButtons = () => {
+    if (!isAuthenticated) {
+      // Usuario no autenticado - mostrar un solo botón para autenticarse
+      return (
+        <>
+          <button
+            onClick={handleOpenAuth}
+            className="group inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-900 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200 transform hover:scale-105"
+          >
+            <UserIcon className="mr-2 h-5 w-5" />
+            Iniciar Sesión / Registrarse
+            <ChevronRightIcon className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          <button className="group inline-flex items-center justify-center rounded-full border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200">
+            <PlayIcon className="mr-3 h-5 w-5" />
+            Ver cómo funciona
+          </button>
+        </>
+      )
+    }
+
+    if (user?.role === 'client') {
+      // Cliente autenticado - puede solicitar técnico
+      return (
+        <>
+          <button
+            onClick={handleServiceRequest}
+            className="group inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-900 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200 transform hover:scale-105"
+          >
+            🔧 Solicitar Técnico
+            <ChevronRightIcon className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          <button
+            onClick={handleGoToDashboard}
+            className="group inline-flex items-center justify-center rounded-full border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200"
+          >
+            Ver Mis Solicitudes
+          </button>
+        </>
+      )
+    }
+
+    if (user?.role === 'technician') {
+      // Técnico autenticado - ir a dashboard
+      return (
+        <>
+          <button
+            onClick={handleGoToDashboard}
+            className="group inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-900 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200 transform hover:scale-105"
+          >
+            🛠️ Ver Trabajos Disponibles
+            <ChevronRightIcon className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          <button className="group inline-flex items-center justify-center rounded-full border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200">
+            <PlayIcon className="mr-3 h-5 w-5" />
+            Ver cómo funciona
+          </button>
+        </>
+      )
+    }
+
+    // Fallback
+    return (
+      <button className="group inline-flex items-center justify-center rounded-full border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200">
+        <PlayIcon className="mr-3 h-5 w-5" />
+        Ver cómo funciona
+      </button>
+    )
+  }
+
+  const getWelcomeMessage = () => {
+    if (!isAuthenticated) {
+      return "Conectamos tu hogar con técnicos especializados en reparación de electrodomésticos. Rápido, confiable y desde la comodidad de tu casa."
+    }
+    
+    if (user?.role === 'client') {
+      return `¡Hola ${user.name}! Solicita un técnico especializado para reparar tus electrodomésticos desde la comodidad de tu hogar.`
+    }
+    
+    if (user?.role === 'technician') {
+      return `¡Bienvenido ${user.name}! Encuentra trabajos de reparación cerca de ti y ayuda a otros usuarios con sus electrodomésticos.`
+    }
+    
+    return "Conectamos tu hogar con técnicos especializados en reparación de electrodomésticos."
   }
 
   return (
@@ -50,12 +149,25 @@ const Hero = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-8 leading-tight"
             >
-              Encuentra el{' '}
-              <span className="bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">
-                técnico
-              </span>
-              <br />
-              perfecto para tu hogar
+              {isAuthenticated && user ? (
+                <>
+                  {user.role === 'client' ? 'Solicita un' : 'Encuentra'}{' '}
+                  <span className="bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">
+                    técnico
+                  </span>
+                  <br />
+                  {user.role === 'client' ? 'especializado' : 'tu próximo trabajo'}
+                </>
+              ) : (
+                <>
+                  Encuentra el{' '}
+                  <span className="bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">
+                    técnico
+                  </span>
+                  <br />
+                  perfecto para tu hogar
+                </>
+              )}
             </motion.h1>
 
             <motion.p
@@ -64,8 +176,7 @@ const Hero = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-xl md:text-2xl text-blue-100 mb-12 max-w-3xl mx-auto leading-relaxed"
             >
-              Conectamos tu hogar con técnicos especializados en reparación de electrodomésticos. 
-              Rápido, confiable y desde la comodidad de tu casa.
+              {getWelcomeMessage()}
             </motion.p>
 
             <motion.div
@@ -74,18 +185,7 @@ const Hero = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <button
-                onClick={handleServiceRequest}
-                className="group inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-900 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200 transform hover:scale-105"
-              >
-                {isAuthenticated && user?.role === 'client' ? 'Solicitar técnico' : 'Explorar servicios'}
-                <ChevronRightIcon className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              
-              <button className="group inline-flex items-center justify-center rounded-full border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 transition-all duration-200">
-                <PlayIcon className="mr-3 h-5 w-5" />
-                Ver cómo funciona
-              </button>
+              {renderActionButtons()}
             </motion.div>
 
             <motion.div
@@ -126,9 +226,19 @@ const Hero = () => {
         </motion.div>
       </section>
 
-      <ServiceRequestModal 
-        isOpen={serviceModalOpen}
-        onClose={() => setServiceModalOpen(false)}
+      {/* Solo mostrar el modal si es un cliente autenticado */}
+      {isAuthenticated && user?.role === 'client' && (
+        <ServiceRequestModal 
+          isOpen={serviceModalOpen}
+          onClose={() => setServiceModalOpen(false)}
+        />
+      )}
+
+      {/* Modal de autenticación */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="login"
       />
     </>
   )

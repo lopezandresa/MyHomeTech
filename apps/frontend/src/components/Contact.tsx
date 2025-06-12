@@ -1,311 +1,231 @@
-import { useState } from 'react'
-import { EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import AuthModal from './auth/AuthModal'
 
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    appliance: '',
-    problem: '',
-    message: ''
-  })
+  const { isAuthenticated } = useAuth()
+  const [authModalOpen, setAuthModalOpen] = useState(false)
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleOpenAuth = () => {
+    setAuthModalOpen(true)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      setSubmitStatus('success')
-      setFormData({ name: '', email: '', phone: '', appliance: '', problem: '', message: '' })
-    } catch (error) {
-      setSubmitStatus('error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const contactInfo = [
+  const benefits = [
     {
-      icon: EnvelopeIcon,
-      title: 'Email',
-      content: 'servicios@hometech.com',
-      link: 'mailto:servicios@hometech.com'
+      icon: CheckCircleIcon,
+      title: 'Técnicos Verificados',
+      description: 'Todos nuestros técnicos están certificados y han pasado verificación de antecedentes.'
     },
     {
-      icon: PhoneIcon,
-      title: 'Línea de Servicios',
-      content: '+57 (300) 123-4567',
-      link: 'tel:+573001234567'
+      icon: ShieldCheckIcon,
+      title: 'Servicio Garantizado',
+      description: 'Garantía en todos los trabajos realizados. Tu satisfacción es nuestra prioridad.'
     },
     {
-      icon: MapPinIcon,
-      title: 'Cobertura',
-      content: 'Principales ciudades de Colombia',
-      link: '#'
+      icon: ClockIcon,
+      title: 'Respuesta Rápida',
+      description: 'Conecta con técnicos disponibles en tu zona en cuestión de minutos.'
+    },
+    {
+      icon: CurrencyDollarIcon,
+      title: 'Precios Justos',
+      description: 'Tú estableces el precio que estás dispuesto a pagar por el servicio.'
     }
   ]
 
-  const appliances = [
-    'Nevera/Refrigerador',
-    'Lavadora',
-    'Aire Acondicionado',
-    'Estufa/Cocina',
-    'Microondas',
-    'Lavavajillas',
-    'Secadora',
-    'Horno',
-    'Otro'
+  const steps = [
+    {
+      number: '1',
+      title: 'Regístrate como Cliente',
+      description: 'Crea tu cuenta gratuita en menos de 2 minutos'
+    },
+    {
+      number: '2',
+      title: 'Solicita tu Servicio',
+      description: 'Describe tu problema y establece tu precio'
+    },
+    {
+      number: '3',
+      title: 'Conecta con Técnicos',
+      description: 'Los técnicos especializados verán tu solicitud'
+    },
+    {
+      number: '4',
+      title: 'Servicio en tu Hogar',
+      description: 'El técnico seleccionado repara tu electrodoméstico'
+    }
   ]
+
+  const handleScrollToAuth = () => {
+    document.querySelector('header')?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
-    <section id="contact" className="py-24 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-            ¿Necesitas un
-            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> técnico especializado?</span>
-          </h2>
-          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-            Contáctanos hoy mismo y conecta con el técnico perfecto para reparar tu electrodoméstico. 
-            Servicio rápido, confiable y con garantía.
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          {/* Contact Form */}
+    <>
+      <section id="contact" className="py-24 bg-gradient-to-br from-blue-50 via-white to-blue-50">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="bg-white rounded-2xl shadow-xl p-8"
+            className="text-center mb-16"
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Solicita tu servicio técnico</h3>
+            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              ¿Necesitas un
+              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> técnico especializado?</span>
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+              {isAuthenticated ? 
+                'Ya tienes una cuenta activa. ¡Solicita tu servicio técnico cuando lo necesites!' :
+                'Únete a miles de usuarios que ya encontraron la solución perfecta para sus electrodomésticos.'
+              }
+            </p>
             
-            {submitStatus === 'success' && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800">¡Solicitud enviada exitosamente! Un técnico te contactará pronto.</p>
-              </div>
-            )}
-
-            {submitStatus === 'error' && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-800">Hubo un error al enviar la solicitud. Por favor, inténtalo de nuevo.</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre completo
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="Tu nombre"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="Tu teléfono"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="tu@email.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="appliance" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de electrodoméstico
-                </label>
-                <select
-                  id="appliance"
-                  name="appliance"
-                  value={formData.appliance}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                >
-                  <option value="">Selecciona el electrodoméstico</option>
-                  {appliances.map((appliance) => (
-                    <option key={appliance} value={appliance}>
-                      {appliance}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="problem" className="block text-sm font-medium text-gray-700 mb-2">
-                  Problema o falla
-                </label>
-                <input
-                  type="text"
-                  id="problem"
-                  name="problem"
-                  value={formData.problem}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="Ej: No enfría, hace ruido, no enciende..."
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                  Detalles adicionales
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
-                  placeholder="Describe cualquier detalle adicional que pueda ayudar al técnico..."
-                />
-              </div>
-              
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-4 px-6 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            {!isAuthenticated && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="flex justify-center"
               >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Enviando solicitud...
-                  </div>
-                ) : (
-                  'Solicitar técnico'
-                )}
-              </button>
-            </form>
+                <button
+                  onClick={handleOpenAuth}
+                  className="group inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                >
+                  <UserPlusIcon className="mr-2 h-5 w-5" />
+                  Iniciar Sesión / Registrarse
+                </button>
+              </motion.div>
+            )}
           </motion.div>
 
-          {/* Contact Information */}
+          {/* Benefits Section */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
             viewport={{ once: true }}
-            className="space-y-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20"
           >
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Información de contacto</h3>
-              <p className="text-gray-600 mb-8 leading-relaxed">
-                Estamos disponibles para conectarte con el técnico especializado que necesitas. 
-                Nuestro equipo te ayudará a encontrar la solución perfecta para tu electrodoméstico.
-              </p>
-            </div>
+            {benefits.map((benefit, index) => (
+              <motion.div
+                key={benefit.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 text-center group"
+              >
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <benefit.icon className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{benefit.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
 
-            <div className="space-y-6">
-              {contactInfo.map((info, index) => (
-                <motion.a
-                  key={info.title}
-                  href={info.link}
+          {/* How it Works Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            viewport={{ once: true }}
+            className="mb-20"
+          >
+            <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
+              ¿Cómo funciona?
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={step.number}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className="flex items-start space-x-4 p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
+                  className="relative text-center"
                 >
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <info.icon className="h-6 w-6 text-white" />
-                    </div>
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg">
+                    {step.number}
                   </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                      {info.title}
-                    </h4>
-                    <p className="text-gray-600 mt-1">{info.content}</p>
-                  </div>
-                </motion.a>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h4>
+                  <p className="text-gray-600">{step.description}</p>
+                  
+                  {/* Connector line */}
+                  {index < steps.length - 1 && (
+                    <div className="hidden lg:block absolute top-6 left-1/2 w-full h-0.5 bg-gradient-to-r from-blue-300 to-blue-400 transform translate-x-6"></div>
+                  )}
+                </motion.div>
               ))}
             </div>
+          </motion.div>
 
-            {/* Service Hours */}
+          {/* Call to Action */}
+          {!isAuthenticated && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
               viewport={{ once: true }}
-              className="bg-blue-50 rounded-xl p-6"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-8 md:p-12 text-center text-white"
             >
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Horarios de servicio</h4>
-              <div className="space-y-2 text-gray-600">
-                <div className="flex justify-between">
-                  <span>Lunes - Viernes:</span>
-                  <span>7:00 AM - 8:00 PM</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Sábados:</span>
-                  <span>8:00 AM - 6:00 PM</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Domingos:</span>
-                  <span>9:00 AM - 5:00 PM</span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <span className="font-medium text-blue-600">Emergencias 24/7 disponibles</span>
+              <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                ¡Comienza ahora mismo!
+              </h3>
+              <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+                Únete a la plataforma líder en servicios técnicos para el hogar. 
+                Crea tu cuenta gratuita y solicita tu primer técnico en menos de 5 minutos.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button
+                  onClick={handleOpenAuth}
+                  className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 transition-all duration-200 transform hover:scale-105"
+                >
+                  <UserPlusIcon className="mr-2 h-5 w-5" />
+                  Iniciar Sesión / Registrarse
+                </button>
+                <div className="text-blue-100">
+                  <span className="font-medium">✓ Sin costos ocultos</span> • 
+                  <span className="font-medium">✓ Registro en 2 minutos</span>
                 </div>
               </div>
             </motion.div>
-          </motion.div>
+          )}
+
+          {/* For authenticated users */}
+          {isAuthenticated && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-r from-green-500 to-green-600 rounded-3xl p-8 md:p-12 text-center text-white"
+            >
+              <CheckCircleIcon className="h-16 w-16 mx-auto mb-4" />
+              <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                ¡Ya eres parte de HomeTech!
+              </h3>
+              <p className="text-lg md:text-xl text-green-100 mb-8 max-w-2xl mx-auto">
+                Tu cuenta está activa y lista para usar. Solicita servicios técnicos cuando los necesites 
+                y conecta con los mejores profesionales de tu zona.
+              </p>
+            </motion.div>
+          )}
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Modal de autenticación */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="login"
+      />
+    </>
   )
 }
 

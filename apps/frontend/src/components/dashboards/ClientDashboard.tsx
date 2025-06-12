@@ -6,17 +6,24 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   CurrencyDollarIcon,
-  CalendarIcon
+  CalendarIcon,
+  FunnelIcon,
+  PlusIcon,
+  UserCircleIcon,
+  BellIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { serviceRequestService } from '../../services/serviceRequestService'
 import type { ServiceRequest } from '../../types/index'
+import DashboardLayout from './DashboardLayout'
 
 const ClientDashboard: React.FC = () => {
   const { user } = useAuth()
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState('my-requests')
+  const [requestFilter, setRequestFilter] = useState<'in-progress' | 'all'>('in-progress')
 
   useEffect(() => {
     if (user) {
@@ -36,6 +43,14 @@ const ClientDashboard: React.FC = () => {
       setIsLoading(false)
     }
   }
+
+  // Filter requests based on current filter
+  const filteredRequests = requests.filter(request => {
+    if (requestFilter === 'in-progress') {
+      return ['pending', 'offered', 'accepted', 'scheduled'].includes(request.status)
+    }
+    return true // Show all requests
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,7 +111,7 @@ const ClientDashboard: React.FC = () => {
   const handleAcceptOffer = async (requestId: number, acceptClientPrice: boolean) => {
     try {
       await serviceRequestService.acceptRequest(requestId, { acceptClientPrice })
-      await loadRequests() // Reload requests
+      await loadRequests()
     } catch (error) {
       console.error('Error accepting offer:', error)
       setError('Error al aceptar la oferta')
@@ -106,30 +121,66 @@ const ClientDashboard: React.FC = () => {
   const handleCompleteService = async (requestId: number) => {
     try {
       await serviceRequestService.completeRequest(requestId)
-      await loadRequests() // Reload requests
+      await loadRequests()
     } catch (error) {
       console.error('Error completing service:', error)
       setError('Error al marcar como completado')
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando tus solicitudes...</p>
+  const renderMyRequests = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando tus solicitudes...</p>
+          </div>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Mis Solicitudes de Servicio</h1>
-          <p className="text-gray-600 mt-2">Gestiona tus solicitudes de técnicos especializados</p>
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Mis Solicitudes</h1>
+            <p className="text-gray-600 mt-1">Gestiona tus solicitudes de servicio técnico</p>
+          </div>
+          <button
+            onClick={() => window.location.hash = '#hero'}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span>Nueva Solicitud</span>
+          </button>
+        </div>
+
+        {/* Filter buttons */}
+        <div className="flex items-center space-x-4 mb-6">
+          <FunnelIcon className="h-5 w-5 text-gray-500" />
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setRequestFilter('in-progress')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                requestFilter === 'in-progress'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              En Curso ({requests.filter(r => ['pending', 'offered', 'accepted', 'scheduled'].includes(r.status)).length})
+            </button>
+            <button
+              onClick={() => setRequestFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                requestFilter === 'all'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Todas ({requests.length})
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -142,31 +193,40 @@ const ClientDashboard: React.FC = () => {
           </motion.div>
         )}
 
-        {requests.length === 0 ? (
+        {filteredRequests.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
             <ClipboardDocumentListIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes solicitudes</h3>
-            <p className="text-gray-600 mb-6">Crea tu primera solicitud de servicio técnico</p>
-            <button
-              onClick={() => window.location.hash = '#hero'}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Solicitar Técnico
-            </button>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {requestFilter === 'in-progress' ? 'No tienes solicitudes en curso' : 'No tienes solicitudes'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {requestFilter === 'in-progress' 
+                ? 'Tus solicitudes completadas o canceladas aparecerán cuando cambies el filtro a "Todas"' 
+                : 'Crea tu primera solicitud de servicio técnico'
+              }
+            </p>
+            {requestFilter === 'all' && (
+              <button
+                onClick={() => window.location.hash = '#hero'}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Solicitar Técnico
+              </button>
+            )}
           </motion.div>
         ) : (
           <div className="grid gap-6">
-            {requests.map((request, index) => (
+            {filteredRequests.map((request, index) => (
               <motion.div
                 key={request.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-lg shadow-lg p-6"
+                className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -256,7 +316,48 @@ const ClientDashboard: React.FC = () => {
           </div>
         )}
       </div>
+    )
+  }
+
+  const renderNotifications = () => (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notificaciones</h1>
+      <div className="text-center py-12">
+        <BellIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay notificaciones</h3>
+        <p className="text-gray-600">Te notificaremos cuando haya actualizaciones en tus solicitudes</p>
+      </div>
     </div>
+  )
+
+  const renderProfile = () => (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mi Perfil</h1>
+      <div className="text-center py-12">
+        <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Configuración de perfil</h3>
+        <p className="text-gray-600">Próximamente podrás editar tu información personal</p>
+      </div>
+    </div>
+  )
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'my-requests':
+        return renderMyRequests()
+      case 'notifications':
+        return renderNotifications()
+      case 'profile':
+        return renderProfile()
+      default:
+        return renderMyRequests()
+    }
+  }
+
+  return (
+    <DashboardLayout>
+      {renderContent()}
+    </DashboardLayout>
   )
 }
 
