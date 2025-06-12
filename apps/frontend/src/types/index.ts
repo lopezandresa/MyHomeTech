@@ -51,9 +51,11 @@ export interface CreateClientProfileRequest {
 // Técnico
 export interface Appliance {
   id: number
-  name: string
+  type: string
+  brand: string
   model: string
-  brand?: string
+  name: string
+  isActive: boolean
 }
 
 export interface TechnicianProfile {
@@ -100,7 +102,7 @@ export interface CreateServiceRequestRequest {
   applianceId: number
   description: string
   clientPrice: number
-  validMinutes: number
+  validMinutes?: number // Opcional, por defecto 5 minutos
 }
 
 export interface OfferPriceRequest {

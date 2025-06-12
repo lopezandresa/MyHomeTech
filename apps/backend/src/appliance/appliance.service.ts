@@ -13,12 +13,58 @@ export class ApplianceService {
   ) {}
 
   create(dto: CreateApplianceDto) {
-    const a = this.repo.create(dto);
-    return this.repo.save(a);
+    // Generar nombre completo si no se proporciona
+    const name = dto.name || `${dto.type} ${dto.brand} ${dto.model}`;
+    const appliance = this.repo.create({
+      ...dto,
+      name,
+    });
+    return this.repo.save(appliance);
   }
 
   findAll() {
-    return this.repo.find();
+    return this.repo.find({ where: { isActive: true } });
+  }
+
+  // Obtener tipos únicos de electrodomésticos
+  async getTypes(): Promise<string[]> {
+    const result = await this.repo
+      .createQueryBuilder('appliance')
+      .select('DISTINCT appliance.type', 'type')
+      .where('appliance.isActive = :isActive', { isActive: true })
+      .getRawMany();
+    
+    return result.map(item => item.type);
+  }
+
+  // Obtener marcas por tipo
+  async getBrandsByType(type: string): Promise<string[]> {
+    const result = await this.repo
+      .createQueryBuilder('appliance')
+      .select('DISTINCT appliance.brand', 'brand')
+      .where('appliance.type = :type AND appliance.isActive = :isActive', { type, isActive: true })
+      .getRawMany();
+    
+    return result.map(item => item.brand);
+  }
+
+  // Obtener modelos por tipo y marca
+  async getModelsByTypeAndBrand(type: string, brand: string): Promise<string[]> {
+    const result = await this.repo
+      .createQueryBuilder('appliance')
+      .select('DISTINCT appliance.model', 'model')
+      .where('appliance.type = :type AND appliance.brand = :brand AND appliance.isActive = :isActive', 
+        { type, brand, isActive: true })
+      .getRawMany();
+    
+    return result.map(item => item.model);
+  }
+
+  // Buscar electrodoméstico específico
+  async findByTypeAndBrandAndModel(type: string, brand: string, model: string): Promise<Appliance | null> {
+    return this.repo.findOne({
+      where: { type, brand, model, isActive: true }
+    });
   }
 
   async update(id: number, dto: UpdateApplianceDto): Promise<Appliance> {
@@ -46,7 +92,7 @@ export class ApplianceService {
   async findByName(name: string): Promise<Appliance[]> {
     // Busca coincidencias parciales (case-insensitive)
     return this.repo.find({
-      where: { name: ILike(`%${name}%`) },
+      where: { name: ILike(`%${name}%`), isActive: true },
     });
   }
 }

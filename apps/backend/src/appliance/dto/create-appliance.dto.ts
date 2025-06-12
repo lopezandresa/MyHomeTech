@@ -1,16 +1,26 @@
-import { IsString } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateApplianceDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Tipo de electrodoméstico' })
   @IsString()
-  name: string;
+  type: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Marca del electrodoméstico' })
+  @IsString()
+  brand: string;
+
+  @ApiProperty({ description: 'Modelo específico' })
   @IsString()
   model: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: 'Nombre completo (opcional, se genera automáticamente)' })
+  @IsOptional()
   @IsString()
-  brand?: string;
+  name?: string;
+
+  @ApiProperty({ description: 'Estado activo', default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

@@ -17,11 +17,13 @@ export class ServiceRequestService {
     @InjectRepository(ServiceRequest)
     private readonly srRepo: Repository<ServiceRequest>,
   ) {}
-
   async create(clientId: number, dto: CreateServiceRequestDto): Promise<ServiceRequest> {
+    // Usar valor por defecto de 5 minutos si no se especifica
+    const validMinutes = dto.validMinutes || 5;
+    
     // calcula expiresAt
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + dto.validMinutes * 60000);
+    const expiresAt = new Date(now.getTime() + validMinutes * 60000);
 
     const req = this.srRepo.create({
       clientId,

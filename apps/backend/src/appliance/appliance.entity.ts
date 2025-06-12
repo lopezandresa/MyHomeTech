@@ -6,11 +6,17 @@ export class Appliance {
   id: number;
 
   @Column()
-  name: string;
+  type: string; // Tipo de electrodoméstico (ej: "Refrigerador", "Lavadora", "Microondas")
 
   @Column()
-  model: string;
+  brand: string; // Marca (ej: "Samsung", "LG", "Whirlpool")
 
-  @Column({ nullable: true })
-  brand: string;
+  @Column()
+  model: string; // Modelo específico
+
+  @Column()
+  name: string; // Nombre completo generado (tipo + marca + modelo)
+
+  @Column({ default: true })
+  isActive: boolean;
 }

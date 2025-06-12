@@ -51,11 +51,41 @@ export class ApplianceController {
   async findById(@Param('id') id: number): Promise<Appliance | null> {
     return this.svc.findById(id);
   }
-
   @ApiOperation({ summary: 'Obtiene un electrodoméstico por nombre (contains)' })
   @Get('search/:name')
   async findByName(@Param('name') name: string): Promise<Appliance[]> {
     return this.svc.findByName(name);
+  }
+
+  @Get('types/list')
+  @ApiOperation({ summary: 'Obtiene todos los tipos de electrodomésticos disponibles' })
+  async getTypes(): Promise<string[]> {
+    return this.svc.getTypes();
+  }
+
+  @Get('brands/:type')
+  @ApiOperation({ summary: 'Obtiene marcas disponibles para un tipo específico' })
+  async getBrandsByType(@Param('type') type: string): Promise<string[]> {
+    return this.svc.getBrandsByType(type);
+  }
+
+  @Get('models/:type/:brand')
+  @ApiOperation({ summary: 'Obtiene modelos disponibles para un tipo y marca específicos' })
+  async getModelsByTypeAndBrand(
+    @Param('type') type: string,
+    @Param('brand') brand: string
+  ): Promise<string[]> {
+    return this.svc.getModelsByTypeAndBrand(type, brand);
+  }
+
+  @Get('find/:type/:brand/:model')
+  @ApiOperation({ summary: 'Busca electrodoméstico específico por tipo, marca y modelo' })
+  async findByTypeAndBrandAndModel(
+    @Param('type') type: string,
+    @Param('brand') brand: string,
+    @Param('model') model: string
+  ): Promise<Appliance | null> {
+    return this.svc.findByTypeAndBrandAndModel(type, brand, model);
   }
 
   

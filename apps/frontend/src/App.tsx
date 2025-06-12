@@ -23,18 +23,19 @@ const AppContent = () => {
 
     return () => clearTimeout(timer)
   }, [])
-
-  // Reset to home when user logs out
+  // Reset to home when user logs out, redirect to dashboard when logged in
   useEffect(() => {
     if (!isAuthenticated) {
       setCurrentPage('home')
+    } else if (user && (currentPage === 'home' || currentPage === 'dashboard')) {
+      // Redirect authenticated users to their dashboard
+      setCurrentPage('dashboard')
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, user, currentPage])
 
   const handleNavigation = (page: string) => {
     setCurrentPage(page)
   }
-
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
@@ -44,9 +45,9 @@ const AppContent = () => {
         }
         
         if (user.role === 'client') {
-          return <ClientDashboard />
+          return <ClientDashboard onNavigate={handleNavigation} />
         } else if (user.role === 'technician') {
-          return <TechnicianDashboard />
+          return <TechnicianDashboard onNavigate={handleNavigation} />
         }
         
         // Default to home if role is not recognized
@@ -110,10 +111,10 @@ const AppContent = () => {
       </div>
     )
   }
-
   return (
     <div className="min-h-screen bg-white">
-      <Header onNavigate={handleNavigation} />
+      {/* Only show Header when not on dashboard */}
+      {currentPage !== 'dashboard' && <Header onNavigate={handleNavigation} />}
       {renderPage()}
     </div>
   )

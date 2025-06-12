@@ -3,7 +3,7 @@ import {
   IsString,
   IsNumber,
   IsPositive,
-  IsDateString,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -22,10 +22,13 @@ export class CreateServiceRequestDto {
   clientPrice: number;
 
   @ApiProperty({
-    description: 'Minutos de vigencia antes de expirar',
-    example: 30,
+    description: 'Minutos de vigencia antes de expirar (por defecto 5 minutos)',
+    example: 5,
+    default: 5,
+    required: false
   })
+  @IsOptional()
   @IsInt()
   @IsPositive()
-  validMinutes: number;
+  validMinutes?: number = 5;
 }
