@@ -2,19 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   WrenchScrewdriverIcon, 
-  ClockIcon, 
   CheckCircleIcon,
-  XCircleIcon,
-  CurrencyDollarIcon,
-  CalendarIcon,
-  EyeIcon,
-  UserCircleIcon,
   BriefcaseIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { serviceRequestService } from '../../services/serviceRequestService'
 import type { ServiceRequest } from '../../types/index'
 import DashboardLayout from './DashboardLayout'
+import TechnicianProfile from './TechnicianProfile'
 
 interface TechnicianDashboardProps {
   onNavigate?: (page: string) => void
@@ -344,17 +339,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
       )}
     </div>
   )
-
-  const renderProfile = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900">Mi Perfil</h2>
-      <div className="text-center py-12">
-        <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Configuración de perfil</h3>
-        <p className="text-gray-600">Próximamente podrás editar tu información personal</p>
-      </div>
-    </div>
-  )
+  const renderProfile = () => <TechnicianProfile />
 
   const renderContent = (activeTab: string) => {
     switch (activeTab) {

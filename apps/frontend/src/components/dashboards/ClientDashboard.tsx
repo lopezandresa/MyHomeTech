@@ -8,14 +8,14 @@ import {
   CurrencyDollarIcon,
   CalendarIcon,
   FunnelIcon,
-  PlusIcon,
-  UserCircleIcon
+  PlusIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { serviceRequestService } from '../../services/serviceRequestService'
 import type { ServiceRequest } from '../../types/index'
 import DashboardLayout from './DashboardLayout'
 import ServiceRequestForm from '../ServiceRequestForm'
+import ClientProfile from './ClientProfile'
 
 interface ClientDashboardProps {
   onNavigate?: (page: string) => void
@@ -27,6 +27,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [requestFilter, setRequestFilter] = useState<'in-progress' | 'all'>('in-progress')
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -149,9 +150,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Mis Solicitudes</h1>
             <p className="text-gray-600 mt-1">Gestiona tus solicitudes de servicio técnico</p>
-          </div>
-          <button
-            onClick={() => window.location.hash = '#hero'}
+          </div>          <button
+            onClick={() => setShowNewRequestModal(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
           >
             <PlusIcon className="h-4 w-4" />
@@ -211,10 +211,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
                 ? 'Tus solicitudes completadas o canceladas aparecerán cuando cambies el filtro a "Todas"' 
                 : 'Crea tu primera solicitud de servicio técnico'
               }
-            </p>
-            {requestFilter === 'all' && (
+            </p>            {requestFilter === 'all' && (
               <button
-                onClick={() => window.location.hash = '#hero'}
+                onClick={() => setShowNewRequestModal(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Solicitar Técnico
@@ -320,50 +319,53 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
         )}
       </div>    )
   }
-
-  const renderProfile = () => (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mi Perfil</h1>
-      <div className="text-center py-12">
-        <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Configuración de perfil</h3>
-        <p className="text-gray-600">Próximamente podrás editar tu información personal</p>
-      </div>
-    </div>
-  )
+  const renderProfile = () => <ClientProfile />
+  
   const renderContent = (activeTab: string) => {
     switch (activeTab) {
       case 'main':
         return renderMyRequests()
-      case 'create-request':
-        return renderCreateRequest()
       case 'profile':
         return renderProfile()
       default:
         return renderMyRequests()
     }
   }
-  const renderCreateRequest = () => (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Nueva Solicitud de Servicio</h2>      <ServiceRequestForm 
-        onSuccess={() => {
-          // Reload requests after successful creation
-          loadRequests()
-        }}
-        onError={(error) => {
-          setError(error)
-        }}
-      />
-    </div>
-  )
+
   return (
-    <DashboardLayout 
-      title="Dashboard Cliente"
-      subtitle="Gestiona tus solicitudes de servicio"
-      onNavigate={onNavigate}
-    >
-      {({ activeTab }) => renderContent(activeTab)}
-    </DashboardLayout>
+    <>
+      <DashboardLayout 
+        title="Dashboard Cliente"
+        subtitle="Gestiona tus solicitudes de servicio"
+        onNavigate={onNavigate}
+      >
+        {({ activeTab }) => renderContent(activeTab)}
+      </DashboardLayout>
+
+      {/* Modal para Nueva Solicitud */}
+      {showNewRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ServiceRequestForm 
+              onSuccess={() => {
+                setShowNewRequestModal(false)
+                loadRequests()
+              }}
+              onError={(error) => {
+                setError(error)
+              }}
+              onCancel={() => setShowNewRequestModal(false)}
+            />
+          </motion.div>
+        </div>
+      )}
+    </>
   )
 }
 

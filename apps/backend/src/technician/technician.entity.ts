@@ -2,7 +2,7 @@ import {
   Entity, PrimaryGeneratedColumn, Column,
   ManyToMany, JoinTable
 } from 'typeorm';
-import { Appliance } from '../appliance/appliance.entity';
+import { ApplianceType } from '../appliance-type/appliance-type.entity';
 
 @Entity()
 export class Technician {
@@ -25,7 +25,7 @@ export class Technician {
   @Column()
   idPhotoUrl: string;
 
-  @ManyToMany(() => Appliance, { eager: true })
-  @JoinTable({ name: 'technician_appliances' })
-  appliances: Appliance[];
+  @ManyToMany(() => ApplianceType, { eager: true })
+  @JoinTable({ name: 'technician_specialties' })
+  specialties: ApplianceType[];
 }

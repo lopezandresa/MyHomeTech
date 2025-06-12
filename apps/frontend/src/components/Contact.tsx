@@ -58,9 +58,9 @@ const Contact = () => {
     }
   ]
 
-  const handleScrollToAuth = () => {
-    document.querySelector('header')?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // const handleScrollToAuth = () => {
+  //   document.querySelector('header')?.scrollIntoView({ behavior: 'smooth' })
+  // }
 
   return (
     <>

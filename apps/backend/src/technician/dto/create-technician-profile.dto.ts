@@ -27,10 +27,10 @@ import {
     idPhotoUrl: string;
   
     @ApiProperty({ 
-      description: 'Lista de IDs de electrodomésticos especializados',
+      description: 'Lista de IDs de tipos de electrodomésticos especializados',
       type: [Number]
     })
     @ArrayNotEmpty()
     @ArrayUnique()
-    appliances: number[];
+    specialties: number[];
   }

@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Identity } from './identity.entity';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class IdentityService {
@@ -74,5 +75,26 @@ export class IdentityService {
     const saved = await this.repo.save(user);
     const { password, ...rest } = saved;
     return rest;
+  }
+
+  async changePassword(userId: number, dto: ChangePasswordDto): Promise<{ message: string }> {
+    const user = await this.repo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    // Verificar contraseña actual
+    const isCurrentPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+
+    // Hash de la nueva contraseña
+    const salt = await bcrypt.genSalt();
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, salt);
+
+    // Actualizar contraseña
+    user.password = newPasswordHash;
+    await this.repo.save(user);
+
+    return { message: 'Contraseña actualizada exitosamente' };
   }
 }

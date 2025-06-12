@@ -25,9 +25,12 @@ export class ClientService {
   findAll(): Promise<Client[]> {
     return this.clientRepo.find();
   }
-
   findById(id: number): Promise<Client | null> {
     return this.clientRepo.findOne({ where: { id } });
+  }
+
+  findByIdentityId(identityId: number): Promise<Client | null> {
+    return this.clientRepo.findOne({ where: { identityId } });
   }
 
   async updateProfileByIdentityId(identityId: number, profile: Partial<Client>): Promise<Client> {

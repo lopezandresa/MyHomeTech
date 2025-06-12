@@ -7,6 +7,7 @@ import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 export type IdentityResponse = Omit<Identity, 'password'>;
 
@@ -64,5 +65,16 @@ export class IdentityController {
   @ApiOperation({ summary: 'Activa o inactiva un usuario por ID' })
   async toggleStatus(@Param('id') id: number): Promise<IdentityResponse> {
     return this.svc.toggleStatus(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
+  @Post('change-password')
+  @ApiOperation({ summary: 'Cambiar contraseña del usuario autenticado' })
+  async changePassword(
+    @Request() req, 
+    @Body() dto: ChangePasswordDto
+  ): Promise<{ message: string }> {
+    return this.svc.changePassword(req.user.id, dto);
   }
 }

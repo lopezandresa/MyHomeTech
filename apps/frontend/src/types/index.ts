@@ -58,6 +58,30 @@ export interface Appliance {
   isActive: boolean
 }
 
+export interface ApplianceType {
+  id: number
+  name: string
+  description?: string
+  isActive: boolean
+}
+
+export interface ApplianceBrand {
+  id: number
+  name: string
+  typeId: number
+  isActive: boolean
+  type?: ApplianceType
+}
+
+export interface ApplianceModel {
+  id: number
+  name: string
+  description?: string
+  brandId: number
+  isActive: boolean
+  brand?: ApplianceBrand
+}
+
 export interface TechnicianProfile {
   id: number
   identityId: number
@@ -65,7 +89,7 @@ export interface TechnicianProfile {
   birthDate: string
   experienceYears: number
   idPhotoUrl: string
-  appliances: Appliance[]
+  specialties: ApplianceType[]
 }
 
 export interface CreateTechnicianProfileRequest {
@@ -74,7 +98,7 @@ export interface CreateTechnicianProfileRequest {
   birthDate: string
   experienceYears: number
   idPhotoUrl: string
-  appliances: number[]
+  specialties: number[]
 }
 
 // Solicitud de servicio

@@ -107,7 +107,7 @@ const DashboardContent: React.FC<DashboardProps> = ({ activeTab }) => {
 
 const Dashboard: React.FC = () => {
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Dashboard" subtitle="Panel principal">
       <DashboardContent activeTab="main" />
     </DashboardLayout>
   )

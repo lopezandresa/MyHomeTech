@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { 
   ClipboardDocumentListIcon,
-  PlusIcon,
   UserCircleIcon,
   WrenchScrewdriverIcon,
   BriefcaseIcon,
@@ -26,6 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('main')
+
   const getMenuItems = () => {
     if (user?.role === 'client') {
       return [
@@ -34,12 +34,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           label: 'Mis Solicitudes', 
           icon: ClipboardDocumentListIcon,
           description: 'Ver todas mis solicitudes'
-        },
-        { 
-          id: 'create-request', 
-          label: 'Nueva Solicitud', 
-          icon: PlusIcon,
-          description: 'Crear solicitud de servicio'
         },
         { 
           id: 'profile', 

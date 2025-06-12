@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Body, Get,
+  Controller, Post, Body, Get, Put,
   Param, UseGuards, Request
 } from '@nestjs/common';
 import {
@@ -25,6 +25,31 @@ export class ClientController {
   ): Promise<Client> {
     dto.identityId = req.user.id;
     return this.svc.createProfile(dto);
+  }
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer-jwt')
+  @Get('me')
+  @ApiOperation({ summary: 'Obtener perfil del cliente actual' })
+  getMyProfile(@Request() req): Promise<Client | null> {
+    return this.svc.findByIdentityId(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer-jwt')
+  @Put('me')
+  @ApiOperation({ summary: 'Actualizar perfil del cliente actual' })
+  async updateMyProfile(
+    @Body() updateData: Partial<CreateClientProfileDto>,
+    @Request() req,
+  ): Promise<Client> {
+    const profileData: Partial<Client> = {};
+    
+    if (updateData.fullName) profileData.fullName = updateData.fullName;
+    if (updateData.cedula) profileData.cedula = updateData.cedula;
+    if (updateData.birthDate) profileData.birthDate = new Date(updateData.birthDate);
+    if (updateData.phone) profileData.phone = updateData.phone;
+
+    return this.svc.updateProfileByIdentityId(req.user.id, profileData);
   }
 
   @Get()

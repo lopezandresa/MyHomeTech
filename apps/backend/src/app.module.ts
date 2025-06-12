@@ -8,6 +8,9 @@ import { RatingModule } from './rating/rating.module';
 import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
 import { ApplianceModule } from './appliance/appliance.module';
+import { ApplianceTypeModule } from './appliance-type/appliance-type.module';
+import { ApplianceBrandModule } from './appliance-brand/appliance-brand.module';
+import { ApplianceModelModule } from './appliance-model/appliance-model.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -34,7 +37,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     RatingModule,
     NotificationModule,
     IdentityModule,
-    ApplianceModule],
+    ApplianceModule,
+    ApplianceTypeModule,
+    ApplianceBrandModule,
+    ApplianceModelModule],
   controllers: [],
   providers: [],
   

@@ -118,7 +118,7 @@ const About = () => {
               viewport={{ once: true }}
               className="grid grid-cols-2 gap-4 mt-8"
             >
-              {stats.map((stat, index) => (
+              {stats.map((stat) => (
                 <div key={stat.label} className="text-center p-6 bg-gray-50 rounded-xl">
                   <div className="text-3xl font-bold text-blue-600 mb-2">{stat.value}</div>
                   <div className="text-gray-600 text-sm">{stat.label}</div>

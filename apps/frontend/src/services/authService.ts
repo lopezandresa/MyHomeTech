@@ -7,6 +7,12 @@ import type {
   UpdateProfileRequest
 } from '../types/index'
 
+// Tipos para cambio de contraseña
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 class AuthService {
   // Login
   async login(data: LoginRequest): Promise<{ user: User; token: string }> {
@@ -67,6 +73,12 @@ class AuthService {
     const user = response.data
     localStorage.setItem('user', JSON.stringify(user))
     return user
+  }
+
+  // Cambiar contraseña
+  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>('/identity/change-password', data)
+    return response.data
   }
 
   // Verificar rol
