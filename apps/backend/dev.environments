@@ -4,3 +4,4 @@ DB_USER=postgres
 DB_PASS=alopez
 DB_NAME=myhometech
 JWT_SECRET=alopez
+FRONTEND_URL=http://localhost:5173

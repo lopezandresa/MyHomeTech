@@ -79,15 +79,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 <div className="flex items-center space-x-4">
                   <button
                     onClick={() => handleAuthClick('login')}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-                  >
-                    Iniciar Sesión
-                  </button>
-                  <button
-                    onClick={() => handleAuthClick('register')}
                     className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                   >
-                    Únete Ahora
+                    Iniciar Sesión
                   </button>
                 </div>
               )}
