@@ -7,13 +7,15 @@ const Contact = () => {
     name: '',
     email: '',
     phone: '',
+    appliance: '',
+    problem: '',
     message: ''
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -29,7 +31,7 @@ const Contact = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
       setSubmitStatus('success')
-      setFormData({ name: '', email: '', phone: '', message: '' })
+      setFormData({ name: '', email: '', phone: '', appliance: '', problem: '', message: '' })
     } catch (error) {
       setSubmitStatus('error')
     } finally {
@@ -41,21 +43,33 @@ const Contact = () => {
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      content: 'contacto@hometech.com',
-      link: 'mailto:contacto@hometech.com'
+      content: 'servicios@hometech.com',
+      link: 'mailto:servicios@hometech.com'
     },
     {
       icon: PhoneIcon,
-      title: 'Teléfono',
-      content: '+1 (555) 123-4567',
-      link: 'tel:+15551234567'
+      title: 'Línea de Servicios',
+      content: '+57 (300) 123-4567',
+      link: 'tel:+573001234567'
     },
     {
       icon: MapPinIcon,
-      title: 'Oficina',
-      content: 'Ciudad de México, México',
+      title: 'Cobertura',
+      content: 'Principales ciudades de Colombia',
       link: '#'
     }
+  ]
+
+  const appliances = [
+    'Nevera/Refrigerador',
+    'Lavadora',
+    'Aire Acondicionado',
+    'Estufa/Cocina',
+    'Microondas',
+    'Lavavajillas',
+    'Secadora',
+    'Horno',
+    'Otro'
   ]
 
   return (
@@ -69,12 +83,12 @@ const Contact = () => {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-            ¿Listo para transformar
-            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> tu hogar?</span>
+            ¿Necesitas un
+            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> técnico especializado?</span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-            Contáctanos hoy mismo y descubre cómo podemos hacer tu hogar más inteligente, 
-            seguro y eficiente. Nuestro equipo de expertos está listo para ayudarte.
+            Contáctanos hoy mismo y conecta con el técnico perfecto para reparar tu electrodoméstico. 
+            Servicio rápido, confiable y con garantía.
           </p>
         </motion.div>
 
@@ -87,17 +101,17 @@ const Contact = () => {
             viewport={{ once: true }}
             className="bg-white rounded-2xl shadow-xl p-8"
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Envíanos un mensaje</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Solicita tu servicio técnico</h3>
             
             {submitStatus === 'success' && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800">¡Mensaje enviado exitosamente! Te contactaremos pronto.</p>
+                <p className="text-green-800">¡Solicitud enviada exitosamente! Un técnico te contactará pronto.</p>
               </div>
             )}
 
             {submitStatus === 'error' && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-800">Hubo un error al enviar el mensaje. Por favor, inténtalo de nuevo.</p>
+                <p className="text-red-800">Hubo un error al enviar la solicitud. Por favor, inténtalo de nuevo.</p>
               </div>
             )}
 
@@ -128,6 +142,7 @@ const Contact = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
+                    required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     placeholder="Tu teléfono"
                   />
@@ -149,20 +164,55 @@ const Contact = () => {
                   placeholder="tu@email.com"
                 />
               </div>
+
+              <div>
+                <label htmlFor="appliance" className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de electrodoméstico
+                </label>
+                <select
+                  id="appliance"
+                  name="appliance"
+                  value={formData.appliance}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                >
+                  <option value="">Selecciona el electrodoméstico</option>
+                  {appliances.map((appliance) => (
+                    <option key={appliance} value={appliance}>
+                      {appliance}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="problem" className="block text-sm font-medium text-gray-700 mb-2">
+                  Problema o falla
+                </label>
+                <input
+                  type="text"
+                  id="problem"
+                  name="problem"
+                  value={formData.problem}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Ej: No enfría, hace ruido, no enciende..."
+                />
+              </div>
               
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                  Mensaje
+                  Detalles adicionales
                 </label>
                 <textarea
                   id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
-                  required
                   rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
-                  placeholder="Cuéntanos cómo podemos ayudarte..."
+                  placeholder="Describe cualquier detalle adicional que pueda ayudar al técnico..."
                 />
               </div>
               
@@ -174,10 +224,10 @@ const Contact = () => {
                 {isSubmitting ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Enviando...
+                    Enviando solicitud...
                   </div>
                 ) : (
-                  'Enviar mensaje'
+                  'Solicitar técnico'
                 )}
               </button>
             </form>
@@ -194,8 +244,8 @@ const Contact = () => {
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Información de contacto</h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                Estamos aquí para ayudarte en cada paso del camino hacia un hogar más inteligente. 
-                No dudes en contactarnos para cualquier consulta o soporte técnico.
+                Estamos disponibles para conectarte con el técnico especializado que necesitas. 
+                Nuestro equipo te ayudará a encontrar la solución perfecta para tu electrodoméstico.
               </p>
             </div>
 
@@ -225,7 +275,7 @@ const Contact = () => {
               ))}
             </div>
 
-            {/* Business Hours */}
+            {/* Service Hours */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -233,22 +283,22 @@ const Contact = () => {
               viewport={{ once: true }}
               className="bg-blue-50 rounded-xl p-6"
             >
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Horarios de atención</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Horarios de servicio</h4>
               <div className="space-y-2 text-gray-600">
                 <div className="flex justify-between">
                   <span>Lunes - Viernes:</span>
-                  <span>9:00 AM - 6:00 PM</span>
+                  <span>7:00 AM - 8:00 PM</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Sábados:</span>
-                  <span>10:00 AM - 4:00 PM</span>
+                  <span>8:00 AM - 6:00 PM</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Domingos:</span>
-                  <span>Cerrado</span>
+                  <span>9:00 AM - 5:00 PM</span>
                 </div>
                 <div className="mt-4 pt-4 border-t border-blue-200">
-                  <span className="font-medium text-blue-600">Soporte técnico 24/7 disponible</span>
+                  <span className="font-medium text-blue-600">Emergencias 24/7 disponibles</span>
                 </div>
               </div>
             </motion.div>

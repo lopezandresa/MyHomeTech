@@ -1,49 +1,49 @@
 import { 
-  HomeIcon, 
+  WrenchScrewdriverIcon, 
   ShieldCheckIcon, 
-  CloudIcon, 
+  ClockIcon, 
   DevicePhoneMobileIcon,
-  BoltIcon,
-  ChartBarIcon 
+  StarIcon,
+  MapPinIcon 
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
 const Features = () => {
   const features = [
     {
-      name: 'Control Total del Hogar',
-      description: 'Controla todos los dispositivos de tu hogar desde una sola aplicación. Luces, temperatura, seguridad y más.',
-      icon: HomeIcon,
+      name: 'Técnicos Certificados',
+      description: 'Todos nuestros técnicos están certificados y cuentan con años de experiencia en reparación de electrodomésticos.',
+      icon: WrenchScrewdriverIcon,
       color: 'from-blue-500 to-blue-600'
     },
     {
-      name: 'Seguridad Avanzada',
-      description: 'Protege tu hogar con sistemas de seguridad inteligentes, cámaras HD y alertas en tiempo real.',
+      name: 'Servicio Garantizado',
+      description: 'Ofrecemos garantía en todos nuestros servicios. Tu satisfacción y tranquilidad son nuestra prioridad.',
       icon: ShieldCheckIcon,
       color: 'from-blue-600 to-blue-700'
     },
     {
-      name: 'Acceso en la Nube',
-      description: 'Accede a tu hogar desde cualquier lugar del mundo con nuestra infraestructura cloud segura.',
-      icon: CloudIcon,
+      name: 'Respuesta Rápida',
+      description: 'Técnicos disponibles las 24 horas. Agenda tu cita y recibe atención el mismo día.',
+      icon: ClockIcon,
       color: 'from-blue-500 to-cyan-500'
     },
     {
-      name: 'App Móvil Intuitiva',
-      description: 'Controla tu hogar con nuestra aplicación móvil diseñada para ser simple y poderosa.',
+      name: 'App Fácil de Usar',
+      description: 'Solicita servicios, realiza pagos y califica técnicos desde nuestra aplicación móvil intuitiva.',
       icon: DevicePhoneMobileIcon,
       color: 'from-cyan-500 to-blue-500'
     },
     {
-      name: 'Automatización Inteligente',
-      description: 'Crea rutinas automáticas que se adapten a tu estilo de vida y optimicen el consumo energético.',
-      icon: BoltIcon,
+      name: 'Técnicos Calificados',
+      description: 'Sistema de calificaciones y reseñas que te ayuda a elegir al mejor técnico para tu necesidad.',
+      icon: StarIcon,
       color: 'from-blue-600 to-purple-600'
     },
     {
-      name: 'Análisis y Reportes',
-      description: 'Obtén insights detallados sobre el uso de energía y el comportamiento de tu hogar inteligente.',
-      icon: ChartBarIcon,
+      name: 'Servicio a Domicilio',
+      description: 'Los técnicos van directo a tu hogar con todas las herramientas necesarias para la reparación.',
+      icon: MapPinIcon,
       color: 'from-purple-500 to-blue-600'
     }
   ]
@@ -59,13 +59,13 @@ const Features = () => {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-            Características que
-            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> revolucionan </span>
-            tu hogar
+            Servicios que
+            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> transforman </span>
+            tu experiencia
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-            Descubre todas las funcionalidades que hacen de Home Tech la plataforma más completa 
-            para la automatización de tu hogar inteligente.
+            Descubre por qué HomeTech es la plataforma líder para conectar hogares 
+            con técnicos especializados en reparación de electrodomésticos.
           </p>
         </motion.div>
 

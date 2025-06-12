@@ -1,28 +1,28 @@
 const Footer = () => {
   const navigation = {
-    product: [
-      { name: 'Características', href: '#features' },
-      { name: 'Seguridad', href: '#' },
-      { name: 'Precios', href: '#' },
-      { name: 'API', href: '#' },
+    servicios: [
+      { name: 'Reparación de Neveras', href: '#' },
+      { name: 'Reparación de Lavadoras', href: '#' },
+      { name: 'Aires Acondicionados', href: '#' },
+      { name: 'Electrodomésticos de Cocina', href: '#' },
     ],
     support: [
-      { name: 'Documentación', href: '#' },
       { name: 'Centro de ayuda', href: '#' },
-      { name: 'Soporte técnico', href: '#' },
-      { name: 'Estado del sistema', href: '#' },
+      { name: 'Solicitar técnico', href: '#contact' },
+      { name: 'Seguimiento de servicio', href: '#' },
+      { name: 'Garantías', href: '#' },
     ],
     company: [
       { name: 'Acerca de', href: '#about' },
-      { name: 'Blog', href: '#' },
-      { name: 'Trabajos', href: '#' },
-      { name: 'Partners', href: '#' },
+      { name: 'Nuestros técnicos', href: '#' },
+      { name: 'Únete como técnico', href: '#' },
+      { name: 'Testimonios', href: '#' },
     ],
     legal: [
       { name: 'Privacidad', href: '#' },
-      { name: 'Términos', href: '#' },
+      { name: 'Términos de servicio', href: '#' },
+      { name: 'Política de garantías', href: '#' },
       { name: 'Cookies', href: '#' },
-      { name: 'Licencias', href: '#' },
     ],
   }
 
@@ -78,11 +78,11 @@ const Footer = () => {
               <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">HT</span>
               </div>
-              <span className="text-2xl font-bold text-white">Home Tech</span>
+              <span className="text-2xl font-bold text-white">HomeTech</span>
             </div>
             <p className="text-sm leading-6 text-gray-300">
-              Transformamos hogares con tecnología inteligente, segura y fácil de usar. 
-              Conecta, controla y disfruta de la comodidad del futuro hoy mismo.
+              Conectamos hogares con técnicos especializados en reparación de electrodomésticos. 
+              Servicio rápido, confiable y con garantía en toda Colombia.
             </p>
             <div className="flex space-x-6">
               {socialLinks.map((item) => (
@@ -96,9 +96,9 @@ const Footer = () => {
           <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
             <div className="md:grid md:grid-cols-2 md:gap-8">
               <div>
-                <h3 className="text-sm font-semibold leading-6 text-white">Producto</h3>
+                <h3 className="text-sm font-semibold leading-6 text-white">Servicios</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                  {navigation.product.map((item) => (
+                  {navigation.servicios.map((item) => (
                     <li key={item.name}>
                       <a href={item.href} className="text-sm leading-6 text-gray-300 hover:text-white transition-colors duration-200">
                         {item.name}
@@ -155,7 +155,7 @@ const Footer = () => {
             <div className="min-w-0 flex-1">
               <h3 className="text-lg font-semibold text-white">Mantente actualizado</h3>
               <p className="mt-2 text-sm text-gray-300">
-                Recibe las últimas noticias sobre productos y actualizaciones.
+                Recibe consejos de mantenimiento y ofertas especiales en servicios técnicos.
               </p>
             </div>
             <div className="mt-6 sm:flex sm:max-w-md md:mt-0">
@@ -186,11 +186,11 @@ const Footer = () => {
         <div className="mt-8 border-t border-gray-800 pt-8 md:flex md:items-center md:justify-between">
           <div className="flex space-x-6 md:order-2">
             <p className="text-xs leading-5 text-gray-400">
-              Soporte 24/7: +1 (555) 123-4567
+              Línea de servicios: +57 (300) 123-4567
             </p>
           </div>
           <p className="mt-8 text-xs leading-5 text-gray-400 md:order-1 md:mt-0">
-            &copy; 2025 Home Tech. Todos los derechos reservados.
+            &copy; 2025 HomeTech. Todos los derechos reservados.
           </p>
         </div>
       </div>

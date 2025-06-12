@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Features from './components/Features'
 import About from './components/About'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
+import ClientDashboard from './components/dashboards/ClientDashboard'
+import TechnicianDashboard from './components/dashboards/TechnicianDashboard'
 
-function App() {
+// Componente principal que maneja la navegación
+const AppContent = () => {
+  const { isAuthenticated, user } = useAuth()
+  const [currentPage, setCurrentPage] = useState('home')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -18,12 +24,88 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Reset to home when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCurrentPage('home')
+    }
+  }, [isAuthenticated])
+
+  const handleNavigation = (page: string) => {
+    setCurrentPage(page)
+  }
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        if (!isAuthenticated || !user) {
+          setCurrentPage('home')
+          return null
+        }
+        
+        if (user.role === 'client') {
+          return <ClientDashboard />
+        } else if (user.role === 'technician') {
+          return <TechnicianDashboard />
+        }
+        
+        // Default to home if role is not recognized
+        setCurrentPage('home')
+        return null
+
+      case 'profile':
+        // TODO: Implement profile page
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Perfil de Usuario</h2>
+              <p className="text-gray-600 mb-6">Funcionalidad en desarrollo</p>
+              <button
+                onClick={() => setCurrentPage('home')}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Volver al Inicio
+              </button>
+            </div>
+          </div>
+        )
+
+      case 'settings':
+        // TODO: Implement settings page
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Configuración</h2>
+              <p className="text-gray-600 mb-6">Funcionalidad en desarrollo</p>
+              <button
+                onClick={() => setCurrentPage('home')}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Volver al Inicio
+              </button>
+            </div>
+          </div>
+        )
+
+      default:
+        return (
+          <>
+            <Hero />
+            <Features />
+            <About />
+            <Contact />
+            <Footer />
+          </>
+        )
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
-          <h2 className="text-white text-xl font-semibold">Cargando Home Tech...</h2>
+          <h2 className="text-white text-xl font-semibold">Cargando HomeTech...</h2>
         </div>
       </div>
     )
@@ -31,13 +113,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-      <Hero />
-      <Features />
-      <About />
-      <Contact />
-      <Footer />
+      <Header onNavigate={handleNavigation} />
+      {renderPage()}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

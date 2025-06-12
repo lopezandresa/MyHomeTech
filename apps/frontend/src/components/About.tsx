@@ -3,18 +3,18 @@ import { motion } from 'framer-motion'
 
 const About = () => {
   const benefits = [
-    'Instalación rápida y sin complicaciones',
-    'Compatibilidad con más de 1000 dispositivos',
-    'Interfaz intuitiva y fácil de usar',
+    'Técnicos verificados y certificados',
+    'Especialistas en más de 50 tipos de electrodomésticos',
+    'Servicio a domicilio sin costo adicional',
     'Soporte técnico 24/7 en español',
-    'Actualizaciones automáticas gratuitas',
-    'Garantía de satisfacción del 100%'
+    'Garantía en todas las reparaciones',
+    'Presupuestos gratuitos y transparentes'
   ]
 
   const stats = [
     { label: 'Años de experiencia', value: '10+' },
-    { label: 'Hogares conectados', value: '15K+' },
-    { label: 'Países con presencia', value: '25+' },
+    { label: 'Reparaciones exitosas', value: '15K+' },
+    { label: 'Técnicos especializados', value: '500+' },
     { label: 'Satisfacción del cliente', value: '99%' }
   ]
 
@@ -31,20 +31,20 @@ const About = () => {
           >
             <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
               Líderes en
-              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> automatización </span>
-              doméstica
+              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> servicios técnicos </span>
+              a domicilio
             </h2>
             
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              En Home Tech, nos apasiona crear tecnología que simplifique la vida de las personas. 
-              Durante más de una década, hemos sido pioneros en el desarrollo de soluciones de 
-              automatización doméstica que no solo son innovadoras, sino también accesibles y fáciles de usar.
+              En HomeTech, conectamos hogares con los mejores técnicos especializados en reparación 
+              de electrodomésticos. Durante más de una década, hemos revolucionado la forma en que 
+              las personas acceden a servicios técnicos de calidad.
             </p>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Nuestro equipo de ingenieros y diseñadores trabaja incansablemente para crear productos 
-              que se adapten perfectamente a tu estilo de vida, brindándote el control total de tu hogar 
-              con la máxima seguridad y confiabilidad.
+              Nuestro equipo de técnicos certificados cuenta con años de experiencia en reparación 
+              de neveras, lavadoras, aires acondicionados, estufas y más. Todos los servicios incluyen 
+              garantía y soporte completo.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -75,7 +75,7 @@ const About = () => {
                 href="#contact"
                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
               >
-                Solicita una demostración
+                Solicita tu servicio
               </a>
             </motion.div>
           </motion.div>
@@ -92,21 +92,21 @@ const About = () => {
             <div className="relative bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl overflow-hidden shadow-2xl">
               <div className="aspect-w-4 aspect-h-3 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center h-96">
                 <div className="text-center text-white">
-                  <div className="text-6xl mb-4">🏠</div>
-                  <p className="text-xl font-semibold">Casa Inteligente</p>
-                  <p className="text-blue-200">Tecnología del futuro</p>
+                  <div className="text-6xl mb-4">🔧</div>
+                  <p className="text-xl font-semibold">Técnicos Expertos</p>
+                  <p className="text-blue-200">Reparación a domicilio</p>
                 </div>
               </div>
               
               {/* Floating stats cards */}
               <div className="absolute -bottom-6 -left-6 bg-white rounded-lg shadow-lg p-4">
                 <div className="text-2xl font-bold text-blue-600">24/7</div>
-                <div className="text-sm text-gray-600">Monitoreo</div>
+                <div className="text-sm text-gray-600">Disponible</div>
               </div>
               
               <div className="absolute -top-6 -right-6 bg-white rounded-lg shadow-lg p-4">
                 <div className="text-2xl font-bold text-green-600">100%</div>
-                <div className="text-sm text-gray-600">Seguro</div>
+                <div className="text-sm text-gray-600">Garantizado</div>
               </div>
             </div>
 
