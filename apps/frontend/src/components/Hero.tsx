@@ -104,15 +104,7 @@ const Hero = () => {
     if (!isAuthenticated) {
       return "Conectamos tu hogar con técnicos especializados en reparación de electrodomésticos. Rápido, confiable y desde la comodidad de tu casa."
     }
-    
-    if (user?.role === 'client') {
-      return `¡Hola ${user.name}! Solicita un técnico especializado para reparar tus electrodomésticos desde la comodidad de tu hogar.`
-    }
-    
-    if (user?.role === 'technician') {
-      return `¡Bienvenido ${user.name}! Encuentra trabajos de reparación cerca de ti y ayuda a otros usuarios con sus electrodomésticos.`
-    }
-    
+
     return "Conectamos tu hogar con técnicos especializados en reparación de electrodomésticos."
   }
 

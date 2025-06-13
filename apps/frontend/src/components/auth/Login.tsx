@@ -47,12 +47,14 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
       className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full"
     >
       <div className="text-center mb-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">HT</span>
-          </div>
+        <div className="flex items-center justify-center space-x-3 mb-4">
+          <img
+            src="/MyHomeTech-Logo-1.svg"
+            alt="MyHomeTech"
+            className="h-14 w-14"
+          />
           <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            HomeTech
+            MyHomeTech
           </span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>

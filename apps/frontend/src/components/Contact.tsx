@@ -84,23 +84,7 @@ const Contact = () => {
               }
             </p>
             
-            {!isAuthenticated && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="flex justify-center"
-              >
-                <button
-                  onClick={handleOpenAuth}
-                  className="group inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
-                >
-                  <UserPlusIcon className="mr-2 h-5 w-5" />
-                  Iniciar Sesión / Registrarse
-                </button>
-              </motion.div>
-            )}
+           
           </motion.div>
 
           {/* Benefits Section */}
@@ -166,36 +150,7 @@ const Contact = () => {
           </motion.div>
 
           {/* Call to Action */}
-          {!isAuthenticated && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-8 md:p-12 text-center text-white"
-            >
-              <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                ¡Comienza ahora mismo!
-              </h3>
-              <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-                Únete a la plataforma líder en servicios técnicos para el hogar. 
-                Crea tu cuenta gratuita y solicita tu primer técnico en menos de 5 minutos.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button
-                  onClick={handleOpenAuth}
-                  className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 transition-all duration-200 transform hover:scale-105"
-                >
-                  <UserPlusIcon className="mr-2 h-5 w-5" />
-                  Iniciar Sesión / Registrarse
-                </button>
-                <div className="text-blue-100">
-                  <span className="font-medium">✓ Sin costos ocultos</span> • 
-                  <span className="font-medium">✓ Registro en 2 minutos</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          
 
           {/* For authenticated users */}
           {isAuthenticated && (

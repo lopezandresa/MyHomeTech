@@ -15,9 +15,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
   const navigation = [
     { name: 'Inicio', href: '#hero', action: () => onNavigate?.('home') },
-    { name: 'Servicios', href: '#features', action: () => onNavigate?.('home') },
     { name: 'Acerca de', href: '#about', action: () => onNavigate?.('home') },
-    { name: 'Contacto', href: '#contact', action: () => onNavigate?.('home') },
+    // { name: 'Contacto', href: '#contact', action: () => onNavigate?.('home') },
   ]
 
   const handleAuthClick = () => {
