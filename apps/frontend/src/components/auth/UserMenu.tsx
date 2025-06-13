@@ -9,6 +9,7 @@ import {
   WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
+import UserAvatar from '../common/UserAvatar'
 
 interface UserMenuProps {
   onNavigate?: (page: string) => void
@@ -66,11 +67,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ onNavigate }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 bg-white border border-gray-200 rounded-full py-2 px-4 hover:bg-gray-50 transition-colors"
       >
-        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
-          <span className="text-white font-medium text-sm">
-            {user.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        <UserAvatar user={user} size="sm" />
         <span className="text-gray-700 font-medium hidden sm:block">
           {user.name}
         </span>
@@ -95,9 +92,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ onNavigate }) => {
             >
               {/* User Info */}
               <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                <p className="text-xs text-gray-500">{user.email}</p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
+                <div className="flex items-center space-x-3 mb-2">
+                  <UserAvatar user={user} size="md" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   user.role === 'client' 
                     ? 'bg-blue-100 text-blue-800' 
                     : user.role === 'technician'

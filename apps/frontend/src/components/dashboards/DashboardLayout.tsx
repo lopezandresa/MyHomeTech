@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import DashboardHeader from '../DashboardHeader'
+import UserAvatar from '../common/UserAvatar'
 
 interface DashboardLayoutProps {
   children: React.ReactNode | ((props: { activeTab: string; setActiveTab: (tab: string) => void }) => React.ReactNode)
@@ -98,19 +99,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* User Info */}
         <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
-              <span className="text-white font-semibold text-lg">
-                {user?.name?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{user?.name}</p>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {user?.role === 'client' ? 'Cliente' : 'Técnico'}
-              </span>
-            </div>
-          </div>
+          <UserAvatar user={user} size="lg" showName={true} />
         </div>        {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
           <ul className="space-y-2">

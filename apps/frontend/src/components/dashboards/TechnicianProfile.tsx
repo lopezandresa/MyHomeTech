@@ -533,9 +533,7 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
               {user && (
                 <ProfilePhotoUpload
                   user={user}
-                  onPhotoUpdated={(updatedUser) => {
-                    if (onPhotoUpdated) onPhotoUpdated(updatedUser)
-                  }}
+                  onPhotoUpdated={onPhotoUpdated}
                   size="lg"
                   isEditing={isEditing}
                   selectedFile={profilePhotoFile}

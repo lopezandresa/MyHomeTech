@@ -3,20 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   CheckIcon, 
   XMarkIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CloudArrowUpIcon
 } from '@heroicons/react/24/outline'
 import { authService } from '../../services/authService'
+import { useAuth } from '../../contexts/AuthContext'
 import type { User } from '../../types/index'
 import UserAvatar from './UserAvatar'
 
 interface ProfilePhotoUploadProps {
   user: User
-  onPhotoUpdated: (updatedUser: User) => void
+  onPhotoUpdated?: (updatedUser: User) => void
   size?: 'sm' | 'md' | 'lg' | 'xl'
   isEditing?: boolean
   selectedFile?: File | null
   onFileSelect?: (file: File | null) => void
   previewUrl?: string | null
+  showUploadButton?: boolean
+  autoUpload?: boolean // Nueva prop para controlar subida automática
 }
 
 const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
@@ -26,12 +30,16 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   isEditing = false,
   selectedFile,
   onFileSelect,
-  previewUrl
+  previewUrl,
+  showUploadButton = false,
+  autoUpload = false // Por defecto false para no subir automáticamente
 }) => {
+  const { refreshUser } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Crear un usuario temporal para mostrar la preview
+  // Crear un usuario temporal para mostrar la preview SOLO localmente
   const userWithPreview = previewUrl 
     ? { ...user, profilePhotoPath: previewUrl }
     : user
@@ -63,6 +71,43 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     }
 
     onFileSelect?.(file)
+    
+    // Solo subir automáticamente si autoUpload está habilitado
+    if (autoUpload) {
+      handleUpload(file)
+    }
+  }
+
+  const handleUpload = async (file?: File) => {
+    const fileToUpload = file || selectedFile
+    if (!fileToUpload) return
+
+    try {
+      setIsUploading(true)
+      setError(null)
+
+      // Subir la foto
+      const updatedUser = await authService.uploadProfilePhoto(fileToUpload)
+      
+      // Refrescar el contexto de autenticación para actualizar toda la app
+      await refreshUser()
+      
+      // Callback opcional
+      if (onPhotoUpdated) {
+        onPhotoUpdated(updatedUser)
+      }
+
+      // Limpiar archivo seleccionado
+      if (onFileSelect) {
+        onFileSelect(null)
+      }
+
+    } catch (error: any) {
+      console.error('Error uploading photo:', error)
+      setError(error.response?.data?.message || 'Error al subir la foto')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const clearError = () => {
@@ -78,7 +123,7 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
           size={size}
           editable={isEditing}
           onEditClick={handleAvatarClick}
-          isUploading={false}
+          isUploading={isUploading}
         />
         
         <div className="text-center">
@@ -118,6 +163,41 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
             className="text-gray-400 hover:text-gray-600"
           >
             <XMarkIcon className="h-4 w-4" />
+          </button>
+        </motion.div>
+      )}
+
+      {/* Mostrar aviso de cambios pendientes */}
+      {selectedFile && isEditing && !autoUpload && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
+        >
+          <p className="text-yellow-800 text-sm">
+            📷 Se actualizará tu foto cuando guardes los cambios
+          </p>
+        </motion.div>
+      )}
+
+      {/* Botón de subir (solo si showUploadButton es true) */}
+      {showUploadButton && selectedFile && isEditing && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-center"
+        >
+          <button
+            onClick={() => handleUpload()}
+            disabled={isUploading}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {isUploading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <CloudArrowUpIcon className="h-4 w-4" />
+            )}
+            <span>{isUploading ? 'Subiendo...' : 'Subir Foto'}</span>
           </button>
         </motion.div>
       )}

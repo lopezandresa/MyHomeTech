@@ -1,6 +1,7 @@
 import React from 'react'
-import { BellIcon, UserCircleIcon } from '@heroicons/react/24/outline'
+import { BellIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import UserAvatar from './common/UserAvatar'
 
 interface DashboardHeaderProps {
   title: string
@@ -37,9 +38,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle }) =>
                 {user?.role === 'client' ? 'Cliente' : 'Técnico'}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
-              <UserCircleIcon className="h-6 w-6 text-white" />
-            </div>
+            <UserAvatar user={user} size="md" />
           </div>
         </div>
       </div>
