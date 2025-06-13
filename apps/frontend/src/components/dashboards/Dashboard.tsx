@@ -14,7 +14,6 @@ import {
   BellIcon,
   WifiIcon,
   ArrowPathIcon,
-  ExclamationTriangleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
@@ -55,6 +54,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [scheduleDate, setScheduleDate] = useState('')
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
 
+  // Estado para mostrar notificaciones de nuevo trabajo
+  const [showRecentJobAlert, setShowRecentJobAlert] = useState(false);
+
   // ---- HOOKS DE NOTIFICACIONES ----
   // Para clientes
   const clientNotifications = useRealTimeClientNotifications(isClient ? user?.id : undefined)
@@ -63,20 +65,38 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const technicianNotifications = useRealTimeServiceRequests(isTechnician ? user?.id : undefined)
   
   // Estado para mostrar panel de notificaciones
-  const [showNotifications, setShowNotifications] = useState(false)
-
-  // ---- EFECTOS COMPARTIDOS ----
+  const [showNotifications, setShowNotifications] = useState(false)  // ---- EFECTOS COMPARTIDOS ----
   useEffect(() => {
     if (user) {
       loadData()
-      
-      // Solicitar permisos de notificación para técnicos
-      if (isTechnician) {
-        technicianNotifications.requestNotificationPermission()
-      }
     }
   }, [user])
 
+  // ---- EFECTO SEPARADO PARA TÉCNICOS ----
+  useEffect(() => {
+    if (user && isTechnician) {
+      // Solicitar permisos de notificación para técnicos
+      technicianNotifications.requestNotificationPermission()
+      
+      // Forzar una reconexión al montar el componente para asegurar que el WebSocket esté activo
+      if (technicianNotifications.connectionStatus.state !== ConnectionState.CONNECTED) {
+        console.log('🔄 Connection not established, forcing reconnect:', technicianNotifications.connectionStatus);
+        technicianNotifications.forceReconnect()
+      }
+      
+      // Debug logging del estado de conexión cada 3 segundos
+      const debugInterval = setInterval(() => {
+        console.log('🐛 Dashboard debug - Connection Status:', {
+          isConnected: technicianNotifications.isConnected,
+          connectionStatus: technicianNotifications.connectionStatus,
+          state: technicianNotifications.connectionStatus.state,
+          userId: user.id
+        });
+      }, 3000);
+      
+      return () => clearInterval(debugInterval);
+    }
+  }, [user?.id, isTechnician]); // Solo depende de user.id, no del objeto completo
   // ---- EFECTO PARA TÉCNICOS: ACTUALIZAR LISTA CON NOTIFICACIONES ----
   useEffect(() => {
     if (isTechnician && technicianNotifications.notifications.length > 0) {
@@ -97,15 +117,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         )
       }
     }
-  }, [isTechnician, technicianNotifications.notifications])
-
-  // ---- EFECTO PARA RECARGAR DATOS CUANDO SE RECONECTA (TÉCNICOS) ----
+  }, [isTechnician, technicianNotifications.notifications.length]) // Solo dependemos de la longitud, no del array completo  // ---- EFECTO PARA RECARGAR DATOS CUANDO SE RECONECTA (TÉCNICOS) ----
   useEffect(() => {
-    if (isTechnician && technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED && user) {
+    if (isTechnician && technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED && user?.id) {
       // When we reconnect, reload the data
-      loadData()
+      console.log('✅ Conexión WebSocket restablecida, recargando datos...');
+      loadData();
     }
-  }, [isTechnician, technicianNotifications.connectionStatus.state, user])
+  }, [isTechnician, technicianNotifications.connectionStatus.state, user?.id])
+
+  // ---- EFECTO PARA MOSTRAR ALERTA DE NUEVOS TRABAJOS ----
+  useEffect(() => {
+    if (isTechnician && technicianNotifications.notifications.length > 0) {
+      const latestNotification = technicianNotifications.notifications[0];
+      if (latestNotification.type === 'new') {
+        setShowRecentJobAlert(true);
+        
+        // Auto-ocultar después de 10 segundos
+        setTimeout(() => {
+          setShowRecentJobAlert(false);
+        }, 10000);
+      }
+    }
+  }, [isTechnician, technicianNotifications.notifications.length])
 
   // ---- FUNCIONES COMPARTIDAS ----
   const loadData = async () => {
@@ -539,11 +573,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">Trabajos Disponibles</h2>
           <span className="text-sm text-gray-600">{pendingRequests.length} solicitudes</span>
-        </div>
-
-        {/* Mostrar alerta de conexión */}
+        </div>        {/* Mostrar alerta de conexión */}
         <AnimatePresence>
           {renderConnectionAlert()}
+        </AnimatePresence>
+
+        {/* Alerta de nueva solicitud para técnicos */}
+        <AnimatePresence>
+          {isTechnician && showRecentJobAlert && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between"
+            >
+              <div className="flex items-center">
+                <WrenchScrewdriverIcon className="h-5 w-5 text-green-600 mr-2" />
+                <div>
+                  <h3 className="font-medium text-green-800">¡Nueva solicitud disponible!</h3>
+                  <p className="text-sm text-green-600">Revisa las solicitudes pendientes para ver los nuevos trabajos.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRecentJobAlert(false)}
+                className="text-green-600 hover:text-green-800"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {error && (
@@ -573,15 +631,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <p className="text-gray-600">Las nuevas solicitudes aparecerán aquí</p>
           </motion.div>
         ) : (
-          <div className="grid gap-6">
-            {pendingRequests.map((request, index) => (
+          <div className="grid gap-6">            {pendingRequests.map((request, index) => (
               <motion.div
                 key={request.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
+                className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 relative overflow-hidden"
               >
+                {/* Indicador de nueva solicitud */}
+                {request.createdAt && (Date.now() - new Date(request.createdAt).getTime() < 5 * 60 * 1000) && (
+                  <div className="absolute top-0 right-0 bg-red-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg animate-pulse">
+                    NUEVA
+                  </div>
+                )}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <WrenchScrewdriverIcon className="h-6 w-6 text-blue-600" />
@@ -1016,6 +1079,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
     return null
   }
+
+  // Debug effect for development
+  useEffect(() => {
+    if (import.meta.env.DEV && isTechnician) {
+      console.log('🔍 Dashboard Debug - Technician Connection Status:', {
+        isConnected: technicianNotifications.isConnected,
+        connectionState: technicianNotifications.connectionStatus.state,
+        notifications: technicianNotifications.notifications.length,
+        userId: user?.id
+      });
+    }
+  }, [
+    technicianNotifications.isConnected, 
+    technicianNotifications.connectionStatus.state, 
+    technicianNotifications.notifications.length,
+    isTechnician,
+    user?.id
+  ]);
 
   return (
     <>

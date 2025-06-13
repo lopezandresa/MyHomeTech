@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import webSocketService from '../services/webSocketService'
 import type { ServiceRequest } from '../types/index'
@@ -40,7 +40,6 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
   })
   const checkIntervalRef = useRef<number | null>(null)
   const statusCheckIntervalRef = useRef<number | null>(null)
-
   // Callback para nuevas solicitudes
   const handleNewServiceRequest = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
     console.log('🔔 New service request:', data)
@@ -56,11 +55,25 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     
     // Mostrar notificación del sistema si está soportada
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Nueva Solicitud de Servicio', {
+      const notif = new Notification('Nueva Solicitud de Servicio', {
         body: `${data.serviceRequest.appliance.name} - $${data.serviceRequest.clientPrice}`,
         icon: '/favicon.ico',
         tag: `service-request-${data.serviceRequest.id}`
-      })
+      });
+      
+      // Hacer que la notificación llame la atención
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      
+      // Reproducir sonido de notificación
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(e => console.log('No se pudo reproducir el sonido:', e));
+      } catch (e) {
+        console.log('Error al intentar reproducir sonido:', e);
+      }
     }
   }, [])
 
@@ -86,13 +99,19 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     setNotifications(prev => 
       prev.filter(notif => notif.serviceRequest.id !== data.serviceRequestId)
     )
-  }, [])
-  // Function to check connection and update status
+  }, [])  // Function to check connection and update status
   const checkAndUpdateConnectionStatus = useCallback(() => {
     if (!token) return false;
     
     const connected = webSocketService.isConnected();
     const status = webSocketService.getConnectionStatus();
+    
+    console.log('🔍 Checking connection status:', { 
+      connected, 
+      status, 
+      socketExists: !!webSocketService,
+      technicianId 
+    });
     
     // Determine connection state
     let connectionState: ConnectionStateType;
@@ -104,6 +123,8 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       connectionState = ConnectionState.DISCONNECTED;
     }
     
+    console.log('🔄 Updating connection state to:', connectionState);
+    
     setIsConnected(connected);
     setConnectionStatus({
       ...status,
@@ -111,15 +132,14 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     });
     
     return connected;
-  }, [token]);
+  }, [token, technicianId]);
 
   // Function to force reconnection
   const forceReconnect = useCallback(() => {
     if (!token) return;
     webSocketService.forceReconnect(token);
     checkAndUpdateConnectionStatus();
-  }, [token, checkAndUpdateConnectionStatus]);
-  // Efecto para conectar/desconectar WebSocket
+  }, [token, checkAndUpdateConnectionStatus]);  // Efecto para conectar/desconectar WebSocket
   useEffect(() => {
     if (!user || user.role !== 'technician' || !token) {
       setIsConnected(false);
@@ -130,6 +150,8 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       return;
     }
 
+    console.log('🔄 Setting up WebSocket connection for technician:', user.id);
+
     // Set to connecting state when starting connection
     setConnectionStatus(prev => ({
       ...prev,
@@ -138,14 +160,16 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
 
     // Conectar al WebSocket
     webSocketService.connect(token);
-    checkAndUpdateConnectionStatus();
+    
+    // Verificar estado inmediatamente después de conectar
+    setTimeout(() => {
+      checkAndUpdateConnectionStatus();
+    }, 1000);
 
     // Configurar listeners
     webSocketService.onNewServiceRequest(handleNewServiceRequest);
     webSocketService.onServiceRequestUpdated(handleServiceRequestUpdated);
-    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved);
-
-    // Verificar conexión periódicamente (cada 15 segundos)
+    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved);// Verificar conexión periódicamente (cada 5 segundos en lugar de 15)
     if (checkIntervalRef.current) {
       window.clearInterval(checkIntervalRef.current);
     }
@@ -158,7 +182,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       if (connected && technicianId) {
         webSocketService.joinTechnicianRoom(technicianId);
       }
-    }, 15000);
+    }, 5000); // Reducido de 15000 a 5000
     
     // Verificar estado de conexión más frecuentemente (cada 5 segundos)
     if (statusCheckIntervalRef.current) {
@@ -223,6 +247,17 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     };
   }, [technicianId, isConnected, token]);
 
+  // Debug logging for connection state changes
+  useEffect(() => {
+    if (user?.role === 'technician' && technicianId && token) {
+      console.log(`🔍 WebSocket connection state changed for technician ${technicianId}:`, {
+        state: connectionStatus.state,
+        connected: isConnected,
+        attempts: connectionStatus.attempts
+      });
+    }
+  }, [connectionStatus.state, isConnected, technicianId, user?.role, token]);
+
   // Función para solicitar permisos de notificación
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -241,8 +276,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
   const dismissNotification = useCallback((index: number) => {
     setNotifications(prev => prev.filter((_, i) => i !== index))
   }, [])
-
-  return {
+  return useMemo(() => ({
     notifications,
     isConnected,
     connectionStatus,
@@ -251,5 +285,13 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     clearNotifications,
     dismissNotification,
     hasUnreadNotifications: notifications.length > 0
-  }
+  }), [
+    notifications,
+    isConnected,
+    connectionStatus,
+    forceReconnect,
+    requestNotificationPermission,
+    clearNotifications,
+    dismissNotification
+  ])
 }

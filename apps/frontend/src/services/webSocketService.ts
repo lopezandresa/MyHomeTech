@@ -9,9 +9,13 @@ class WebSocketService {
   private reconnectTimer: number | null = null
   private lastToken: string | null = null
   private connectionAttempts: number = 0
-  private maxConnectionAttempts: number = 10
+  private maxConnectionAttempts: number = 10;
+  
   connect(token: string): void {
+    console.log('🔌 Attempting to connect to WebSocket server...');
+    
     if (this.socket?.connected) {
+      console.log('✅ Already connected to WebSocket server');
       return
     }
 
@@ -29,20 +33,23 @@ class WebSocketService {
       this.currentTechnicianId = this.restoreTechnicianRoom();
     }
 
+    console.log('🌐 Creating socket connection to:', import.meta.env.VITE_API_URL || 'http://localhost:3000');
+
     this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
       auth: {
         token
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,      reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000
     })
 
     this.socket.on('connect', () => {
       console.log('✅ Connected to WebSocket server')
+      console.log('🔗 Socket ID:', this.socket?.id)
+      console.log('🏠 Current technician ID:', this.currentTechnicianId)
       
       // Reset reconnection parameters
       this.reconnectInterval = 1000
@@ -50,6 +57,7 @@ class WebSocketService {
       
       // Si estábamos en una sala antes, volver a unirse
       if (this.currentTechnicianId) {
+        console.log('🔄 Rejoining technician room:', this.currentTechnicianId)
         this.joinTechnicianRoom(this.currentTechnicianId)
       }
     })
@@ -137,8 +145,7 @@ class WebSocketService {
     
     this.lastToken = null
     this.connectionAttempts = 0
-  }
-  joinTechnicianRoom(technicianId: number): void {
+  }  joinTechnicianRoom(technicianId: number): void {
     if (!this.socket?.connected) {
       console.warn('WebSocket not connected, will join room when connected')
       this.currentTechnicianId = technicianId // Save for when we connect
@@ -149,15 +156,21 @@ class WebSocketService {
     // Leave previous room if any
     if (this.currentTechnicianId && this.currentTechnicianId !== technicianId) {
       this.leaveTechnicianRoom(this.currentTechnicianId)
-    }    this.currentTechnicianId = technicianId
+    }
+    
+    this.currentTechnicianId = technicianId
     this.persistTechnicianRoom(technicianId);
     this.socket.emit('join-technician-room', { technicianId })
     console.log(`🏠 Joined technician room: ${technicianId}`)
-    
-    // Persist the technician room ID to localStorage
-    this.persistTechnicianRoom(technicianId)
+      // Añadir una verificación de unión a la sala para asegurar que todo funciona
+    setTimeout(() => {
+      if (this.socket?.connected) {
+        console.log(`🔍 Verifying technician room join for: ${technicianId}`);
+        // Reenviar join para asegurar que el backend recibió la solicitud
+        this.socket.emit('join-technician-room', { technicianId });
+      }
+    }, 1000);
   }
-
   leaveTechnicianRoom(technicianId: number): void {
     if (!this.socket?.connected) {
       return
@@ -165,13 +178,11 @@ class WebSocketService {
 
     this.socket.emit('leave-technician-room', { technicianId })
     console.log(`🚪 Left technician room: ${technicianId}`)
-      if (this.currentTechnicianId === technicianId) {
+    
+    if (this.currentTechnicianId === technicianId) {
       this.currentTechnicianId = null
       this.persistTechnicianRoom(null);
     }
-    
-    // Remove the technician room ID from localStorage
-    this.persistTechnicianRoom(null)
   }
 
   // Add a persistent identifier to help with reconnection
@@ -243,68 +254,76 @@ class WebSocketService {
     if (!this.socket) return
     this.socket.off('service-request-removed', callback)
   }
-  
+    // Method to check if WebSocket is connected
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    const connected = this.socket?.connected || false;
+    console.log('🔌 isConnected check:', { 
+      connected, 
+      socketExists: !!this.socket,
+      socketId: this.socket?.id,
+      readyState: this.socket?.connected
+    });
+    return connected;
   }
-  
-  // Función para comprobar la conexión y reconectar si es necesario
-  checkConnection(token: string): boolean {
-    if (!this.socket) {
-      this.connect(token);
-      return false;
-    }
+  // Method to get connection status
+  getConnectionStatus() {
+    const connected = this.socket?.connected || false;
+    console.log('📊 WebSocket status:', { 
+      connected, 
+      socketExists: !!this.socket,
+      attempts: this.connectionAttempts,
+      maxAttempts: this.maxConnectionAttempts 
+    });
     
-    if (!this.socket.connected) {
-      // Only try to reconnect if we're not already in the process
-      if (!this.reconnectTimer) {
-        this.connect(token);
-      }
-      return false;
-    }
-    
-    return true;
-  }
-  
-  // Method to force an immediate reconnection attempt
-  forceReconnect(token: string): void {
-    console.log('🔄 Forcing reconnection...')
-    
-    // Disconnect current socket if it exists
-    if (this.socket) {
-      this.socket.disconnect()
-      this.socket = null
-    }
-    
-    // Clear any existing reconnection timer
-    if (this.reconnectTimer) {
-      window.clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = null
-    }
-    
-    // Reset reconnection parameters
-    this.reconnectInterval = 1000
-    this.connectionAttempts = 0
-    
-    // Reconnect
-    this.connect(token)
-  }
-  
-  // Get connection details
-  getConnectionStatus(): { 
-    connected: boolean, 
-    attempts: number, 
-    maxAttempts: number,
-    nextAttemptIn: number | null 
-  } {
     return {
-      connected: this.socket?.connected || false,
+      connected,
       attempts: this.connectionAttempts,
       maxAttempts: this.maxConnectionAttempts,
       nextAttemptIn: this.reconnectTimer ? this.reconnectInterval : null
+    };
+  }
+
+  // Method to check connection with token
+  checkConnection(token: string): boolean {
+    if (!this.socket?.connected && token) {
+      if (this.connectionAttempts < this.maxConnectionAttempts) {
+        this.connect(token);
+      }
     }
+    return this.socket?.connected || false;
+  }
+
+  // Method to force reconnection
+  forceReconnect(token: string): void {
+    this.connectionAttempts = 0;
+    this.reconnectInterval = 1000;
+    if (this.reconnectTimer) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.disconnect();
+    this.connect(token);
+  }
+
+  // Debug method to check connection status
+  debugConnectionStatus(): void {
+    console.log('🔍 WebSocket Debug Info:');
+    console.log('Socket exists:', !!this.socket);
+    console.log('Socket connected:', this.socket?.connected);
+    console.log('Socket ID:', this.socket?.id);
+    console.log('Current technician ID:', this.currentTechnicianId);
+    console.log('Connection attempts:', this.connectionAttempts);
+    console.log('Max attempts:', this.maxConnectionAttempts);
+    console.log('Last token exists:', !!this.lastToken);
+    console.log('Reconnect timer active:', !!this.reconnectTimer);
   }
 }
 
 export const webSocketService = new WebSocketService()
+
+// Expose service for debugging in development
+if (import.meta.env.DEV) {
+  (window as any).webSocketService = webSocketService;
+}
+
 export default webSocketService

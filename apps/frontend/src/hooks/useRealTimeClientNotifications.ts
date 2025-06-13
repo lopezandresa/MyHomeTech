@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { io } from 'socket.io-client'
 import type { ServiceRequest } from '../types'
 
 interface ClientNotification {
@@ -25,7 +25,6 @@ interface UseRealTimeClientNotificationsReturn {
 export const useRealTimeClientNotifications = (
   clientId?: number
 ): UseRealTimeClientNotificationsReturn => {
-  const [socket, setSocket] = useState<Socket | null>(null)
   const [notifications, setNotifications] = useState<ClientNotification[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [hasPermission, setHasPermission] = useState(false)
@@ -123,6 +122,7 @@ export const useRealTimeClientNotifications = (
 
   const hasUnreadNotifications = notifications.some(n => !n.read)
 
+  // Efecto para conectar y configurar socket
   useEffect(() => {
     if (!clientId) return
 
@@ -181,20 +181,16 @@ export const useRealTimeClientNotifications = (
         serviceRequest: data.serviceRequest,
         message: data.message,
         type: data.type
-      })
-    })
-
-    setSocket(newSocket)
+      })    })
 
     return () => {
-      if (clientId) {
+      if (clientId && newSocket) {
         newSocket.emit('leave-client-room', { clientId })
       }
       newSocket.disconnect()
     }
   }, [clientId, addNotification])
-
-  return {
+  return useMemo(() => ({
     notifications,
     isConnected,
     hasUnreadNotifications,
@@ -203,5 +199,14 @@ export const useRealTimeClientNotifications = (
     dismissNotification,
     markAsRead,
     markAllAsRead
-  }
+  }), [
+    notifications,
+    isConnected,
+    hasUnreadNotifications,
+    requestNotificationPermission,
+    clearNotifications,
+    dismissNotification,
+    markAsRead,
+    markAllAsRead
+  ])
 }
