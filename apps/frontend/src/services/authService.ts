@@ -100,8 +100,18 @@ class AuthService {
   // Obtener URL de la foto de perfil
   getProfilePhotoUrl(profilePhotoPath?: string): string | null {
     if (!profilePhotoPath) return null
+    
+    // Limpiar la ruta que viene del backend
+    let cleanPath = profilePhotoPath
+    
+    // Si la ruta comienza con './', quitamos el './'
+    if (profilePhotoPath.startsWith('./')) {
+      cleanPath = profilePhotoPath.substring(2)
+    }
+    
     // La URL se construye con el endpoint estático del backend
-    return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/profile-photos/${profilePhotoPath.split('/').pop()}`
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    return `${baseUrl}/${cleanPath}`
   }
 
   // Verificar rol

@@ -77,7 +77,6 @@ const TechnicianProfile: React.FC = () => {
         specialties: profileData.specialties.map(s => s.id)
       })
     } catch (error) {
-      console.log('Profile not found, user needs to create one')
       setHasProfile(false)
       setFormData({
         fullName: user.name,
@@ -177,14 +176,13 @@ const TechnicianProfile: React.FC = () => {
       setSuccess(null)
 
       // Validate required fields based on active tab
-      if (activeTab === 'user') {
-        if (!formData.fullName) {
-          setError('El nombre es obligatorio')
+      if (activeTab === 'professional') {
+        if (!formData.cedula.trim()) {
+          setError('La cédula es obligatoria')
           return
         }
-      } else if (activeTab === 'professional') {
-        if (!formData.cedula || !formData.birthDate) {
-          setError('Cédula y fecha de nacimiento son obligatorios')
+        if (!formData.birthDate) {
+          setError('La fecha de nacimiento es obligatoria')
           return
         }
         if (!hasProfile && formData.specialties.length === 0) {
@@ -197,33 +195,30 @@ const TechnicianProfile: React.FC = () => {
         }
       }
 
-      // Create or update profile
-      const profileRequest: CreateTechnicianProfileRequest = {
-        identityId: user!.id,
-        cedula: formData.cedula,
-        birthDate: formData.birthDate,
-        experienceYears: formData.experienceYears,
-        specialties: formData.specialties,
-        idPhotoFile: profilePhotoFile || undefined
+      // Create or update profile (only for professional tab)
+      if (activeTab === 'professional') {
+        const profileRequest: CreateTechnicianProfileRequest = {
+          identityId: user!.id,
+          cedula: formData.cedula.trim(),
+          birthDate: formData.birthDate,
+          experienceYears: Number(formData.experienceYears) || 0,
+          specialties: formData.specialties,
+          idPhotoFile: profilePhotoFile || undefined
+        }
+
+        if (hasProfile) {
+          // Update existing profile
+          await technicianService.updateMyProfile(profileRequest)
+        } else {
+          // Create new profile
+          await technicianService.createProfile(profileRequest)
+        }
+
+        setSuccess('Perfil profesional actualizado correctamente')
+        await loadProfile()
       }
 
-      if (hasProfile) {
-        // Update existing profile
-        await technicianService.updateMyProfile(profileRequest)
-      } else {
-        // Create new profile
-        await technicianService.createProfile(profileRequest)
-      }
-
-      // Update user name if changed
-      if (formData.fullName !== user?.name) {
-        await authService.updateProfile({ name: formData.fullName })
-        await refreshUser()
-      }
-
-      setSuccess('Perfil actualizado correctamente')
       setIsEditing(false)
-      await loadProfile()
     } catch (error: any) {
       console.error('Error saving profile:', error)
       setError(error.response?.data?.message || 'Error al guardar el perfil')
@@ -393,6 +388,8 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
 }) => {
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
+  const [localIsLoading, setLocalIsLoading] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
 
   // Cleanup preview URL when component unmounts or file changes
   React.useEffect(() => {
@@ -421,23 +418,49 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
 
   const handleSaveWithPhoto = async () => {
     try {
+      setLocalIsLoading(true)
+      setLocalError(null)
+      if (setSuccess) setSuccess(null)
+
       // Si hay una foto seleccionada, subirla primero
       if (profilePhotoFile) {
         const updatedUser = await authService.uploadProfilePhoto(profilePhotoFile)
+        
+        // IMPORTANTE: Limpiar el preview ANTES de actualizar el contexto
+        if (profilePhotoPreview) {
+          URL.revokeObjectURL(profilePhotoPreview)
+          setProfilePhotoPreview(null)
+        }
+        setProfilePhotoFile(null)
+        
+        // Ahora actualizar el contexto con el usuario que tiene la foto real
         if (onPhotoUpdated) onPhotoUpdated(updatedUser)
       }
       
-      // Luego ejecutar el guardado normal
-      await onSave()
-      
-      // Limpiar estados de foto
-      setProfilePhotoFile(null)
-      if (profilePhotoPreview) {
-        URL.revokeObjectURL(profilePhotoPreview)
-        setProfilePhotoPreview(null)
+      // Actualizar nombre si cambió
+      if (formData.fullName !== user?.name) {
+        await authService.updateProfile({ name: formData.fullName })
       }
-    } catch (error) {
-      console.error('Error saving with photo:', error)
+      
+      // Refrescar el usuario para asegurar que se actualice en toda la app
+      const refreshedUser = await authService.getProfile()
+      
+      if (onPhotoUpdated) {
+        onPhotoUpdated(refreshedUser)
+      }
+
+      if (setSuccess) setSuccess('Información de usuario actualizada correctamente')
+      
+      // Salir del modo edición
+      setTimeout(() => {
+        onCancel() // Esto cambiará isEditing a false
+      }, 1000)
+      
+    } catch (error: any) {
+      console.error('Error saving user info:', error)
+      setLocalError(error.response?.data?.message || 'Error al guardar la información')
+    } finally {
+      setLocalIsLoading(false)
     }
   }
 
@@ -456,13 +479,13 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
   return (
     <>
       {/* Alerts */}
-      {error && (
+      {(error || localError) && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
         >
-          <p className="text-red-800">{error}</p>
+          <p className="text-red-800">{error || localError}</p>
         </motion.div>
       )}
 
@@ -564,10 +587,10 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
               </button>
               <button
                 onClick={handleSaveWithPhoto}
-                disabled={isLoading}
+                disabled={localIsLoading}
                 className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {isLoading ? (
+                {localIsLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <CheckIcon className="h-4 w-4" />

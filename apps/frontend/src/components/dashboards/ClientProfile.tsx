@@ -57,7 +57,6 @@ const ClientProfile: React.FC = () => {
         phone: profileData.phone
       })
     } catch (error) {
-      console.log('Profile not found, user needs to create one')
       setHasProfile(false)
       setFormData({
         fullName: user.name,
