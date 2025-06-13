@@ -5,10 +5,12 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Identity } from '../identity/identity.entity';
 import { Appliance } from '../appliance/appliance.entity';
 import { Address } from '../address/address.entity';
+import { ServiceRequestOffer } from './service-request-offer.entity';
 
 export enum ServiceRequestStatus {
   PENDING      = 'pending',
@@ -96,5 +98,10 @@ export class ServiceRequest {
   cancelledAt?: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  expiredAt?: Date;
+  expiredAt?: Date;  /** Ofertas recibidas de técnicos */
+  @OneToMany(() => ServiceRequestOffer, offer => offer.serviceRequest, { 
+    cascade: true,
+    eager: false // Cargar solo cuando se necesite
+  })
+  offers?: ServiceRequestOffer[];
 }

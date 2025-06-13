@@ -239,6 +239,11 @@ class WebSocketService {
     this.socket.on('service-request-removed', callback)
   }
 
+  onOfferRejected(callback: (data: { serviceRequest: ServiceRequest, message: string, type: string }) => void): void {
+    if (!this.socket) return
+    this.socket.on('offer-rejected', callback)
+  }
+
   // Remove event listeners
   offNewServiceRequest(callback?: (...args: any[]) => void): void {
     if (!this.socket) return
@@ -253,6 +258,11 @@ class WebSocketService {
   offServiceRequestRemoved(callback?: (...args: any[]) => void): void {
     if (!this.socket) return
     this.socket.off('service-request-removed', callback)
+  }
+
+  offOfferRejected(callback?: (...args: any[]) => void): void {
+    if (!this.socket) return
+    this.socket.off('offer-rejected', callback)
   }
     // Method to check if WebSocket is connected
   isConnected(): boolean {

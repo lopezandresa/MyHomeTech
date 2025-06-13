@@ -4,8 +4,7 @@
   "description": "Backend API for My Home Tech",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
-  "scripts": {
+  "license": "UNLICENSED",  "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -18,7 +17,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "typeorm:generate": "npm run typeorm -- migration:generate -d src/database/data-source.ts",
+    "typeorm:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
+    "typeorm:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

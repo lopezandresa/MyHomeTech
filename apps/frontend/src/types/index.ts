@@ -122,7 +122,7 @@ export interface ServiceRequest {
   addressId: number
   description: string
   clientPrice: number
-  technicianPrice?: number
+  technicianPrice?: number // Mantenido por compatibilidad
   status: 'pending' | 'offered' | 'accepted' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'expired'
   createdAt: string
   expiresAt?: string
@@ -136,6 +136,7 @@ export interface ServiceRequest {
   appliance: Appliance
   address: Address
   technician?: User
+  offers?: ServiceRequestOffer[] // Nuevas ofertas múltiples
 }
 
 export interface CreateServiceRequestRequest {
@@ -148,6 +149,7 @@ export interface CreateServiceRequestRequest {
 
 export interface OfferPriceRequest {
   technicianPrice: number
+  comment?: string
 }
 
 export interface AcceptRequestRequest {
@@ -191,3 +193,16 @@ export interface CreateAddressRequest {
 }
 
 export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+
+// Ofertas de técnicos
+export interface ServiceRequestOffer {
+  id: number
+  serviceRequestId: number
+  technicianId: number
+  price: number
+  status: 'pending' | 'accepted' | 'rejected'
+  comment?: string
+  createdAt: string
+  resolvedAt?: string
+  technician: User // Identity/User object, not full TechnicianProfile
+}

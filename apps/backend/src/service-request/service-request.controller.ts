@@ -75,7 +75,6 @@ export class ServiceRequestController {
   ): Promise<ServiceRequest> {
     return this.svc.offerPrice(id, req.user.id, dto);
   }
-
   // 4) Cliente acepta
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('client')
@@ -127,16 +126,15 @@ export class ServiceRequestController {
   ): Promise<ServiceRequest | null> {
     return this.svc.findById(id);
   }
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('client')
   @Get('client/:clientId')
   @ApiParam({ name: 'clientId', type: Number })
-  @ApiOperation({ summary: 'Cliente ve su historial de solicitudes' })
+  @ApiOperation({ summary: 'Cliente ve su historial de solicitudes con ofertas' })
   findByClient(
     @Param('clientId', ParseIntPipe) clientId: number,
   ): Promise<ServiceRequest[]> {
-    return this.svc.findByClient(clientId);
+    return this.svc.findByClientWithOffers(clientId);
   }
 
   
@@ -176,5 +174,60 @@ export class ServiceRequestController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ServiceRequest> {
     return this.svc.rejectByTechnician(id, req.user.id);
+  }
+
+  // Cliente rechaza oferta del técnico
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('client')
+  @Post(':id/reject-offer')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Cliente rechaza la oferta del técnico' })
+  async rejectOffer(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ServiceRequest> {
+    return this.svc.rejectOfferByClient(id, req.user.id);
+  }
+
+  // Cliente acepta oferta específica
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('client')
+  @Post(':id/accept-offer/:offerId')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiParam({ name: 'offerId', type: Number })
+  @ApiOperation({ summary: 'Cliente acepta una oferta específica' })
+  async acceptSpecificOffer(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('offerId', ParseIntPipe) offerId: number,
+  ): Promise<ServiceRequest> {
+    return this.svc.acceptSpecificOffer(id, offerId, req.user.id);
+  }
+
+  // Cliente cancela toda la solicitud
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('client')
+  @Post(':id/cancel')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Cliente cancela su solicitud' })
+  async cancelRequest(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ServiceRequest> {
+    return this.svc.cancelByClient(id, req.user.id);
+  }
+
+  // 3b) Cliente actualiza precio inicial
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('client')
+  @Post(':id/update-price')
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Cliente actualiza el precio inicial de su solicitud' })
+  updatePrice(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { price: number },
+  ): Promise<ServiceRequest> {
+    return this.svc.updateClientPrice(id, req.user.id, dto.price);
   }
 }

@@ -99,6 +99,28 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     setNotifications(prev => 
       prev.filter(notif => notif.serviceRequest.id !== data.serviceRequestId)
     )
+  }, [])
+
+  // Callback para ofertas rechazadas
+  const handleOfferRejected = useCallback((data: { serviceRequest: ServiceRequest, message: string, type: string }) => {
+    console.log('❌ Offer rejected:', data)
+    
+    const notification: ServiceRequestNotification = {
+      serviceRequest: data.serviceRequest,
+      message: data.message,
+      timestamp: new Date(),
+      type: 'removed'
+    }
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 9)])
+    
+    // Mostrar notificación del sistema
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Oferta rechazada', {
+        body: data.message,
+        icon: '/favicon.ico'
+      })
+    }
   }, [])  // Function to check connection and update status
   const checkAndUpdateConnectionStatus = useCallback(() => {
     if (!token) return false;
@@ -164,12 +186,11 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     // Verificar estado inmediatamente después de conectar
     setTimeout(() => {
       checkAndUpdateConnectionStatus();
-    }, 1000);
-
-    // Configurar listeners
+    }, 1000);    // Configurar listeners
     webSocketService.onNewServiceRequest(handleNewServiceRequest);
     webSocketService.onServiceRequestUpdated(handleServiceRequestUpdated);
-    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved);// Verificar conexión periódicamente (cada 5 segundos en lugar de 15)
+    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved);
+    webSocketService.onOfferRejected(handleOfferRejected);// Verificar conexión periódicamente (cada 5 segundos en lugar de 15)
     if (checkIntervalRef.current) {
       window.clearInterval(checkIntervalRef.current);
     }
@@ -191,13 +212,12 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     
     statusCheckIntervalRef.current = window.setInterval(() => {
       checkAndUpdateConnectionStatus();
-    }, 5000);
-
-    // Cleanup al desmontar
+    }, 5000);    // Cleanup al desmontar
     return () => {
       webSocketService.offNewServiceRequest(handleNewServiceRequest);
       webSocketService.offServiceRequestUpdated(handleServiceRequestUpdated);
       webSocketService.offServiceRequestRemoved(handleServiceRequestRemoved);
+      webSocketService.offOfferRejected(handleOfferRejected);
       
       if (checkIntervalRef.current) {
         window.clearInterval(checkIntervalRef.current);

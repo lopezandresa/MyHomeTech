@@ -199,4 +199,15 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     
     this.logger.log(`Notified client ${serviceRequest.clientId} about request update ${serviceRequest.id}: ${type}`);
   }
+
+  // Notificar al técnico cuando el cliente rechaza su oferta
+  notifyOfferRejected(serviceRequest: ServiceRequest, technicianId: number) {
+    this.server.to(`technician-${technicianId}`).emit('offer-rejected', {
+      serviceRequest,
+      message: 'El cliente ha rechazado tu oferta',
+      type: 'rejected'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} about rejected offer for request ${serviceRequest.id}`);
+  }
 }

@@ -27,6 +27,9 @@ import ClientProfile from './ClientProfile'
 import TechnicianProfile from './TechnicianProfile'
 import { ClientNotifications } from '../ClientNotifications'
 import CountdownTimer from '../CountdownTimer'
+import { MultiOfferDebug } from '../MultiOfferDebug'
+import { OfferCard } from '../OfferCard'
+import { useOfferThrottle } from '../../hooks/useOfferThrottle'
 
 interface DashboardProps {
   onNavigate?: (page: string) => void
@@ -237,18 +240,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return <ClipboardDocumentListIcon className="h-5 w-5" />
     }
   }
-
   // ---- FUNCIONES ESPECÍFICAS PARA CLIENTES ----
-  const handleAcceptOffer = async (requestId: number, acceptClientPrice: boolean) => {
-    try {
-      await serviceRequestService.acceptRequest(requestId, { acceptClientPrice })
-      await loadData()
-    } catch (error) {
-      console.error('Error accepting offer:', error)
-      setError('Error al aceptar la oferta')
-    }
-  }
-
   const handleCompleteService = async (requestId: number) => {
     try {
       await serviceRequestService.completeRequest(requestId)
@@ -259,9 +251,68 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
   }
 
+  const handleAcceptSpecificOffer = async (serviceRequestId: number, offerId: number) => {
+    try {
+      await serviceRequestService.acceptSpecificOffer(serviceRequestId, offerId)
+      // Remover la solicitud de la lista ya que fue aceptada
+      setClientRequests(prev => prev.filter(req => req.id !== serviceRequestId))
+    } catch (error) {
+      console.error('Error accepting specific offer:', error)
+      setError('Error al aceptar la oferta')
+    }
+  }
+
+  const handleCancelRequest = async (requestId: number) => {
+    try {
+      await serviceRequestService.cancelRequest(requestId)
+      // Remover la solicitud de la lista ya que fue cancelada
+      setClientRequests(prev => prev.filter(req => req.id !== requestId))
+    } catch (error) {
+      console.error('Error cancelling request:', error)
+      setError('Error al cancelar la solicitud')
+    }
+  }
+
+  const handleUpdateClientPrice = async (requestId: number, currentPrice: number) => {
+    const newPriceStr = prompt(`Precio actual: $${currentPrice.toLocaleString()} COP\n\nIngresa el nuevo precio:`, currentPrice.toString())
+    
+    if (!newPriceStr) return // Usuario canceló
+    
+    const newPrice = parseInt(newPriceStr.replace(/[^\d]/g, ''))
+    
+    if (!newPrice || newPrice <= 0) {
+      alert('Por favor ingresa un precio válido')
+      return
+    }
+    
+    if (newPrice === currentPrice) {
+      alert('El precio debe ser diferente al actual')
+      return
+    }
+
+    try {
+      const updatedRequest = await serviceRequestService.updateClientPrice(requestId, newPrice)
+      
+      // Actualizar la solicitud en la lista
+      setClientRequests(prev => 
+        prev.map(req => req.id === requestId ? updatedRequest : req)
+      )
+      
+      alert(`Precio actualizado exitosamente a $${newPrice.toLocaleString()} COP. Los técnicos serán notificados del cambio.`)
+    } catch (error) {
+      console.error('Error updating client price:', error)
+      setError('Error al actualizar el precio')
+    }
+  }
+
   // ---- FUNCIONES ESPECÍFICAS PARA TÉCNICOS ----
   const handleMakeOffer = async (requestId: number) => {
     if (!offerPrice) return
+    
+    if (!canMakeOffer) {
+      setError(`Debes esperar ${timeLeft} segundos antes de hacer otra oferta`)
+      return
+    }
     
     try {
       await serviceRequestService.offerPrice(requestId, { 
@@ -269,6 +320,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       })
       setOfferPrice('')
       setSelectedRequest(null)
+      startThrottle() // Iniciar el período de throttling
       await loadData()
     } catch (error) {
       console.error('Error making offer:', error)
@@ -317,6 +369,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       technicianNotifications.forceReconnect()
     }
   }
+
+  // Hook para throttling de ofertas de técnicos
+  const { canMakeOffer, timeLeft, startThrottle } = useOfferThrottle()
 
   // ---- RENDERIZADO DE SECCIONES ----
   
@@ -503,33 +558,62 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   
                   <div className="mt-4 text-gray-700">
                     <p>{request.description}</p>
-                  </div>
-                  
-                  {/* Acciones específicas para clientes según el estado */}
+                  </div>                  {/* Acciones específicas para clientes según el estado */}
                   <div className="mt-4">
-                    {request.status === 'offered' && (
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="font-medium text-blue-800 mb-2">El técnico ha hecho una oferta:</p>
-                        <div className="flex justify-between items-center mb-4">
-                          <div>
-                            <p className="text-sm text-gray-600">Tu oferta: <span className="font-medium">${request.clientPrice.toLocaleString()} COP</span></p>
-                            <p className="text-sm text-gray-600">Oferta del técnico: <span className="font-medium">${request.technicianPrice?.toLocaleString()} COP</span></p>
-                          </div>
-                          <div className="flex gap-2">
+                    {request.status === 'offered' && request.offers && request.offers.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-gray-800 flex items-center gap-2">
+                            <CurrencyDollarIcon className="h-5 w-5 text-blue-600" />
+                            Ofertas recibidas ({request.offers.filter(o => o.status === 'pending').length})
+                          </h4>
+                          <button
+                            onClick={() => handleCancelRequest(request.id)}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                            Cancelar solicitud
+                          </button>
+                        </div>
+                          {/* Tu oferta inicial como referencia */}
+                        <div className="p-3 bg-gray-50 rounded-lg border">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600 mb-1">Tu oferta inicial</p>
+                              <p className="text-lg font-bold text-gray-800">${request.clientPrice.toLocaleString()} COP</p>
+                            </div>
                             <button
-                              onClick={() => handleAcceptOffer(request.id, true)}
-                              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                              onClick={() => handleUpdateClientPrice(request.id, request.clientPrice)}
+                              className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm flex items-center gap-1"
                             >
-                              Aceptar mi precio
-                            </button>
-                            <button
-                              onClick={() => handleAcceptOffer(request.id, false)}
-                              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                            >
-                              Aceptar oferta
+                              <CurrencyDollarIcon className="h-4 w-4" />
+                              Actualizar precio
                             </button>
                           </div>
                         </div>
+                          {/* Lista de ofertas ordenadas por fecha */}
+                        <div className="space-y-3">
+                          {request.offers
+                            .filter(offer => offer.status === 'pending')
+                            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                            .map((offer, index) => (
+                              <OfferCard
+                                key={offer.id}
+                                offer={offer}
+                                index={index}
+                                requestId={request.id}
+                                onAccept={handleAcceptSpecificOffer}
+                              />
+                            ))
+                          }
+                        </div>
+                        
+                        {request.offers.filter(o => o.status === 'pending').length === 0 && (
+                          <div className="text-center py-6 text-gray-500">
+                            <CurrencyDollarIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                            <p>No hay ofertas pendientes</p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {request.status === 'scheduled' && (
@@ -1174,13 +1258,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Cancelar
-              </button>
-              <button
+              </button>              <button
                 onClick={() => handleMakeOffer(selectedRequest.id)}
-                disabled={!offerPrice}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                disabled={!offerPrice || !canMakeOffer}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  !offerPrice || !canMakeOffer 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                Enviar Oferta
+                {!canMakeOffer 
+                  ? `Espera ${timeLeft}s` 
+                  : 'Enviar Oferta'
+                }
               </button>
             </div>
           </motion.div>
@@ -1227,6 +1317,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </button>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* Debug Panel - Only in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-6">
+          <MultiOfferDebug 
+            clientId={isClient ? user?.id : undefined}
+            technicianId={isTechnician ? user?.id : undefined}
+          />
         </div>
       )}
     </>
