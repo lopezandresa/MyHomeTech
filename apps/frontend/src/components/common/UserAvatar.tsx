@@ -68,7 +68,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         {cachedUrl ? (
           <img
             src={cachedUrl}
-            alt={`Foto de ${user.name}`}
+            alt={`Foto de ${user.firstName} ${user.firstLastName}`}
             className="h-full w-full object-cover"
             onError={(e) => {
               // Si la imagen falla al cargar, mostrar el icono por defecto
@@ -98,7 +98,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       
       {showName && (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-900">{user.name}</span>
+          <span className="text-sm font-medium text-gray-900">{user.firstName} {user.firstLastName}</span>
           <span className="text-xs text-gray-500 capitalize">{user.role}</span>
         </div>
       )}

@@ -1,24 +1,39 @@
 import { IsOptional, IsString, IsEmail, IsIn } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../identity.entity';
 
 export class UpdateIdentityDto {
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ description: 'Primer nombre del usuario' })
   @IsOptional()
   @IsString()
-  name?: string;
+  firstName?: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ description: 'Segundo nombre del usuario' })
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @ApiPropertyOptional({ description: 'Primer apellido del usuario' })
+  @IsOptional()
+  @IsString()
+  firstLastName?: string;
+
+  @ApiPropertyOptional({ description: 'Segundo apellido del usuario' })
+  @IsOptional()
+  @IsString()
+  secondLastName?: string;
+
+  @ApiPropertyOptional({ description: 'Email del usuario' })
   @IsOptional()
   @IsEmail()
   email?: string;
 
-  @ApiProperty({ required: false, enum: ['client','technician','admin'] })
+  @ApiPropertyOptional({ description: 'Rol del usuario', enum: ['client','technician','admin'] })
   @IsOptional()
   @IsIn(['client','technician','admin'])
   role?: Role;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ description: 'Nueva contraseña' })
   @IsOptional()
   @IsString()
   password?: string;

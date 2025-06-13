@@ -33,12 +33,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle }) =>
           {/* User Profile */}
           <div className="flex items-center space-x-3">
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.firstLastName}</p>
               <p className="text-xs text-gray-500 capitalize">
                 {user?.role === 'client' ? 'Cliente' : 'Técnico'}
               </p>
             </div>
-            <UserAvatar user={user} size="md" />
+            {user && <UserAvatar user={user} size="md" />}
           </div>
         </div>
       </div>

@@ -1,16 +1,24 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import type { User } from '../types/index'
-import authService from '../services/authService'
+import type { User, UpdateProfileRequest } from '../types/index'
+import { authService } from '../services/authService'
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string, role: 'client' | 'technician') => Promise<void>
+  register: (
+    firstName: string, 
+    middleName: string | undefined, 
+    firstLastName: string, 
+    secondLastName: string | undefined, 
+    email: string, 
+    password: string, 
+    role: 'client' | 'technician'
+  ) => Promise<void>
   logout: () => void
-  updateProfile: (data: { name?: string; email?: string; password?: string }) => Promise<void>
+  updateProfile: (data: UpdateProfileRequest) => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -56,15 +64,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const register = async (name: string, email: string, password: string, role: 'client' | 'technician') => {
+  const register = async (
+    firstName: string, 
+    middleName: string | undefined, 
+    firstLastName: string, 
+    secondLastName: string | undefined, 
+    email: string, 
+    password: string, 
+    role: 'client' | 'technician'
+  ) => {
     try {
       setIsLoading(true)
-      await authService.register({ name, email, password, role })
+      await authService.register({ 
+        firstName, 
+        middleName, 
+        firstLastName, 
+        secondLastName, 
+        email, 
+        password, 
+        role 
+      })
       // Después del registro, hacer login automático
       await login(email, password)
     } catch (error) {
       setIsLoading(false)
       throw error
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -73,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null)
   }
 
-  const updateProfile = async (data: { name?: string; email?: string; password?: string }) => {
+  const updateProfile = async (data: UpdateProfileRequest) => {
     try {
       const updatedUser = await authService.updateProfile(data)
       setUser(updatedUser)

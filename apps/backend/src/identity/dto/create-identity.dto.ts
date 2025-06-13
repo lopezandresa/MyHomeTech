@@ -1,11 +1,25 @@
-import { IsString, IsEmail, MinLength, IsIn } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEmail, MinLength, IsIn, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../identity.entity';
 
 export class CreateIdentityDto {
-  @ApiProperty({ description: 'Nombre completo del usuario' })
+  @ApiProperty({ description: 'Primer nombre del usuario' })
   @IsString()
-  name: string;
+  firstName: string;
+
+  @ApiPropertyOptional({ description: 'Segundo nombre del usuario' })
+  @IsString()
+  @IsOptional()
+  middleName?: string;
+
+  @ApiProperty({ description: 'Primer apellido del usuario' })
+  @IsString()
+  firstLastName: string;
+
+  @ApiPropertyOptional({ description: 'Segundo apellido del usuario' })
+  @IsString()
+  @IsOptional()
+  secondLastName?: string;
 
   @ApiProperty({ description: 'Email único del usuario' })
   @IsEmail()

@@ -41,7 +41,7 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
 
   // Crear un usuario temporal para mostrar la preview SOLO localmente
   const userWithPreview = previewUrl 
-    ? { ...user, profilePhotoPath: previewUrl }
+    ? { ...user, profilePhotoUrl: previewUrl }
     : user
 
   const handleAvatarClick = () => {

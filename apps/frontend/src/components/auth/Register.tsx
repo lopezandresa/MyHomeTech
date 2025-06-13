@@ -10,22 +10,51 @@ interface RegisterProps {
 
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
   const { register, isLoading } = useAuth()
-  const [formData, setFormData] = useState({
-    name: '',
+  const [formData, setFormData] = useState<{
+    firstName: string
+    middleName: string
+    firstLastName: string
+    secondLastName: string
+    email: string
+    password: string
+    confirmPassword: string
+    role: 'client' | 'technician'
+  }>({
+    firstName: '',
+    middleName: '',
+    firstLastName: '',
+    secondLastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'client' as 'client' | 'technician'
+    role: 'client'
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Utility function to capitalize names
+  const capitalizeName = (name: string, isLastName: boolean = false): string => {
+    const capitalized = name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    
+    // Only remove extra spaces for first and middle names, preserve spaces in last names
+    return isLastName ? capitalized : capitalized.replace(/\s+/g, ' ').trim()
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    
+    // Apply capitalization to name fields
+    const nameFields = ['firstName', 'middleName', 'firstLastName', 'secondLastName']
+    const processedValue = nameFields.includes(name) ? capitalizeName(value, name.includes('LastName')) : value
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }))
     if (error) setError(null)
   }
@@ -53,7 +82,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     }
 
     try {
-      await register(formData.name, formData.email, formData.password, formData.role)
+      await register(formData.firstName, formData.middleName, formData.firstLastName, formData.secondLastName, formData.email, formData.password, formData.role)
       onClose()
     } catch (error: any) {
       console.error('Register error:', error)
@@ -127,20 +156,71 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
           </div>
         </div>
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-            Nombre completo
-          </label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            placeholder="Tu nombre completo"
-          />
+        {/* Name fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+              Primer Nombre *
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ingresa tu primer nombre"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="middleName" className="block text-sm font-medium text-gray-700 mb-1">
+              Segundo Nombre
+            </label>
+            <input
+              type="text"
+              id="middleName"
+              name="middleName"
+              value={formData.middleName}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ingresa tu segundo nombre (opcional)"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="firstLastName" className="block text-sm font-medium text-gray-700 mb-1">
+              Primer Apellido *
+            </label>
+            <input
+              type="text"
+              id="firstLastName"
+              name="firstLastName"
+              value={formData.firstLastName}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ingresa tu primer apellido"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="secondLastName" className="block text-sm font-medium text-gray-700 mb-1">
+              Segundo Apellido
+            </label>
+            <input
+              type="text"
+              id="secondLastName"
+              name="secondLastName"
+              value={formData.secondLastName}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ingresa tu segundo apellido (opcional)"
+            />
+          </div>
         </div>
 
         <div>

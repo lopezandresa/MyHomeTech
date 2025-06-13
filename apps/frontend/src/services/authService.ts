@@ -125,5 +125,9 @@ class AuthService {
   }
 }
 
-export const authService = new AuthService()
+// Crear instancia y exportar
+const authService = new AuthService()
+
+// Exportaciones nombradas y por defecto
+export { authService }
 export default authService

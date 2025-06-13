@@ -11,6 +11,7 @@ import { ApplianceModule } from './appliance/appliance.module';
 import { ApplianceTypeModule } from './appliance-type/appliance-type.module';
 import { ApplianceBrandModule } from './appliance-brand/appliance-brand.module';
 import { ApplianceModelModule } from './appliance-model/appliance-model.module';
+import { AddressModule } from './address/address.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -43,7 +44,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ApplianceModule,
     ApplianceTypeModule,
     ApplianceBrandModule,
-    ApplianceModelModule],
+    ApplianceModelModule,
+    AddressModule],
   controllers: [],
   providers: [],
   

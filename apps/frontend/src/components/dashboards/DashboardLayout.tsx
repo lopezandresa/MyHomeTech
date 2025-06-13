@@ -99,7 +99,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* User Info */}
         <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-          <UserAvatar user={user} size="lg" showName={true} />
+          {user && <UserAvatar user={user} size="lg" showName={true} />}
         </div>        {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
           <ul className="space-y-2">

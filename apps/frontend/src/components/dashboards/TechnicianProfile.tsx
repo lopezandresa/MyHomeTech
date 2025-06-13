@@ -36,9 +36,12 @@ const TechnicianProfile: React.FC = () => {
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
 
-  // Form data
+  // Form data - now with separate name fields
   const [formData, setFormData] = useState({
-    fullName: user?.name || '',
+    firstName: user?.firstName || '',
+    middleName: user?.middleName || '',
+    firstLastName: user?.firstLastName || '',
+    secondLastName: user?.secondLastName || '',
     email: user?.email || '',
     cedula: '',
     birthDate: '',
@@ -69,7 +72,10 @@ const TechnicianProfile: React.FC = () => {
       setProfile(profileData)
       setHasProfile(true)
       setFormData({
-        fullName: user.name,
+        firstName: user.firstName,
+        middleName: user.middleName || '',
+        firstLastName: user.firstLastName,
+        secondLastName: user.secondLastName || '',
         email: user.email,
         cedula: profileData.cedula,
         birthDate: profileData.birthDate.split('T')[0],
@@ -79,8 +85,11 @@ const TechnicianProfile: React.FC = () => {
     } catch (error) {
       setHasProfile(false)
       setFormData({
-        fullName: user.name,
-        email: user.email,
+        firstName: user?.firstName || '',
+        middleName: user?.middleName || '',
+        firstLastName: user?.firstLastName || '',
+        secondLastName: user?.secondLastName || '',
+        email: user?.email || '',
         cedula: '',
         birthDate: '',
         experienceYears: 0,
@@ -102,9 +111,16 @@ const TechnicianProfile: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target
+    
+    // Apply capitalization to name fields
+    const nameFields = ['firstName', 'middleName', 'firstLastName', 'secondLastName']
+    const processedValue = nameFields.includes(name) 
+      ? capitalizeName(value, name === 'firstLastName' || name === 'secondLastName') 
+      : (type === 'number' ? parseInt(value) || 0 : value)
+    
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value) || 0 : value
+      [name]: processedValue
     }))
   }
 
@@ -239,7 +255,10 @@ const TechnicianProfile: React.FC = () => {
     
     if (hasProfile && profile) {
       setFormData({
-        fullName: user!.name,
+        firstName: user!.firstName,
+        middleName: user!.middleName || '',
+        firstLastName: user!.firstLastName,
+        secondLastName: user!.secondLastName || '',
         email: user!.email,
         cedula: profile.cedula,
         birthDate: profile.birthDate.split('T')[0],
@@ -248,7 +267,10 @@ const TechnicianProfile: React.FC = () => {
       })
     } else {
       setFormData({
-        fullName: user?.name || '',
+        firstName: user?.firstName || '',
+        middleName: user?.middleName || '',
+        firstLastName: user?.firstLastName || '',
+        secondLastName: user?.secondLastName || '',
         email: user?.email || '',
         cedula: '',
         birthDate: '',
@@ -256,6 +278,18 @@ const TechnicianProfile: React.FC = () => {
         specialties: []
       })
     }
+  }
+
+  // Utility function to capitalize names
+  const capitalizeName = (name: string, isLastName: boolean = false): string => {
+    const capitalized = name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    
+    // Only remove extra spaces for first and middle names, preserve spaces in last names
+    return isLastName ? capitalized : capitalized.replace(/\s+/g, ' ').trim()
   }
 
   if (isLoading && !profile) {
@@ -327,7 +361,6 @@ const TechnicianProfile: React.FC = () => {
               showChangePassword={showChangePassword}
               onInputChange={handleInputChange}
               onEdit={() => setIsEditing(true)}
-              onSave={handleSave}
               onCancel={handleCancel}
               setShowChangePassword={setShowChangePassword}
               onPhotoUpdated={refreshUser}
@@ -375,16 +408,15 @@ interface UserInfoTabProps {
   showChangePassword: boolean
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onEdit: () => void
-  onSave: () => void
   onCancel: () => void
   setShowChangePassword: (show: boolean) => void
   onPhotoUpdated?: (updatedUser: any) => void
-  setSuccess?: (message: string) => void
+  setSuccess?: (message: string | null) => void
 }
 
 const UserInfoTab: React.FC<UserInfoTabProps> = ({
   user, isEditing, formData, error, success, isLoading, showChangePassword,
-  onInputChange, onEdit, onSave, onCancel, setShowChangePassword, onPhotoUpdated, setSuccess
+  onInputChange, onEdit, onCancel, setShowChangePassword, onPhotoUpdated, setSuccess
 }) => {
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
@@ -438,8 +470,13 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
       }
       
       // Actualizar nombre si cambió
-      if (formData.fullName !== user?.name) {
-        await authService.updateProfile({ name: formData.fullName })
+      if (formData.firstName !== user?.firstName || formData.middleName !== user?.middleName || formData.firstLastName !== user?.firstLastName || formData.secondLastName !== user?.secondLastName) {
+        await authService.updateProfile({ 
+          firstName: formData.firstName, 
+          middleName: formData.middleName, // Cambiar secondName por middleName
+          firstLastName: formData.firstLastName, 
+          secondLastName: formData.secondLastName 
+        })
       }
       
       // Refrescar el usuario para asegurar que se actualice en toda la app
@@ -462,18 +499,6 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
     } finally {
       setLocalIsLoading(false)
     }
-  }
-
-  const handleCancelWithPhoto = () => {
-    // Limpiar estados de foto
-    setProfilePhotoFile(null)
-    if (profilePhotoPreview) {
-      URL.revokeObjectURL(profilePhotoPreview)
-      setProfilePhotoPreview(null)
-    }
-    
-    // Ejecutar cancelar normal
-    onCancel()
   }
 
   return (
@@ -543,23 +568,89 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
               )}
             </div>
 
-            {/* Full Name */}
-            <div className="md:col-span-2">
+            {/* First Name */}
+            <div>
               <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
                 <UserIcon className="h-4 w-4" />
-                <span>Nombre Completo</span>
+                <span>Primer Nombre</span>
+                <span className="text-red-500">*</span>
               </label>
               {isEditing ? (
                 <input
                   type="text"
-                  name="fullName"
-                  value={formData.fullName}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={onInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu nombre completo"
+                  placeholder="Tu primer nombre"
+                  required
                 />
               ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.name}</p>
+                <p className="text-lg text-gray-900 py-2">{user?.firstName}</p>
+              )}
+            </div>
+
+            {/* Middle Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Segundo Nombre</span>
+                <span className="text-sm text-gray-500">(Opcional)</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu segundo nombre"
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.middleName || 'No especificado'}</p>
+              )}
+            </div>
+
+            {/* First Last Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Primer Apellido</span>
+                <span className="text-red-500">*</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="firstLastName"
+                  value={formData.firstLastName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu primer apellido"
+                  required
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.firstLastName}</p>
+              )}
+            </div>
+
+            {/* Second Last Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Segundo Apellido</span>
+                <span className="text-sm text-gray-500">(Opcional)</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="secondLastName"
+                  value={formData.secondLastName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu segundo apellido"
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.secondLastName || 'No especificado'}</p>
               )}
             </div>
 

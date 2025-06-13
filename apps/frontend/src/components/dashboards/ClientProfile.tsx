@@ -16,6 +16,7 @@ import { clientService } from '../../services/clientService'
 import { authService } from '../../services/authService'
 import type { ClientProfile as ClientProfileType, CreateClientProfileRequest } from '../../types/index'
 import ChangePassword from './ChangePassword'
+import ProfilePhotoUpload from '../common/ProfilePhotoUpload'
 
 const ClientProfile: React.FC = () => {
   const { user, refreshUser } = useAuth()
@@ -28,9 +29,12 @@ const ClientProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'user'>('user')
   const [showChangePassword, setShowChangePassword] = useState(false)
 
-  // Form data
+  // Form data - now with separate name fields
   const [formData, setFormData] = useState({
-    fullName: user?.name || '',
+    firstName: user?.firstName || '',
+    middleName: user?.middleName || '',
+    firstLastName: user?.firstLastName || '',
+    secondLastName: user?.secondLastName || '',
     email: user?.email || '',
     cedula: '',
     birthDate: '',
@@ -50,7 +54,10 @@ const ClientProfile: React.FC = () => {
       setProfile(profileData)
       setHasProfile(true)
       setFormData({
-        fullName: user.name,
+        firstName: user.firstName,
+        middleName: user.middleName || '',
+        firstLastName: user.firstLastName,
+        secondLastName: user.secondLastName || '',
         email: user.email,
         cedula: profileData.cedula,
         birthDate: profileData.birthDate.split('T')[0],
@@ -59,8 +66,11 @@ const ClientProfile: React.FC = () => {
     } catch (error) {
       setHasProfile(false)
       setFormData({
-        fullName: user.name,
-        email: user.email,
+        firstName: user?.firstName || '',
+        middleName: user?.middleName || '',
+        firstLastName: user?.firstLastName || '',
+        secondLastName: user?.secondLastName || '',
+        email: user?.email || '',
         cedula: '',
         birthDate: '',
         phone: ''
@@ -72,9 +82,14 @@ const ClientProfile: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    
+    // Apply capitalization to name fields
+    const nameFields = ['firstName', 'middleName', 'firstLastName', 'secondLastName']
+    const processedValue = nameFields.includes(name) ? capitalizeName(value, name.includes('LastName')) : value
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }))
   }
 
@@ -84,22 +99,38 @@ const ClientProfile: React.FC = () => {
       setError(null)
       setSuccess(null)
 
-      // Validate required fields based on active tab
-      if (activeTab === 'user') {
-        if (!formData.fullName) {
-          setError('El nombre es obligatorio')
-          return
-        }
-        if (!hasProfile && (!formData.cedula || !formData.birthDate || !formData.phone)) {
-          setError('Todos los campos son obligatorios para crear el perfil')
-          return
-        }
+      // Validate required fields
+      if (!formData.firstName.trim()) {
+        setError('El primer nombre es obligatorio')
+        return
+      }
+      if (!formData.firstLastName.trim()) {
+        setError('El primer apellido es obligatorio')
+        return
+      }
+      if (!hasProfile && (!formData.cedula || !formData.birthDate || !formData.phone)) {
+        setError('La cédula, fecha de nacimiento y teléfono son obligatorios para crear el perfil')
+        return
+      }
+
+      // Update user name fields if changed
+      if (formData.firstName !== user?.firstName || 
+          formData.middleName !== user?.middleName || 
+          formData.firstLastName !== user?.firstLastName || 
+          formData.secondLastName !== user?.secondLastName) {
+        await authService.updateProfile({ 
+          firstName: formData.firstName,
+          middleName: formData.middleName, // Cambiar secondName por middleName
+          firstLastName: formData.firstLastName,
+          secondLastName: formData.secondLastName
+        })
+        await refreshUser()
       }
 
       // Create or update profile
       const profileRequest: CreateClientProfileRequest = {
         identityId: user!.id,
-        fullName: formData.fullName,
+        fullName: `${formData.firstName} ${formData.middleName || ''} ${formData.firstLastName} ${formData.secondLastName || ''}`.trim().replace(/\s+/g, ' '),
         cedula: formData.cedula,
         birthDate: formData.birthDate,
         phone: formData.phone
@@ -111,12 +142,6 @@ const ClientProfile: React.FC = () => {
       } else {
         // Create new profile
         await clientService.createProfile(profileRequest)
-      }
-
-      // Update user name if changed
-      if (formData.fullName !== user?.name) {
-        await authService.updateProfile({ name: formData.fullName })
-        await refreshUser()
       }
 
       setSuccess('Perfil actualizado correctamente')
@@ -136,7 +161,10 @@ const ClientProfile: React.FC = () => {
     setSuccess(null)
     if (hasProfile && profile) {
       setFormData({
-        fullName: user!.name,
+        firstName: user!.firstName,
+        middleName: user!.middleName || '',
+        firstLastName: user!.firstLastName,
+        secondLastName: user!.secondLastName || '',
         email: user!.email,
         cedula: profile.cedula,
         birthDate: profile.birthDate.split('T')[0],
@@ -144,13 +172,28 @@ const ClientProfile: React.FC = () => {
       })
     } else {
       setFormData({
-        fullName: user?.name || '',
+        firstName: user?.firstName || '',
+        middleName: user?.middleName || '',
+        firstLastName: user?.firstLastName || '',
+        secondLastName: user?.secondLastName || '',
         email: user?.email || '',
         cedula: '',
         birthDate: '',
         phone: ''
       })
     }
+  }
+
+  // Utility function to capitalize names
+  const capitalizeName = (name: string, isLastName: boolean = false): string => {
+    const capitalized = name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    
+    // Only remove extra spaces for first and middle names, preserve spaces in last names
+    return isLastName ? capitalized : capitalized.replace(/\s+/g, ' ').trim()
   }
 
   if (isLoading && !profile) {
@@ -208,6 +251,7 @@ const ClientProfile: React.FC = () => {
               onSave={handleSave}
               onCancel={handleCancel}
               setShowChangePassword={setShowChangePassword}
+              refreshUser={refreshUser}
             />
           )}
         </div>
@@ -232,12 +276,75 @@ interface UserInfoTabProps {
   onSave: () => void
   onCancel: () => void
   setShowChangePassword: (show: boolean) => void
+  refreshUser?: () => void
 }
 
 const UserInfoTab: React.FC<UserInfoTabProps> = ({
   user, profile, hasProfile, isEditing, formData, error, success, isLoading, showChangePassword,
-  onInputChange, onEdit, onSave, onCancel, setShowChangePassword
+  onInputChange, onEdit, onSave, onCancel, setShowChangePassword, refreshUser
 }) => {
+  // Estados para manejo de foto de perfil
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
+  const [localIsLoading, setLocalIsLoading] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  // Limpiar preview URL cuando el componente se desmonta o cambian los archivos
+  React.useEffect(() => {
+    return () => {
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview)
+      }
+    }
+  }, [profilePhotoPreview])
+
+  const handlePhotoFileSelect = (file: File | null) => {
+    // Limpiar preview URL anterior
+    if (profilePhotoPreview) {
+      URL.revokeObjectURL(profilePhotoPreview)
+      setProfilePhotoPreview(null)
+    }
+
+    setProfilePhotoFile(file)
+    
+    if (file) {
+      // Crear nueva preview URL
+      const newPreviewUrl = URL.createObjectURL(file)
+      setProfilePhotoPreview(newPreviewUrl)
+    }
+  }
+
+  const handleSaveWithPhoto = async () => {
+    try {
+      setLocalIsLoading(true)
+      setLocalError(null)
+
+      // Si hay una foto seleccionada, subirla primero
+      if (profilePhotoFile) {
+        const updatedUser = await authService.uploadProfilePhoto(profilePhotoFile)
+        
+        // Limpiar el preview ANTES de actualizar el contexto
+        if (profilePhotoPreview) {
+          URL.revokeObjectURL(profilePhotoPreview)
+          setProfilePhotoPreview(null)
+        }
+        setProfilePhotoFile(null)
+        
+        // Actualizar el contexto con el usuario que tiene la foto real
+        if (refreshUser) refreshUser()
+      }
+      
+      // Llamar al save principal para guardar otros cambios
+      await onSave()
+      
+    } catch (error: any) {
+      console.error('Error saving user info:', error)
+      setLocalError(error.response?.data?.message || 'Error al guardar la información')
+    } finally {
+      setLocalIsLoading(false)
+    }
+  }
+
   return (
     <>
       {/* Alerts */}
@@ -288,23 +395,108 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Full Name */}
+            {/* Profile Photo Section */}
             <div className="md:col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <UserIcon className="h-5 w-5 mr-2" />
+                Foto de Perfil
+              </h3>
+              {user && (
+                <ProfilePhotoUpload
+                  user={user}
+                  onPhotoUpdated={refreshUser}
+                  size="lg"
+                  isEditing={isEditing}
+                  selectedFile={profilePhotoFile}
+                  onFileSelect={handlePhotoFileSelect}
+                  previewUrl={profilePhotoPreview}
+                />
+              )}
+            </div>
+
+            {/* First Name */}
+            <div>
               <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
                 <UserIcon className="h-4 w-4" />
-                <span>Nombre Completo</span>
+                <span>Primer Nombre</span>
+                <span className="text-red-500">*</span>
               </label>
               {isEditing || !hasProfile ? (
                 <input
                   type="text"
-                  name="fullName"
-                  value={formData.fullName}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={onInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu nombre completo"
+                  placeholder="Tu primer nombre"
+                  required
                 />
               ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.name}</p>
+                <p className="text-lg text-gray-900 py-2">{user?.firstName}</p>
+              )}
+            </div>
+
+            {/* Second Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Segundo Nombre</span>
+                <span className="text-sm text-gray-500">(Opcional)</span>
+              </label>
+              {isEditing || !hasProfile ? (
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu segundo nombre"
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.middleName || 'No especificado'}</p>
+              )}
+            </div>
+
+            {/* First Last Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Primer Apellido</span>
+                <span className="text-red-500">*</span>
+              </label>
+              {isEditing || !hasProfile ? (
+                <input
+                  type="text"
+                  name="firstLastName"
+                  value={formData.firstLastName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu primer apellido"
+                  required
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.firstLastName}</p>
+              )}
+            </div>
+
+            {/* Second Last Name */}
+            <div>
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                <UserIcon className="h-4 w-4" />
+                <span>Segundo Apellido</span>
+                <span className="text-sm text-gray-500">(Opcional)</span>
+              </label>
+              {isEditing || !hasProfile ? (
+                <input
+                  type="text"
+                  name="secondLastName"
+                  value={formData.secondLastName}
+                  onChange={onInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tu segundo apellido"
+                />
+              ) : (
+                <p className="text-lg text-gray-900 py-2">{user?.secondLastName || 'No especificado'}</p>
               )}
             </div>
 
@@ -394,11 +586,11 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
                 </button>
               )}
               <button
-                onClick={onSave}
-                disabled={isLoading}
+                onClick={profilePhotoFile ? handleSaveWithPhoto : onSave}
+                disabled={isLoading || localIsLoading}
                 className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {isLoading ? (
+                {(isLoading || localIsLoading) ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <CheckIcon className="h-4 w-4" />

@@ -1,11 +1,16 @@
 export interface User {
   id: number
-  name: string
+  firstName: string
+  middleName?: string
+  firstLastName: string
+  secondLastName?: string
   email: string
   role: 'client' | 'technician' | 'admin'
   status: boolean
   profilePhotoUrl?: string
   profilePhotoPublicId?: string
+  // Campo calculado para compatibilidad
+  get fullName(): string
 }
 
 export interface LoginRequest {
@@ -14,7 +19,10 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  name: string
+  firstName: string
+  middleName?: string
+  firstLastName: string
+  secondLastName?: string
   email: string
   password: string
   role: 'client' | 'technician'
@@ -26,7 +34,10 @@ export interface AuthResponse {
 }
 
 export interface UpdateProfileRequest {
-  name?: string
+  firstName?: string
+  middleName?: string
+  firstLastName?: string
+  secondLastName?: string
   email?: string
   password?: string
 }

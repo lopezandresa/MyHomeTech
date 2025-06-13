@@ -27,56 +27,66 @@ export class IdentityService {
     const hash = await bcrypt.hash(dto.password, salt);
     const identity = this.repo.create({ ...dto, password: hash });
     const saved = await this.repo.save(identity);
-    const { password, ...rest } = saved;
     
-    return rest;
+    return this.excludePassword(saved);
   }
 
   async findByEmail(email: string): Promise<Identity> {
     if (!email) throw new NotFoundException(`User email was not specified`);
-    const user = await this.repo.findOne({ where: { email } });
+    const user = await this.repo.findOne({ 
+      where: { email },
+      relations: ['addresses', 'primaryAddress']
+    });
     if (!user) throw new NotFoundException(`User with email ${email} not found`);
     return user;
   }
 
   async findByEmailNoPass(email: string): Promise<Omit<Identity,'password'>>{
     const user = await this.findByEmail(email);
-    const { password, ...rest } = user;
-    return rest;
+    return this.excludePassword(user);
   }
 
   async findAll(): Promise<Omit<Identity,'password'>[]> {
-    const users = await this.repo.find();
-    return users.map(({ password, ...rest }) => rest);
+    const users = await this.repo.find({
+      relations: ['addresses', 'primaryAddress']
+    });
+    return users.map(user => this.excludePassword(user));
   }
 
   async findById(id: number): Promise<Omit<Identity,'password'>> {
     if (!id) throw new NotFoundException(`User id was not specified`);
-    const user = await this.repo.findOne({ where: { id } });
+    const user = await this.repo.findOne({ 
+      where: { id },
+      relations: ['addresses', 'primaryAddress']
+    });
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
-    const { password, ...rest } = user;
-    return rest;
+    return this.excludePassword(user);
   }
 
   async updateUser(id: number, dto: UpdateIdentityDto): Promise<Omit<Identity, 'password'>> {
-    const user = await this.repo.findOne({ where: { id } });
+    const user = await this.repo.findOne({ 
+      where: { id },
+      relations: ['addresses', 'primaryAddress']
+    });
     if (!user) throw new NotFoundException('User not found');
     if (dto.password) {
       const salt = await bcrypt.genSalt();
       dto.password = await bcrypt.hash(dto.password, salt);
-    }    Object.assign(user, dto);
+    }
+    Object.assign(user, dto);
     const saved = await this.repo.save(user);
-    const { password, ...rest } = saved;
-    return rest;
+    return this.excludePassword(saved);
   }
 
   async toggleStatus(id: number): Promise<Omit<Identity, 'password'>> {
-    const user = await this.repo.findOne({ where: { id } });
+    const user = await this.repo.findOne({ 
+      where: { id },
+      relations: ['addresses', 'primaryAddress']
+    });
     if (!user) throw new NotFoundException('User not found');
     user.status = !user.status;
     const saved = await this.repo.save(user);
-    const { password, ...rest } = saved;
-    return rest;
+    return this.excludePassword(saved);
   }
 
   async changePassword(userId: number, dto: ChangePasswordDto): Promise<{ message: string }> {
@@ -120,8 +130,7 @@ export class IdentityService {
     user.profilePhotoPublicId = uploadResult.publicId;
     
     const saved = await this.repo.save(user);
-    const { password, ...rest } = saved;
-    return rest;
+    return this.excludePassword(saved);
   }
 
   async getOptimizedProfilePhotoUrl(userId: number, options?: {
@@ -132,5 +141,14 @@ export class IdentityService {
     if (!user || !user.profilePhotoPublicId) return null;
 
     return this.cloudinaryService.generateOptimizedUrl(user.profilePhotoPublicId, options);
+  }
+
+  private excludePassword(user: Identity): Omit<Identity, 'password'> {
+    const { password, ...rest } = user;
+    return {
+      ...rest,
+      fullName: user.fullName,
+      displayName: user.displayName
+    };
   }
 }
