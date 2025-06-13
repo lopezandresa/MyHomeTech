@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { EyeIcon, EyeSlashIcon, UserIcon, WrenchScrewdriverIcon, IdentificationIcon, CalendarDaysIcon, PhoneIcon, ClockIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
-import { formatDate, toInputDateFormat, parseDate } from '../../utils/dateUtils'
 
 interface RegisterProps {
   onSwitchToLogin: () => void
