@@ -172,7 +172,7 @@ const MyRequests: React.FC<MyRequestsProps> = ({ activeTab }) => {
                 {request.technician && (
                   <div>
                     <p className="text-sm font-medium text-gray-500">Técnico Asignado</p>
-                    <p className="text-sm text-gray-900">{request.technician.name}</p>
+                    <p className="text-sm text-gray-900">{request.technician.firstName} {request.technician.firstLastName}</p>
                   </div>
                 )}
               </div>

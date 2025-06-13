@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Header from './components/Header'
 import Hero from './components/Hero'
-import Features from './components/Features'
 import About from './components/About'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
-import ClientDashboard from './components/dashboards/ClientDashboard'
-import TechnicianDashboard from './components/dashboards/TechnicianDashboard'
+import Dashboard from './components/dashboards/Dashboard'
 
 // Componente principal que maneja la navegación
 const AppContent = () => {
@@ -37,22 +35,13 @@ const AppContent = () => {
     setCurrentPage(page)
   }
   const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        if (!isAuthenticated || !user) {
+    switch (currentPage) {      case 'dashboard':        if (!isAuthenticated || !user) {
           setCurrentPage('home')
           return null
         }
         
-        if (user.role === 'client') {
-          return <ClientDashboard onNavigate={handleNavigation} />
-        } else if (user.role === 'technician') {
-          return <TechnicianDashboard onNavigate={handleNavigation} />
-        }
-        
-        // Default to home if role is not recognized
-        setCurrentPage('home')
-        return null
+        // Usar el dashboard unificado independientemente del rol
+        return <Dashboard onNavigate={handleNavigation} />
 
       case 'profile':
         // TODO: Implement profile page
@@ -92,7 +81,6 @@ const AppContent = () => {
         return (
           <>
             <Hero />
-            <Features />
             <About />
             <Contact />
             <Footer />
