@@ -24,5 +24,8 @@ export class Identity {
   role: Role;
 
   @Column({ nullable: true })
-  profilePhotoPath: string;
+  profilePhotoUrl: string;
+
+  @Column({ nullable: true })
+  profilePhotoPublicId: string;
 }

@@ -6,12 +6,14 @@ import { Identity } from './identity.entity';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CloudinaryService } from '../common/cloudinary.service';
 
 @Injectable()
 export class IdentityService {
   constructor(
     @InjectRepository(Identity)
     private readonly repo: Repository<Identity>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async register(dto: CreateIdentityDto): Promise<Omit<Identity,'password'>> {
@@ -98,13 +100,37 @@ export class IdentityService {
     return { message: 'Contraseña actualizada exitosamente' };
   }
 
-  async updateProfilePhoto(userId: number, photoPath: string): Promise<Omit<Identity, 'password'>> {
+  async updateProfilePhoto(userId: number, file: Express.Multer.File): Promise<Omit<Identity, 'password'>> {
     const user = await this.repo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    user.profilePhotoPath = photoPath;
+    // Si ya tiene una foto, eliminar la anterior de Cloudinary
+    if (user.profilePhotoPublicId) {
+      await this.cloudinaryService.deleteImage(user.profilePhotoPublicId);
+    }
+
+    // Subir nueva foto a Cloudinary
+    const uploadResult = await this.cloudinaryService.uploadImage(
+      file, 
+      'profile-photos', 
+      `user_${userId}_profile`
+    );
+
+    user.profilePhotoUrl = uploadResult.url;
+    user.profilePhotoPublicId = uploadResult.publicId;
+    
     const saved = await this.repo.save(user);
     const { password, ...rest } = saved;
     return rest;
+  }
+
+  async getOptimizedProfilePhotoUrl(userId: number, options?: {
+    width?: number;
+    height?: number;
+  }): Promise<string | null> {
+    const user = await this.repo.findOne({ where: { id: userId } });
+    if (!user || !user.profilePhotoPublicId) return null;
+
+    return this.cloudinaryService.generateOptimizedUrl(user.profilePhotoPublicId, options);
   }
 }

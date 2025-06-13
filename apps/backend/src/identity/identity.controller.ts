@@ -1,8 +1,7 @@
 import { Controller, Post, Body, UseGuards, Get, Request, Param, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { IdentityService } from './identity.service';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { Identity } from './identity.entity';
@@ -85,13 +84,7 @@ export class IdentityController {
   @ApiBearerAuth('JWT')
   @Post('me/upload-profile-photo')
   @UseInterceptors(FileInterceptor('profilePhoto', {
-    storage: diskStorage({
-      destination: './uploads/profile-photos',
-      filename: (req, file, callback) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        callback(null, `profile-${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
+    storage: memoryStorage(),
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return callback(new Error('Solo se permiten archivos de imagen'), false);
@@ -108,6 +101,6 @@ export class IdentityController {
     @Request() req,
     @UploadedFile() profilePhoto: Express.Multer.File
   ): Promise<IdentityResponse> {
-    return this.svc.updateProfilePhoto(req.user.id, profilePhoto.path);
+    return this.svc.updateProfilePhoto(req.user.id, profilePhoto);
   }
 }

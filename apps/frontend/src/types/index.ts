@@ -4,7 +4,8 @@ export interface User {
   email: string
   role: 'client' | 'technician' | 'admin'
   status: boolean
-  profilePhotoPath?: string
+  profilePhotoUrl?: string
+  profilePhotoPublicId?: string
 }
 
 export interface LoginRequest {

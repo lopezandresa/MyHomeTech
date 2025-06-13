@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { UserIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { authService } from '../../services/authService'
+import { useImageCache } from '../../services/imageCacheService'
 import type { User } from '../../types/index'
 
 interface UserAvatarProps {
@@ -23,6 +24,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   isUploading = false
 }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const { cachedUrl, isLoading: isImageLoading } = useImageCache(user.profilePhotoUrl)
 
   const sizeClasses = {
     sm: 'h-8 w-8',
@@ -45,15 +47,13 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     xl: 'h-7 w-7'
   }
 
-  const photoUrl = user.profilePhotoPath?.startsWith('blob:') 
-    ? user.profilePhotoPath // Si es una URL de preview local, usarla directamente
-    : authService.getProfilePhotoUrl(user.profilePhotoPath)
-
   const handleClick = () => {
     if (editable && onEditClick) {
       onEditClick()
     }
   }
+
+  const showLoadingState = isUploading || isImageLoading
 
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
@@ -65,9 +65,9 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}
       >
-        {photoUrl ? (
+        {cachedUrl ? (
           <img
-            src={photoUrl}
+            src={cachedUrl}
             alt={`Foto de ${user.name}`}
             className="h-full w-full object-cover"
             onError={(e) => {
@@ -85,9 +85,9 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         )}
         
         {/* Overlay de edición */}
-        {editable && (isHovered || isUploading) && (
+        {editable && (isHovered || showLoadingState) && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full transition-all duration-200">
-            {isUploading ? (
+            {showLoadingState ? (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             ) : (
               <PencilIcon className={`${editIconSizeClasses[size]} text-white`} />
