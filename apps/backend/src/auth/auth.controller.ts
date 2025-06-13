@@ -1,8 +1,7 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LoginDto } from './dto/login.dto';
-import { JwtAuthGuard } from './jwt/jwt.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -15,7 +14,6 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(@Request() req) {
     // En JWT stateless, el logout es responsabilidad del cliente (borrar token)

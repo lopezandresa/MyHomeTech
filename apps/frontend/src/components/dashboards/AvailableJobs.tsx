@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import serviceRequestService from '../../services/serviceRequestService'
+import { serviceRequestService } from '../../services/serviceRequestService'
 import type { ServiceRequest } from '../../types/index'
+import { formatDate } from '../../utils/dateUtils'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface AvailableJobsProps {
   activeTab?: string
@@ -55,16 +56,6 @@ const AvailableJobs: React.FC<AvailableJobsProps> = ({ activeTab }) => {
     } finally {
       setActionLoading(null)
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
   }
 
   const getTimeRemaining = (expiresAt: string) => {
@@ -158,7 +149,7 @@ const AvailableJobs: React.FC<AvailableJobsProps> = ({ activeTab }) => {
                     {request.appliance.name} - {request.appliance.brand}
                   </h3>
                   <p className="text-sm text-gray-600">Modelo: {request.appliance.model}</p>
-                  <p className="text-sm text-gray-600">Cliente: {request.client.name}</p>
+                  <p className="text-sm text-gray-600">Cliente: {request.client.firstName} {request.client.firstLastName}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-green-600">${request.clientPrice.toLocaleString()}</p>

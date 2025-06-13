@@ -143,6 +143,14 @@ export class IdentityService {
     return this.cloudinaryService.generateOptimizedUrl(user.profilePhotoPublicId, options);
   }
 
+  async checkEmail(email: string): Promise<void> {
+    const existing = await this.repo.findOne({ where: { email } });
+    if (existing) {
+      throw new ConflictException('Este correo electrónico ya está registrado');
+    }
+    return;
+  }
+
   private excludePassword(user: Identity): Omit<Identity, 'password'> {
     const { password, ...rest } = user;
     return {

@@ -25,20 +25,34 @@ class AuthService {
     
     return { user, token }
   }
-
   // Registro
   async register(data: RegisterRequest): Promise<User> {
     const response = await api.post<User>('/identity/register', data)
-    return response.data
+    
+    // Intento automático de login tras registro exitoso
+    try {
+      const loginResult = await this.login({
+        email: data.email,
+        password: data.password
+      })
+      return loginResult.user
+    } catch (error) {
+      console.error('Error en login automático tras registro:', error)
+      return response.data
+    }
   }
 
   // Logout
   logout(): void {
     try {
-      // Llamar al endpoint de logout del backend de forma asíncrona
-      api.post('/auth/logout').catch((error) => {
-        console.warn('Error en logout del backend (ignorado):', error)
-      })
+      // Verificar si hay un token antes de intentar llamar al endpoint de logout
+      const token = localStorage.getItem('authToken')
+      if (token) {
+        // Llamar al endpoint de logout del backend de forma asíncrona
+        api.post('/auth/logout').catch((error) => {
+          console.warn('Error en logout del backend (ignorado):', error)
+        })
+      }
     } catch (error) {
       console.warn('Error iniciando logout del backend:', error)
     }
@@ -184,6 +198,19 @@ class AuthService {
       console.error('Error parsing user from localStorage:', error)
       localStorage.removeItem('user') // Limpiar datos corruptos
       return null
+    }
+  }
+
+  // Verificar si un correo ya existe
+  async checkEmailExists(email: string): Promise<boolean> {
+    try {
+      await api.post('/identity/check-email', { email })
+      return false // Si no hay error, el correo no existe
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        return true // Si el status es 409, el correo ya existe
+      }
+      throw error // Para cualquier otro error, propagar
     }
   }
 }

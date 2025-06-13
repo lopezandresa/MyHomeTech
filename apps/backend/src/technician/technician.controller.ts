@@ -12,7 +12,6 @@ import { Technician } from './technician.entity';
 @Controller('technicians')
 export class TechnicianController {
   constructor(private readonly svc: TechnicianService) {}
-
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer-jwt')
   @Post('profile')
@@ -51,6 +50,43 @@ export class TechnicianController {
     }
 
     dto.identityId = req.user.id;
+    return this.svc.createProfile(dto);
+  }
+
+  @Post('create-profile')
+  @UseInterceptors(FileInterceptor('idPhoto', {
+    storage: diskStorage({
+      destination: './uploads/id-photos',
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        callback(null, `id-photo-${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return callback(new Error('Solo se permiten archivos de imagen'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Crea perfil de técnico durante registro (sin autenticación)' })
+  async createProfileDuringRegistration(
+    @Body() dto: CreateTechnicianProfileDto,
+    @UploadedFile() idPhoto: Express.Multer.File,
+  ): Promise<Technician> {
+    // Convertir specialties de string a array de números
+    if (typeof dto.specialties === 'string') {
+      dto.specialties = JSON.parse(dto.specialties);
+    }
+
+    if (idPhoto) {
+      dto.idPhotoPath = idPhoto.path;
+    }
+
     return this.svc.createProfile(dto);
   }
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { EyeIcon, EyeSlashIcon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, EyeSlashIcon, UserIcon, WrenchScrewdriverIcon, IdentificationIcon, CalendarDaysIcon, PhoneIcon, ClockIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatDate, toInputDateFormat, parseDate } from '../../utils/dateUtils'
 
 interface RegisterProps {
   onSwitchToLogin: () => void
@@ -19,6 +20,13 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     password: string
     confirmPassword: string
     role: 'client' | 'technician'
+    // Campos adicionales para cliente
+    cedula: string
+    birthDate: string
+    phone: string
+    // Campos adicionales para técnico
+    experienceYears: number
+    idPhotoFile?: File | null
   }>({
     firstName: '',
     middleName: '',
@@ -27,7 +35,12 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'client'
+    role: 'client',
+    cedula: '',
+    birthDate: '',
+    phone: '',
+    experienceYears: 0,
+    idPhotoFile: null
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -44,13 +57,25 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     // Only remove extra spaces for first and middle names, preserve spaces in last names
     return isLastName ? capitalized : capitalized.replace(/\s+/g, ' ').trim()
   }
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
     
     // Apply capitalization to name fields
     const nameFields = ['firstName', 'middleName', 'firstLastName', 'secondLastName']
-    const processedValue = nameFields.includes(name) ? capitalizeName(value, name.includes('LastName')) : value
+    let processedValue: any = value
+    
+    if (nameFields.includes(name)) {
+      processedValue = capitalizeName(value, name.includes('LastName'))
+    } else if (type === 'number') {
+      processedValue = parseInt(value) || 0
+    } else if (type === 'file') {
+      processedValue = e.target.files?.[0] || null
+      setFormData(prev => ({
+        ...prev,
+        idPhotoFile: processedValue
+      }))
+      return
+    }
     
     setFormData(prev => ({
       ...prev,
@@ -65,7 +90,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
       role
     }))
   }
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -81,12 +106,82 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
       return
     }
 
+    // Validar campos según el rol
+    if (!formData.cedula.trim() || !formData.birthDate) {
+      setError('La cédula y fecha de nacimiento son obligatorios')
+      return
+    }
+
+    if (formData.role === 'client' && !formData.phone.trim()) {
+      setError('El teléfono es obligatorio para clientes')
+      return
+    }
+
+    if (formData.role === 'technician') {
+      if (formData.experienceYears < 0) {
+        setError('Los años de experiencia no pueden ser negativos')
+        return
+      }
+      if (!formData.idPhotoFile) {
+        setError('La foto de cédula es obligatoria para técnicos')
+        return
+      }
+    }
+
+    // Validar correo electrónico
     try {
-      await register(formData.firstName, formData.middleName, formData.firstLastName, formData.secondLastName, formData.email, formData.password, formData.role)
+      const { authService } = await import('../../services/authService')
+      const emailExists = await authService.checkEmailExists(formData.email)
+      if (emailExists) {
+        setError('El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.')
+        return
+      }
+    } catch (error) {
+      console.error('Error al verificar email:', error)
+      // Continuar con el proceso de registro si hay un error en la verificación
+    }
+
+    try {
+      // Enviar datos básicos de usuario
+      const user = await register(
+        formData.firstName, 
+        formData.middleName, 
+        formData.firstLastName, 
+        formData.secondLastName, 
+        formData.email, 
+        formData.password, 
+        formData.role
+      )
+      
+      // Crear perfil según el rol
+      if (formData.role === 'client') {
+        // Importar clientService y crear perfil de cliente
+        const { clientService } = await import('../../services/clientService')
+        await clientService.createProfile({
+          identityId: user.id,
+          fullName: `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.firstLastName} ${formData.secondLastName || ''}`.trim(),
+          cedula: formData.cedula,
+          birthDate: formData.birthDate,
+          phone: formData.phone
+        })
+      } else if (formData.role === 'technician') {        const { technicianService } = await import('../../services/technicianService')
+        await technicianService.createProfile({
+          identityId: user.id,
+          cedula: formData.cedula,
+          birthDate: formData.birthDate,
+          experienceYears: formData.experienceYears,
+          specialties: [], // El técnico puede actualizar esto después
+          idPhotoFile: formData.idPhotoFile || undefined
+        })
+      }      
       onClose()
     } catch (error: any) {
       console.error('Register error:', error)
-      setError(error.response?.data?.message || 'Error al registrar usuario')
+      if (error.response?.status === 409) {
+        setError('El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.')
+      } else {
+        setError(error.response?.data?.message || 'Error al registrar usuario')
+      }
     }
   }
 
@@ -297,6 +392,132 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
               )}
             </button>
           </div>
+        </div>
+
+        {/* Campos específicos según el rol */}
+        <div className="mt-6">
+          <h3 className="font-medium text-gray-900 mb-4">
+            {formData.role === 'client' ? 'Información del Cliente' : 'Información del Técnico'}
+          </h3>
+          
+          {/* Campos comunes para ambos roles */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label htmlFor="cedula" className="block text-sm font-medium text-gray-700 mb-1">
+                Cédula *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <IdentificationIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  id="cedula"
+                  name="cedula"
+                  value={formData.cedula}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej. 123456789"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Nacimiento *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                </div>                <input
+                  type="date"
+                  id="birthDate"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="dd/mm/aaaa"
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Campos específicos para cliente */}
+          {formData.role === 'client' && (
+            <div className="mb-4">
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Teléfono *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <PhoneIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej. 300 123 4567"
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Campos específicos para técnico */}
+          {formData.role === 'technician' && (
+            <>
+              <div className="mb-4">
+                <label htmlFor="experienceYears" className="block text-sm font-medium text-gray-700 mb-1">
+                  Años de Experiencia *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <ClockIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="number"
+                    id="experienceYears"
+                    name="experienceYears"
+                    value={formData.experienceYears}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    max="50"
+                    className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej. 5"
+                  />
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="idPhotoFile" className="block text-sm font-medium text-gray-700 mb-1">
+                  Foto de Cédula *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <CloudArrowUpIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="file"
+                    id="idPhotoFile"
+                    name="idPhotoFile"
+                    accept="image/*"
+                    onChange={handleInputChange}
+                    required
+                    className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Sube una foto de tu cédula para verificar tu identidad. Formatos: JPG, PNG. Tamaño máximo: 5MB.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <button

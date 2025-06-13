@@ -3,11 +3,11 @@ import type { User, UpdateProfileRequest } from '../types'
 import { authService } from '../services/authService'
 
 interface AuthContextType {
-  user: User | null
-  token: string | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
   register: (
     firstName: string, 
     middleName: string | undefined, 
@@ -16,10 +16,10 @@ interface AuthContextType {
     email: string, 
     password: string, 
     role: 'client' | 'technician'
-  ) => Promise<void>
-  logout: () => void
-  updateProfile: (data: UpdateProfileRequest) => Promise<void>
-  refreshUser: () => Promise<void>
+  ) => Promise<User>;
+  logout: () => void;
+  updateProfile: (data: UpdateProfileRequest) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -105,7 +105,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false)
     }
   }
-
   // Register con manejo de errores mejorado
   const register = async (
     firstName: string, 
@@ -115,10 +114,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string, 
     password: string, 
     role: 'client' | 'technician'
-  ): Promise<void> => {
+  ): Promise<User> => {
     try {
       setIsLoading(true)
-      await authService.register({
+      const user = await authService.register({
         firstName,
         middleName,
         firstLastName,
@@ -127,6 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password,
         role,
       })
+      return user
     } catch (error) {
       console.error('Error en registro:', error)
       throw error

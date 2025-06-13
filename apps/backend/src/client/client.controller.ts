@@ -14,7 +14,6 @@ import { Client } from './client.entity';
 @Controller('clients')
 export class ClientController {
   constructor(private readonly svc: ClientService) {}
-
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer-jwt')
   @Post('profile')
@@ -24,6 +23,14 @@ export class ClientController {
     @Request() req,
   ): Promise<Client> {
     dto.identityId = req.user.id;
+    return this.svc.createProfile(dto);
+  }
+
+  @Post('create-profile')
+  @ApiOperation({ summary: 'Crea perfil de cliente durante registro (sin autenticación)' })
+  createProfileDuringRegistration(
+    @Body() dto: CreateClientProfileDto,
+  ): Promise<Client> {
     return this.svc.createProfile(dto);
   }
   @UseGuards(JwtAuthGuard)

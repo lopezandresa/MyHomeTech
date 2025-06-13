@@ -15,12 +15,11 @@ class TechnicianService {
     formData.append('birthDate', data.birthDate)
     formData.append('experienceYears', data.experienceYears.toString())
     formData.append('specialties', JSON.stringify(data.specialties))
-    
-    if (data.idPhotoFile) {
+      if (data.idPhotoFile) {
       formData.append('idPhoto', data.idPhotoFile)
     }
 
-    const response = await api.post<TechnicianProfile>('/technicians/profile', formData, {
+    const response = await api.post<TechnicianProfile>('/technicians/create-profile', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

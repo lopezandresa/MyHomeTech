@@ -7,7 +7,6 @@ import {
   IdentificationIcon,
   CalendarDaysIcon,
   UserIcon,
-  LockClosedIcon,
   WrenchScrewdriverIcon,
   PlusIcon,
   TrashIcon,
@@ -18,8 +17,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import { technicianService } from '../../services/technicianService'
 import { authService } from '../../services/authService'
 import type { TechnicianProfile as TechnicianProfileType, CreateTechnicianProfileRequest, ApplianceType } from '../../types/index'
+import UserInfoPanel from '../common/UserInfoPanel'
 import ChangePassword from './ChangePassword'
-import ProfilePhotoUpload from '../common/ProfilePhotoUpload'
+import { formatDate, toInputDateFormat } from '../../utils/dateUtils'
 
 const TechnicianProfile: React.FC = () => {
   const { user, refreshUser } = useAuth()
@@ -78,7 +78,7 @@ const TechnicianProfile: React.FC = () => {
         secondLastName: user.secondLastName || '',
         email: user.email,
         cedula: profileData.cedula,
-        birthDate: profileData.birthDate.split('T')[0],
+        birthDate: toInputDateFormat(profileData.birthDate),
         experienceYears: profileData.experienceYears,
         specialties: profileData.specialties.map(s => s.id)
       })
@@ -261,7 +261,7 @@ const TechnicianProfile: React.FC = () => {
         secondLastName: user!.secondLastName || '',
         email: user!.email,
         cedula: profile.cedula,
-        birthDate: profile.birthDate.split('T')[0],
+        birthDate: toInputDateFormat(profile.birthDate),
         experienceYears: profile.experienceYears,
         specialties: profile.specialties.map(s => s.id)
       })
@@ -349,23 +349,55 @@ const TechnicianProfile: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'user' && (
-            <UserInfoTab
-              user={user}
-              isEditing={isEditing}
-              formData={formData}
-              error={error}
-              success={success}
-              isLoading={isLoading}
-              showChangePassword={showChangePassword}
-              onInputChange={handleInputChange}
-              onEdit={() => setIsEditing(true)}
-              onCancel={handleCancel}
-              setShowChangePassword={setShowChangePassword}
-              onPhotoUpdated={refreshUser}
-              setSuccess={setSuccess}
-            />
+        <div className="p-6">          {activeTab === 'user' && (
+            <>
+              <UserInfoPanel
+                user={user}
+                isEditing={isEditing}
+                formData={formData}
+                error={error}
+                success={success}
+                isLoading={isLoading}
+                showChangePassword={showChangePassword}
+                onInputChange={handleInputChange}
+                onEdit={() => setIsEditing(true)}
+                onSave={async () => {
+                  try {
+                    await authService.updateProfile({
+                      firstName: formData.firstName,
+                      middleName: formData.middleName,
+                      firstLastName: formData.firstLastName,
+                      secondLastName: formData.secondLastName
+                    });
+                    await refreshUser();
+                    setIsEditing(false);
+                    setSuccess('Información actualizada correctamente');
+                  } catch (error: any) {
+                    setError(error.response?.data?.message || 'Error al actualizar información');
+                  }
+                }}
+                onCancel={handleCancel}
+                setShowChangePassword={setShowChangePassword}
+                refreshUser={refreshUser}
+                title="Información de Usuario"
+                subtitle="Gestiona tu información básica de cuenta"
+              />
+              
+              {/* Mostrar el componente ChangePassword cuando showChangePassword es true */}
+              {showChangePassword && (
+                <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <ChangePassword
+                    onSuccess={() => {
+                      setShowChangePassword(false);
+                      setSuccess('Contraseña actualizada correctamente');
+                    }}
+                    onCancel={() => {
+                      setShowChangePassword(false);
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
           {activeTab === 'professional' && (
             <ProfessionalInfoTab
@@ -394,335 +426,6 @@ const TechnicianProfile: React.FC = () => {
         </div>
       </div>
     </div>
-  )
-}
-
-// Componente para información de usuario
-interface UserInfoTabProps {
-  user: any
-  isEditing: boolean
-  formData: any
-  error: string | null
-  success: string | null
-  isLoading: boolean
-  showChangePassword: boolean
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onEdit: () => void
-  onCancel: () => void
-  setShowChangePassword: (show: boolean) => void
-  onPhotoUpdated?: (updatedUser: any) => void
-  setSuccess?: (message: string | null) => void
-}
-
-const UserInfoTab: React.FC<UserInfoTabProps> = ({
-  user, isEditing, formData, error, success, isLoading, showChangePassword,
-  onInputChange, onEdit, onCancel, setShowChangePassword, onPhotoUpdated, setSuccess
-}) => {
-  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
-  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
-  const [localIsLoading, setLocalIsLoading] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
-
-  // Cleanup preview URL when component unmounts or file changes
-  React.useEffect(() => {
-    return () => {
-      if (profilePhotoPreview) {
-        URL.revokeObjectURL(profilePhotoPreview)
-      }
-    }
-  }, [profilePhotoPreview])
-
-  const handlePhotoFileSelect = (file: File | null) => {
-    // Cleanup previous preview URL
-    if (profilePhotoPreview) {
-      URL.revokeObjectURL(profilePhotoPreview)
-      setProfilePhotoPreview(null)
-    }
-
-    setProfilePhotoFile(file)
-    
-    if (file) {
-      // Create new preview URL
-      const newPreviewUrl = URL.createObjectURL(file)
-      setProfilePhotoPreview(newPreviewUrl)
-    }
-  }
-
-  const handleSaveWithPhoto = async () => {
-    try {
-      setLocalIsLoading(true)
-      setLocalError(null)
-      if (setSuccess) setSuccess(null)
-
-      // Si hay una foto seleccionada, subirla primero
-      if (profilePhotoFile) {
-        const updatedUser = await authService.uploadProfilePhoto(profilePhotoFile)
-        
-        // IMPORTANTE: Limpiar el preview ANTES de actualizar el contexto
-        if (profilePhotoPreview) {
-          URL.revokeObjectURL(profilePhotoPreview)
-          setProfilePhotoPreview(null)
-        }
-        setProfilePhotoFile(null)
-        
-        // Ahora actualizar el contexto con el usuario que tiene la foto real
-        if (onPhotoUpdated) onPhotoUpdated(updatedUser)
-      }
-      
-      // Actualizar nombre si cambió
-      if (formData.firstName !== user?.firstName || formData.middleName !== user?.middleName || formData.firstLastName !== user?.firstLastName || formData.secondLastName !== user?.secondLastName) {
-        await authService.updateProfile({ 
-          firstName: formData.firstName, 
-          middleName: formData.middleName, // Cambiar secondName por middleName
-          firstLastName: formData.firstLastName, 
-          secondLastName: formData.secondLastName 
-        })
-      }
-      
-      // Refrescar el usuario para asegurar que se actualice en toda la app
-      const refreshedUser = await authService.getProfile()
-      
-      if (onPhotoUpdated) {
-        onPhotoUpdated(refreshedUser)
-      }
-
-      if (setSuccess) setSuccess('Información de usuario actualizada correctamente')
-      
-      // Salir del modo edición
-      setTimeout(() => {
-        onCancel() // Esto cambiará isEditing a false
-      }, 1000)
-      
-    } catch (error: any) {
-      console.error('Error saving user info:', error)
-      setLocalError(error.response?.data?.message || 'Error al guardar la información')
-    } finally {
-      setLocalIsLoading(false)
-    }
-  }
-
-  return (
-    <>
-      {/* Alerts */}
-      {(error || localError) && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <p className="text-red-800">{error || localError}</p>
-        </motion.div>
-      )}
-
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
-        >
-          <p className="text-green-800">{success}</p>
-        </motion.div>
-      )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
-              <UserIcon className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Información de Usuario</h2>
-              <p className="text-sm text-gray-600">Gestiona tu información básica de cuenta</p>
-            </div>
-          </div>
-          {!isEditing && (
-            <button
-              onClick={onEdit}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <PencilIcon className="h-4 w-4" />
-              <span>Editar</span>
-            </button>
-          )}
-        </div>
-
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Profile Photo Section */}
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <UserIcon className="h-5 w-5 mr-2" />
-                Foto de Perfil
-              </h3>
-              {user && (
-                <ProfilePhotoUpload
-                  user={user}
-                  onPhotoUpdated={onPhotoUpdated}
-                  size="lg"
-                  isEditing={isEditing}
-                  selectedFile={profilePhotoFile}
-                  onFileSelect={handlePhotoFileSelect}
-                  previewUrl={profilePhotoPreview}
-                />
-              )}
-            </div>
-
-            {/* First Name */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Primer Nombre</span>
-                <span className="text-red-500">*</span>
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu primer nombre"
-                  required
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.firstName}</p>
-              )}
-            </div>
-
-            {/* Middle Name */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Segundo Nombre</span>
-                <span className="text-sm text-gray-500">(Opcional)</span>
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="middleName"
-                  value={formData.middleName}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu segundo nombre"
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.middleName || 'No especificado'}</p>
-              )}
-            </div>
-
-            {/* First Last Name */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Primer Apellido</span>
-                <span className="text-red-500">*</span>
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="firstLastName"
-                  value={formData.firstLastName}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu primer apellido"
-                  required
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.firstLastName}</p>
-              )}
-            </div>
-
-            {/* Second Last Name */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Segundo Apellido</span>
-                <span className="text-sm text-gray-500">(Opcional)</span>
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="secondLastName"
-                  value={formData.secondLastName}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tu segundo apellido"
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{user?.secondLastName || 'No especificado'}</p>
-              )}
-            </div>
-
-            {/* Email (readonly) */}
-            <div className="md:col-span-2">
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <span>📧</span>
-                <span>Correo Electrónico</span>
-              </label>
-              <p className="text-lg text-gray-500 py-2">{user?.email}</p>
-              <p className="text-xs text-gray-400">No se puede modificar</p>
-            </div>
-          </div>          {/* Action Buttons */}
-          {isEditing && (
-            <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-gray-200">
-              <button
-                onClick={onCancel}
-                disabled={isLoading}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <XMarkIcon className="h-4 w-4" />
-                <span>Cancelar</span>
-              </button>
-              <button
-                onClick={handleSaveWithPhoto}
-                disabled={localIsLoading}
-                className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {localIsLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <CheckIcon className="h-4 w-4" />
-                )}
-                <span>Guardar Cambios</span>
-              </button>
-            </div>
-          )}
-
-          {/* Change Password Section */}
-          {!isEditing && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                    <LockClosedIcon className="h-5 w-5 mr-2" />
-                    Cambiar Contraseña
-                  </h3>
-                  <p className="text-sm text-gray-600">Actualiza tu contraseña para mantener tu cuenta segura</p>
-                </div>
-                <button
-                  onClick={() => setShowChangePassword(!showChangePassword)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors"
-                >
-                  <LockClosedIcon className="h-4 w-4" />
-                  <span>{showChangePassword ? 'Ocultar' : 'Cambiar Contraseña'}</span>
-                </button>
-              </div>
-              
-              {showChangePassword && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <ChangePassword
-                    onSuccess={() => {
-                      setShowChangePassword(false)
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
   )
 }
 
@@ -836,17 +539,17 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
                 <CalendarDaysIcon className="h-4 w-4" />
                 <span>Fecha de Nacimiento</span>
               </label>
-              {isEditing || !hasProfile ? (
-                <input
+              {isEditing || !hasProfile ? (                <input
                   type="date"
                   name="birthDate"
                   value={formData.birthDate}
                   onChange={onInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="dd/mm/aaaa"
                 />
               ) : (
                 <p className="text-lg text-gray-900 py-2">
-                  {profile && new Date(profile.birthDate).toLocaleDateString('es-CO')}
+                  {profile && formatDate(profile.birthDate)}
                 </p>
               )}
             </div>

@@ -4,10 +4,9 @@ import type {
   CreateClientProfileRequest
 } from '../types/index'
 
-class ClientService {
-  // Crear perfil de cliente
+class ClientService {  // Crear perfil de cliente
   async createProfile(data: CreateClientProfileRequest): Promise<ClientProfile> {
-    const response = await api.post<ClientProfile>('/clients/profile', data)
+    const response = await api.post<ClientProfile>('/clients/create-profile', data)
     return response.data
   }
 

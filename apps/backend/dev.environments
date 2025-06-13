@@ -1,12 +1,17 @@
+# Base de datos
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASS=alopez
+DB_PASS=123456
 DB_NAME=myhometech
-JWT_SECRET=alopez
+
+# Autenticacion
+JWT_SECRET=ALOPEZ
+
+# Para solucionar el problema de CORS
 FRONTEND_URL=http://localhost:5173
 
 # Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME=dwhbaew8x
-CLOUDINARY_API_KEY=665913576143145
-CLOUDINARY_API_SECRET=h5SVbL5sBceWk7MF_upNbXgSaAI
+CLOUDINARY_CLOUD_NAME=asdsadsdadadad
+CLOUDINARY_API_KEY=23131313131232133
+CLOUDINARY_API_SECRET=asdadas_dxzcx23_dd2

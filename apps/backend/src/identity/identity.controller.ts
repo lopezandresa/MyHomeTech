@@ -103,4 +103,11 @@ export class IdentityController {
   ): Promise<IdentityResponse> {
     return this.svc.updateProfilePhoto(req.user.id, profilePhoto);
   }
+
+  @Post('check-email')
+  @ApiOperation({ summary: 'Verifica si un correo electrónico ya está registrado' })
+  async checkEmail(@Body() dto: { email: string }): Promise<void> {
+    await this.svc.checkEmail(dto.email);
+    return;
+  }
 }
