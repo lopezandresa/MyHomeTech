@@ -7,9 +7,24 @@ import type {
 } from '../types/index'
 
 class TechnicianService {
-  // Crear perfil de técnico
+  // Crear perfil de técnico con archivo
   async createProfile(data: CreateTechnicianProfileRequest): Promise<TechnicianProfile> {
-    const response = await api.post<TechnicianProfile>('/technicians/profile', data)
+    const formData = new FormData()
+    formData.append('identityId', data.identityId.toString())
+    formData.append('cedula', data.cedula)
+    formData.append('birthDate', data.birthDate)
+    formData.append('experienceYears', data.experienceYears.toString())
+    formData.append('specialties', JSON.stringify(data.specialties))
+    
+    if (data.idPhotoFile) {
+      formData.append('idPhoto', data.idPhotoFile)
+    }
+
+    const response = await api.post<TechnicianProfile>('/technicians/profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response.data
   }
 
@@ -18,6 +33,7 @@ class TechnicianService {
     const response = await api.get<TechnicianProfile[]>('/technicians')
     return response.data
   }
+  
   // Obtener técnico por ID
   async getTechnicianById(id: number): Promise<TechnicianProfile> {
     const response = await api.get<TechnicianProfile>(`/technicians/${id}`)
@@ -30,9 +46,21 @@ class TechnicianService {
     return response.data
   }
 
-  // Actualizar mi perfil de técnico
+  // Actualizar mi perfil de técnico con archivo opcional
   async updateMyProfile(data: Partial<CreateTechnicianProfileRequest>): Promise<TechnicianProfile> {
-    const response = await api.put<TechnicianProfile>('/technicians/me', data)
+    const formData = new FormData()
+    
+    if (data.cedula) formData.append('cedula', data.cedula)
+    if (data.birthDate) formData.append('birthDate', data.birthDate)
+    if (data.experienceYears !== undefined) formData.append('experienceYears', data.experienceYears.toString())
+    if (data.specialties) formData.append('specialties', JSON.stringify(data.specialties))
+    if (data.idPhotoFile) formData.append('idPhoto', data.idPhotoFile)
+
+    const response = await api.put<TechnicianProfile>('/technicians/me', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response.data
   }
 
@@ -62,7 +90,7 @@ class TechnicianService {
 
   // Buscar electrodomésticos por nombre
   async searchAppliances(name: string): Promise<Appliance[]> {
-    const response = await api.get<Appliance[]>(`/appliances/search/${name}`)
+    const response = await api.get<Appliance[]>(`/appliances/search?name=${encodeURIComponent(name)}`)
     return response.data
   }
 

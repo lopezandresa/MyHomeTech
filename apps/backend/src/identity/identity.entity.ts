@@ -22,4 +22,7 @@ export class Identity {
 
   @Column({ type: 'enum', enum: ['client', 'technician', 'admin'], default: 'client' })
   role: Role;
+
+  @Column({ nullable: true })
+  profilePhotoPath: string;
 }

@@ -1,6 +1,6 @@
 import {
     IsInt, IsString, IsDateString,
-    Min, IsUrl, ArrayNotEmpty, ArrayUnique
+    Min, ArrayNotEmpty, ArrayUnique, IsOptional
   } from 'class-validator';
   import { ApiProperty } from '@nestjs/swagger';
   
@@ -22,10 +22,6 @@ import {
     @Min(0)
     experienceYears: number;
   
-    @ApiProperty({ description: 'URL de la foto de la cédula' })
-    @IsUrl()
-    idPhotoUrl: string;
-  
     @ApiProperty({ 
       description: 'Lista de IDs de tipos de electrodomésticos especializados',
       type: [Number]
@@ -33,4 +29,9 @@ import {
     @ArrayNotEmpty()
     @ArrayUnique()
     specialties: number[];
+
+    @ApiProperty({ description: 'Ruta del archivo de foto de cédula', required: false })
+    @IsOptional()
+    @IsString()
+    idPhotoPath?: string;
   }

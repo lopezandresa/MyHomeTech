@@ -81,6 +81,29 @@ class AuthService {
     return response.data
   }
 
+  // Subir foto de perfil
+  async uploadProfilePhoto(file: File): Promise<User> {
+    const formData = new FormData()
+    formData.append('profilePhoto', file)
+
+    const response = await api.post<User>('/identity/me/upload-profile-photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    
+    const user = response.data
+    localStorage.setItem('user', JSON.stringify(user))
+    return user
+  }
+
+  // Obtener URL de la foto de perfil
+  getProfilePhotoUrl(profilePhotoPath?: string): string | null {
+    if (!profilePhotoPath) return null
+    // La URL se construye con el endpoint estático del backend
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/profile-photos/${profilePhotoPath.split('/').pop()}`
+  }
+
   // Verificar rol
   hasRole(role: string): boolean {
     const user = this.getCurrentUser()

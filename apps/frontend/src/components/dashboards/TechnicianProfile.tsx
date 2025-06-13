@@ -9,16 +9,17 @@ import {
   UserIcon,
   LockClosedIcon,
   WrenchScrewdriverIcon,
-  PhotoIcon,
   PlusIcon,
   TrashIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CloudArrowUpIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { technicianService } from '../../services/technicianService'
 import { authService } from '../../services/authService'
 import type { TechnicianProfile as TechnicianProfileType, CreateTechnicianProfileRequest, ApplianceType } from '../../types/index'
 import ChangePassword from './ChangePassword'
+import ProfilePhotoUpload from '../common/ProfilePhotoUpload'
 
 const TechnicianProfile: React.FC = () => {
   const { user, refreshUser } = useAuth()
@@ -32,6 +33,8 @@ const TechnicianProfile: React.FC = () => {
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [availableSpecialties, setAvailableSpecialties] = useState<ApplianceType[]>([])
   const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false)
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
 
   // Form data
   const [formData, setFormData] = useState({
@@ -40,7 +43,6 @@ const TechnicianProfile: React.FC = () => {
     cedula: '',
     birthDate: '',
     experienceYears: 0,
-    idPhotoUrl: '',
     specialties: [] as number[]
   })
 
@@ -48,6 +50,15 @@ const TechnicianProfile: React.FC = () => {
     loadProfile()
     loadSpecialties()
   }, [user])
+
+  useEffect(() => {
+    // Cleanup preview URL when component unmounts or file changes
+    return () => {
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview)
+      }
+    }
+  }, [profilePhotoPreview])
 
   const loadProfile = async () => {
     if (!user) return
@@ -63,7 +74,6 @@ const TechnicianProfile: React.FC = () => {
         cedula: profileData.cedula,
         birthDate: profileData.birthDate.split('T')[0],
         experienceYears: profileData.experienceYears,
-        idPhotoUrl: profileData.idPhotoUrl,
         specialties: profileData.specialties.map(s => s.id)
       })
     } catch (error) {
@@ -75,7 +85,6 @@ const TechnicianProfile: React.FC = () => {
         cedula: '',
         birthDate: '',
         experienceYears: 0,
-        idPhotoUrl: '',
         specialties: []
       })
     } finally {
@@ -97,6 +106,42 @@ const TechnicianProfile: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'number' ? parseInt(value) || 0 : value
+    }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.match(/^image\/(jpeg|jpg|png|gif)$/)) {
+        setError('Solo se permiten archivos de imagen (JPG, PNG, GIF)')
+        return
+      }
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('El archivo no puede ser mayor a 5MB')
+        return
+      }
+
+      setProfilePhotoFile(file)
+      
+      // Create preview URL
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview)
+      }
+      const newPreviewUrl = URL.createObjectURL(file)
+      setProfilePhotoPreview(newPreviewUrl)
+      setError(null)
+    }
+  }
+
+  const handleSpecialtyToggle = (specialtyId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      specialties: prev.specialties.includes(specialtyId)
+        ? prev.specialties.filter(id => id !== specialtyId)
+        : [...prev.specialties, specialtyId]
     }))
   }
 
@@ -138,8 +183,16 @@ const TechnicianProfile: React.FC = () => {
           return
         }
       } else if (activeTab === 'professional') {
-        if (!formData.cedula || !formData.birthDate || !formData.idPhotoUrl) {
-          setError('Todos los campos profesionales son obligatorios')
+        if (!formData.cedula || !formData.birthDate) {
+          setError('Cédula y fecha de nacimiento son obligatorios')
+          return
+        }
+        if (!hasProfile && formData.specialties.length === 0) {
+          setError('Debes seleccionar al menos una especialidad')
+          return
+        }
+        if (!hasProfile && !profilePhotoFile) {
+          setError('Debes subir una foto de tu cédula')
           return
         }
       }
@@ -150,8 +203,8 @@ const TechnicianProfile: React.FC = () => {
         cedula: formData.cedula,
         birthDate: formData.birthDate,
         experienceYears: formData.experienceYears,
-        idPhotoUrl: formData.idPhotoUrl,
-        specialties: formData.specialties
+        specialties: formData.specialties,
+        idPhotoFile: profilePhotoFile || undefined
       }
 
       if (hasProfile) {
@@ -183,6 +236,12 @@ const TechnicianProfile: React.FC = () => {
     setIsEditing(false)
     setError(null)
     setSuccess(null)
+    setProfilePhotoFile(null)
+    if (profilePhotoPreview) {
+      URL.revokeObjectURL(profilePhotoPreview)
+      setProfilePhotoPreview(null)
+    }
+    
     if (hasProfile && profile) {
       setFormData({
         fullName: user!.name,
@@ -190,7 +249,6 @@ const TechnicianProfile: React.FC = () => {
         cedula: profile.cedula,
         birthDate: profile.birthDate.split('T')[0],
         experienceYears: profile.experienceYears,
-        idPhotoUrl: profile.idPhotoUrl,
         specialties: profile.specialties.map(s => s.id)
       })
     } else {
@@ -200,7 +258,6 @@ const TechnicianProfile: React.FC = () => {
         cedula: '',
         birthDate: '',
         experienceYears: 0,
-        idPhotoUrl: '',
         specialties: []
       })
     }
@@ -227,7 +284,8 @@ const TechnicianProfile: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-lg">        <div className="border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow-lg">
+        <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('user')}
@@ -259,7 +317,9 @@ const TechnicianProfile: React.FC = () => {
               </div>
             </button>
           </nav>
-        </div>        {/* Tab Content */}
+        </div>
+
+        {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'user' && (
             <UserInfoTab
@@ -275,9 +335,11 @@ const TechnicianProfile: React.FC = () => {
               onSave={handleSave}
               onCancel={handleCancel}
               setShowChangePassword={setShowChangePassword}
+              onPhotoUpdated={refreshUser}
+              setSuccess={setSuccess}
             />
           )}
-            {activeTab === 'professional' && (
+          {activeTab === 'professional' && (
             <ProfessionalInfoTab
               profile={profile}
               hasProfile={hasProfile}
@@ -288,7 +350,11 @@ const TechnicianProfile: React.FC = () => {
               isLoading={isLoading}
               availableSpecialties={availableSpecialties}
               showSpecialtiesModal={showSpecialtiesModal}
+              selectedFile={profilePhotoFile}
+              previewUrl={profilePhotoPreview}
               onInputChange={handleInputChange}
+              onFileChange={handleFileChange}
+              onSpecialtyToggle={handleSpecialtyToggle}
               onEdit={() => setIsEditing(true)}
               onSave={handleSave}
               onCancel={handleCancel}
@@ -317,12 +383,76 @@ interface UserInfoTabProps {
   onSave: () => void
   onCancel: () => void
   setShowChangePassword: (show: boolean) => void
+  onPhotoUpdated?: (updatedUser: any) => void
+  setSuccess?: (message: string) => void
 }
 
 const UserInfoTab: React.FC<UserInfoTabProps> = ({
   user, isEditing, formData, error, success, isLoading, showChangePassword,
-  onInputChange, onEdit, onSave, onCancel, setShowChangePassword
+  onInputChange, onEdit, onSave, onCancel, setShowChangePassword, onPhotoUpdated, setSuccess
 }) => {
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
+
+  // Cleanup preview URL when component unmounts or file changes
+  React.useEffect(() => {
+    return () => {
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview)
+      }
+    }
+  }, [profilePhotoPreview])
+
+  const handlePhotoFileSelect = (file: File | null) => {
+    // Cleanup previous preview URL
+    if (profilePhotoPreview) {
+      URL.revokeObjectURL(profilePhotoPreview)
+      setProfilePhotoPreview(null)
+    }
+
+    setProfilePhotoFile(file)
+    
+    if (file) {
+      // Create new preview URL
+      const newPreviewUrl = URL.createObjectURL(file)
+      setProfilePhotoPreview(newPreviewUrl)
+    }
+  }
+
+  const handleSaveWithPhoto = async () => {
+    try {
+      // Si hay una foto seleccionada, subirla primero
+      if (profilePhotoFile) {
+        const updatedUser = await authService.uploadProfilePhoto(profilePhotoFile)
+        if (onPhotoUpdated) onPhotoUpdated(updatedUser)
+      }
+      
+      // Luego ejecutar el guardado normal
+      await onSave()
+      
+      // Limpiar estados de foto
+      setProfilePhotoFile(null)
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview)
+        setProfilePhotoPreview(null)
+      }
+    } catch (error) {
+      console.error('Error saving with photo:', error)
+    }
+  }
+
+  const handleCancelWithPhoto = () => {
+    // Limpiar estados de foto
+    setProfilePhotoFile(null)
+    if (profilePhotoPreview) {
+      URL.revokeObjectURL(profilePhotoPreview)
+      setProfilePhotoPreview(null)
+    }
+    
+    // Ejecutar cancelar normal
+    onCancel()
+  }
+
   return (
     <>
       {/* Alerts */}
@@ -371,6 +501,27 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Profile Photo Section */}
+            <div className="md:col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <UserIcon className="h-5 w-5 mr-2" />
+                Foto de Perfil
+              </h3>
+              {user && (
+                <ProfilePhotoUpload
+                  user={user}
+                  onPhotoUpdated={(updatedUser) => {
+                    if (onPhotoUpdated) onPhotoUpdated(updatedUser)
+                  }}
+                  size="lg"
+                  isEditing={isEditing}
+                  selectedFile={profilePhotoFile}
+                  onFileSelect={handlePhotoFileSelect}
+                  previewUrl={profilePhotoPreview}
+                />
+              )}
+            </div>
+
             {/* Full Name */}
             <div className="md:col-span-2">
               <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
@@ -412,7 +563,7 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
                 <span>Cancelar</span>
               </button>
               <button
-                onClick={onSave}
+                onClick={handleSaveWithPhoto}
                 disabled={isLoading}
                 className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
@@ -474,7 +625,11 @@ interface ProfessionalInfoTabProps {
   isLoading: boolean
   availableSpecialties: ApplianceType[]
   showSpecialtiesModal: boolean
+  selectedFile: File | null
+  previewUrl: string | null
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onSpecialtyToggle: (specialtyId: number) => void
   onEdit: () => void
   onSave: () => void
   onCancel: () => void
@@ -485,8 +640,8 @@ interface ProfessionalInfoTabProps {
 
 const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
   profile, hasProfile, isEditing, formData, error, success, isLoading,
-  availableSpecialties, showSpecialtiesModal, onInputChange, onEdit, onSave, onCancel,
-  onAddSpecialty, onRemoveSpecialty, setShowSpecialtiesModal
+  availableSpecialties, showSpecialtiesModal, selectedFile, previewUrl, onInputChange, onFileChange, 
+  onSpecialtyToggle, onEdit, onSave, onCancel, onAddSpecialty, onRemoveSpecialty, setShowSpecialtiesModal
 }) => {
   return (
     <>
@@ -511,7 +666,8 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
         </motion.div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">        {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
@@ -604,92 +760,145 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
               )}
             </div>
 
-            {/* ID Photo URL */}
+            {/* ID Photo Upload */}
             <div className="md:col-span-2">
               <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <PhotoIcon className="h-4 w-4" />
-                <span>URL de Foto de Cédula</span>
+                <CloudArrowUpIcon className="h-4 w-4" />
+                <span>Foto de Cédula</span>
               </label>
               {isEditing || !hasProfile ? (
-                <input
-                  type="url"
-                  name="idPhotoUrl"
-                  value={formData.idPhotoUrl}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="https://ejemplo.com/foto-cedula.jpg"
-                />
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onFileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {selectedFile && (
+                    <div className="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <CheckIcon className="h-5 w-5 text-green-600" />
+                      <span className="text-green-700">Archivo seleccionado: {selectedFile.name}</span>
+                    </div>
+                  )}
+                  {previewUrl && (
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-600 mb-2">Vista previa:</p>
+                      <img
+                        src={previewUrl}
+                        alt="Vista previa"
+                        className="max-w-xs max-h-48 object-cover rounded-lg border border-gray-300"
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB
+                  </p>
+                </div>
               ) : (
                 <div className="flex items-center space-x-3">
-                  <p className="text-lg text-gray-900 py-2 flex-1">{profile?.idPhotoUrl}</p>
-                  {profile?.idPhotoUrl && (
-                    <a
-                      href={profile.idPhotoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 text-sm"
-                    >
-                      Ver imagen
-                    </a>
+                  <p className="text-lg text-gray-900 py-2 flex-1">
+                    {profile?.idPhotoPath ? 'Foto de cédula subida' : 'Sin foto de cédula'}
+                  </p>
+                  {profile?.idPhotoPath && (
+                    <span className="text-green-600 text-sm">✓ Archivo subido</span>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Specialties */}
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-3">
-                <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+            {/* Specialties Selection (for creation) */}
+            {(!hasProfile && (isEditing || !hasProfile)) && (
+              <div className="md:col-span-2">
+                <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-3">
                   <WrenchScrewdriverIcon className="h-4 w-4" />
-                  <span>Especialidades en Electrodomésticos</span>
+                  <span>Seleccionar Especialidades</span>
+                  <span className="text-red-500">*</span>
                 </label>
-                {hasProfile && !isEditing && (
-                  <button
-                    onClick={() => setShowSpecialtiesModal(true)}
-                    className="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    <span>Agregar</span>
-                  </button>
-                )}
-              </div>
-
-              {hasProfile && profile?.specialties && profile.specialties.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {profile.specialties.map(specialty => (
-                    <div
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {availableSpecialties.map(specialty => (
+                    <label
                       key={specialty.id}
-                      className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
                     >
-                      <div className="flex items-center">
-                        <CheckIcon className="h-4 w-4 text-blue-600 mr-3" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
-                          {specialty.description && (
-                            <p className="text-xs text-gray-500">{specialty.description}</p>
-                          )}
-                        </div>
+                      <input
+                        type="checkbox"
+                        checked={formData.specialties.includes(specialty.id)}
+                        onChange={() => onSpecialtyToggle(specialty.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
+                        {specialty.description && (
+                          <p className="text-xs text-gray-500 truncate">{specialty.description}</p>
+                        )}
                       </div>
-                      {!isEditing && (
-                        <button
-                          onClick={() => onRemoveSpecialty(specialty.id)}
-                          className="text-red-600 hover:text-red-700 p-1"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                    </label>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <WrenchScrewdriverIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No tienes especialidades asignadas</p>
-                  <p className="text-sm text-gray-400">Agrega especialidades para recibir trabajos específicos</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Selecciona las especialidades en las que tienes experiencia
+                </p>
+              </div>
+            )}
+
+            {/* Existing Specialties (for updates) */}
+            {hasProfile && (
+              <div className="md:col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                    <WrenchScrewdriverIcon className="h-4 w-4" />
+                    <span>Especialidades en Electrodomésticos</span>
+                  </label>
+                  {!isEditing && (
+                    <button
+                      onClick={() => setShowSpecialtiesModal(true)}
+                      className="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      <span>Agregar</span>
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>          {/* Action Buttons */}
+
+                {profile?.specialties && profile.specialties.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {profile.specialties.map(specialty => (
+                      <div
+                        key={specialty.id}
+                        className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                      >
+                        <div className="flex items-center">
+                          <CheckIcon className="h-4 w-4 text-blue-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
+                            {specialty.description && (
+                              <p className="text-xs text-gray-500">{specialty.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        {!isEditing && (
+                          <button
+                            onClick={() => onRemoveSpecialty(specialty.id)}
+                            className="text-red-600 hover:text-red-700 p-1"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    <WrenchScrewdriverIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No tienes especialidades asignadas</p>
+                    <p className="text-sm text-gray-400">Agrega especialidades para recibir trabajos específicos</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
           <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-gray-200">
             {isEditing && hasProfile && (
               <button
@@ -711,7 +920,7 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
               ) : (
                 <CheckIcon className="h-4 w-4" />
               )}
-              <span>Guardar Perfil</span>
+              <span>{hasProfile ? 'Actualizar Perfil' : 'Crear Perfil'}</span>
             </button>
           </div>
 

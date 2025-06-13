@@ -97,4 +97,14 @@ export class IdentityService {
 
     return { message: 'Contraseña actualizada exitosamente' };
   }
+
+  async updateProfilePhoto(userId: number, photoPath: string): Promise<Omit<Identity, 'password'>> {
+    const user = await this.repo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    user.profilePhotoPath = photoPath;
+    const saved = await this.repo.save(user);
+    const { password, ...rest } = saved;
+    return rest;
+  }
 }

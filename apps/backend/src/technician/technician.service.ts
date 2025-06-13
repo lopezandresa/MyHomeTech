@@ -24,7 +24,7 @@ export class TechnicianService {
       cedula: dto.cedula,
       birthDate: new Date(dto.birthDate),
       experienceYears: dto.experienceYears,
-      idPhotoUrl: dto.idPhotoUrl,
+      idPhotoPath: dto.idPhotoPath,
       specialties: specialties,
     });
     return this.techRepo.save(tech);
@@ -66,7 +66,7 @@ export class TechnicianService {
     if (dto.cedula) tech.cedula = dto.cedula;
     if (dto.birthDate) tech.birthDate = new Date(dto.birthDate);
     if (dto.experienceYears !== undefined) tech.experienceYears = dto.experienceYears;
-    if (dto.idPhotoUrl) tech.idPhotoUrl = dto.idPhotoUrl;
+    if (dto.idPhotoPath) tech.idPhotoPath = dto.idPhotoPath;
 
     // Actualizar especialidades si se proporcionan
     if (dto.specialties && dto.specialties.length > 0) {

@@ -4,6 +4,7 @@ export interface User {
   email: string
   role: 'client' | 'technician' | 'admin'
   status: boolean
+  profilePhotoPath?: string
 }
 
 export interface LoginRequest {
@@ -88,7 +89,7 @@ export interface TechnicianProfile {
   cedula: string
   birthDate: string
   experienceYears: number
-  idPhotoUrl: string
+  idPhotoPath: string
   specialties: ApplianceType[]
 }
 
@@ -97,8 +98,8 @@ export interface CreateTechnicianProfileRequest {
   cedula: string
   birthDate: string
   experienceYears: number
-  idPhotoUrl: string
   specialties: number[]
+  idPhotoFile?: File
 }
 
 // Solicitud de servicio

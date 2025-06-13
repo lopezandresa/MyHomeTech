@@ -22,8 +22,8 @@ export class Technician {
   @Column('int')
   experienceYears: number;
 
-  @Column()
-  idPhotoUrl: string;
+  @Column({ nullable: true })
+  idPhotoPath: string;
 
   @ManyToMany(() => ApplianceType, { eager: true })
   @JoinTable({ name: 'technician_specialties' })
