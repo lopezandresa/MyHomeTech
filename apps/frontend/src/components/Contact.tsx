@@ -1,4 +1,4 @@
-import { UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, ShieldCheckIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,9 +8,6 @@ const Contact = () => {
   const { isAuthenticated } = useAuth()
   const [authModalOpen, setAuthModalOpen] = useState(false)
 
-  const handleOpenAuth = () => {
-    setAuthModalOpen(true)
-  }
 
   const benefits = [
     {
