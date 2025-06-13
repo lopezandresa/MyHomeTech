@@ -39,10 +39,8 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     state: ConnectionState.DISCONNECTED
   })
   const checkIntervalRef = useRef<number | null>(null)
-  const statusCheckIntervalRef = useRef<number | null>(null)
-  // Callback para nuevas solicitudes
+  const statusCheckIntervalRef = useRef<number | null>(null)  // Callback para nuevas solicitudes
   const handleNewServiceRequest = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
-    console.log('🔔 New service request:', data)
     
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
@@ -66,20 +64,19 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
         window.focus();
         notif.close();
       };
-      
-      // Reproducir sonido de notificación
+        // Reproducir sonido de notificación
       try {
         const audio = new Audio('/notification.mp3');
-        audio.play().catch(e => console.log('No se pudo reproducir el sonido:', e));
-      } catch (e) {
-        console.log('Error al intentar reproducir sonido:', e);
+        audio.play().catch(() => {
+          // Silently handle audio play errors
+        });
+      } catch {
+        // Silently handle audio errors
       }
     }
   }, [])
-
   // Callback para solicitudes actualizadas
   const handleServiceRequestUpdated = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
-    console.log('🔄 Service request updated:', data)
     
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
@@ -89,11 +86,8 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     }
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
-  }, [])
-  // Callback para solicitudes removidas
+  }, [])  // Callback para solicitudes removidas
   const handleServiceRequestRemoved = useCallback((data: { serviceRequestId: number, message: string }) => {
-    console.log('❌ Service request removed:', data)
-    
     // Crear notificación de solicitud removida
     const notification: ServiceRequestNotification = {
       serviceRequest: { id: data.serviceRequestId } as ServiceRequest, // Crear objeto mínimo
@@ -111,11 +105,8 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       )
     }, 100)
   }, [])
-
   // Callback para ofertas rechazadas
   const handleOfferRejected = useCallback((data: { serviceRequest: ServiceRequest, message: string, type: string }) => {
-    console.log('❌ Offer rejected:', data)
-    
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
       message: data.message,
@@ -135,28 +126,17 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
   }, [])  // Function to check connection and update status
   const checkAndUpdateConnectionStatus = useCallback(() => {
     if (!token) return false;
-    
-    const connected = webSocketService.isConnected();
+      const connected = webSocketService.isConnected();
     const status = webSocketService.getConnectionStatus();
-    
-    console.log('🔍 Checking connection status:', { 
-      connected, 
-      status, 
-      socketExists: !!webSocketService,
-      technicianId 
-    });
     
     // Determine connection state
     let connectionState: ConnectionStateType;
     if (connected) {
       connectionState = ConnectionState.CONNECTED;
     } else if (status.attempts > 0) {
-      connectionState = ConnectionState.CONNECTING;
-    } else {
+      connectionState = ConnectionState.CONNECTING;    } else {
       connectionState = ConnectionState.DISCONNECTED;
     }
-    
-    console.log('🔄 Updating connection state to:', connectionState);
     
     setIsConnected(connected);
     setConnectionStatus({
@@ -178,12 +158,9 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       setIsConnected(false);
       setConnectionStatus(prev => ({
         ...prev,
-        state: ConnectionState.DISCONNECTED
-      }));
+        state: ConnectionState.DISCONNECTED      }));
       return;
     }
-
-    console.log('🔄 Setting up WebSocket connection for technician:', user.id);
 
     // Set to connecting state when starting connection
     setConnectionStatus(prev => ({
@@ -277,18 +254,6 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       }
     };
   }, [technicianId, isConnected, token]);
-
-  // Debug logging for connection state changes
-  useEffect(() => {
-    if (user?.role === 'technician' && technicianId && token) {
-      console.log(`🔍 WebSocket connection state changed for technician ${technicianId}:`, {
-        state: connectionStatus.state,
-        connected: isConnected,
-        attempts: connectionStatus.attempts
-      });
-    }
-  }, [connectionStatus.state, isConnected, technicianId, user?.role, token]);
-
   // Función para solicitar permisos de notificación
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {

@@ -121,7 +121,6 @@ export const useRealTimeClientNotifications = (
   }, [])
 
   const hasUnreadNotifications = notifications.some(n => !n.read)
-
   // Efecto para conectar y configurar socket
   useEffect(() => {
     if (!clientId) return
@@ -132,51 +131,36 @@ export const useRealTimeClientNotifications = (
     })
 
     newSocket.on('connect', () => {
-      console.log('Client connected to WebSocket')
-      setIsConnected(true)
-      
+      setIsConnected(true)      
       // Unirse a la sala específica del cliente
       newSocket.emit('join-client-room', { clientId })
     })
 
     newSocket.on('disconnect', () => {
-      console.log('Client disconnected from WebSocket')
       setIsConnected(false)
-    })
-
-    // Escuchar notificación de solicitud expirada
+    })    // Escuchar notificación de solicitud expirada
     newSocket.on('service-request-expired', (data) => {
-      console.log('Service request expired:', data)
       addNotification({
         serviceRequest: data.serviceRequest,
         message: data.message,
         type: 'expired'
       })
-    })
-
-    // Escuchar nueva oferta recibida
+    })    // Escuchar nueva oferta recibida
     newSocket.on('service-request-offer', (data) => {
-      console.log('New offer received:', data)
       addNotification({
         serviceRequest: data.serviceRequest,
         message: data.message,
         type: 'offer'
       })
-    })
-
-    // Escuchar solicitud aceptada
+    })    // Escuchar solicitud aceptada
     newSocket.on('service-request-accepted', (data) => {
-      console.log('Service request accepted:', data)
       addNotification({
         serviceRequest: data.serviceRequest,
         message: data.message,
         type: 'accepted'
       })
-    })
-
-    // Escuchar actualizaciones generales
+    })    // Escuchar actualizaciones generales
     newSocket.on('service-request-update', (data) => {
-      console.log('Service request update:', data)
       addNotification({
         serviceRequest: data.serviceRequest,
         message: data.message,
