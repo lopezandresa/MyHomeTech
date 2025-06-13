@@ -288,7 +288,7 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
   const [localIsLoading, setLocalIsLoading] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
+  const [, setLocalError] = useState<string | null>(null)
 
   // Limpiar preview URL cuando el componente se desmonta o cambian los archivos
   React.useEffect(() => {
@@ -322,7 +322,6 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
 
       // Si hay una foto seleccionada, subirla primero
       if (profilePhotoFile) {
-        const updatedUser = await authService.uploadProfilePhoto(profilePhotoFile)
         
         // Limpiar el preview ANTES de actualizar el contexto
         if (profilePhotoPreview) {

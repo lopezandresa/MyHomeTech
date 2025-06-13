@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import addressService from '../../services/addressService'
-import type { Address, CreateAddressRequest, UpdateAddressRequest } from '../../types/index'
+import type { Address, CreateAddressRequest } from '../../types/index'
 
 interface AddressManagementProps {
   isEditing: boolean
