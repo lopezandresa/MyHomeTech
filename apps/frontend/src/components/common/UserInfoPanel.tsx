@@ -44,7 +44,6 @@ const UserInfoPanel: React.FC<UserInfoPanelProps> = ({
   error,
   success,
   isLoading,
-  showChangePassword,
   onInputChange,
   onEdit,
   onSave,
