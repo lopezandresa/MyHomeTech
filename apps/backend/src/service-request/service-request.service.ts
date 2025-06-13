@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThan } from 'typeorm';
@@ -10,14 +11,27 @@ import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { OfferPriceDto } from './dto/offer-price.dto';
 import { AcceptRequestDto } from './dto/accept-request.dto';
 import { ScheduleRequestDto } from './dto/schedule-request.dto';
+import { Address } from '../address/address.entity';
 
 @Injectable()
 export class ServiceRequestService {
   constructor(
     @InjectRepository(ServiceRequest)
     private readonly srRepo: Repository<ServiceRequest>,
+    @InjectRepository(Address)
+    private readonly addressRepo: Repository<Address>,
   ) {}
+
   async create(clientId: number, dto: CreateServiceRequestDto): Promise<ServiceRequest> {
+    // Validar que la dirección pertenece al cliente
+    const address = await this.addressRepo.findOne({
+      where: { id: dto.addressId, userId: clientId }
+    });
+    
+    if (!address) {
+      throw new BadRequestException('La dirección seleccionada no es válida o no te pertenece');
+    }
+
     // Usar valor por defecto de 5 minutos si no se especifica
     const validMinutes = dto.validMinutes || 5;
     
@@ -28,6 +42,7 @@ export class ServiceRequestService {
     const req = this.srRepo.create({
       clientId,
       applianceId: dto.applianceId,
+      addressId: dto.addressId,
       description: dto.description,
       clientPrice: dto.clientPrice,
       expiresAt,

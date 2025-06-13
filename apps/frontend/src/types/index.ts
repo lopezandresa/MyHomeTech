@@ -119,6 +119,7 @@ export interface ServiceRequest {
   id: number
   clientId: number
   applianceId: number
+  addressId: number
   description: string
   clientPrice: number
   technicianPrice?: number
@@ -132,11 +133,13 @@ export interface ServiceRequest {
   cancelledAt?: string
   client: User
   appliance: Appliance
+  address: Address
   technician?: User
 }
 
 export interface CreateServiceRequestRequest {
   applianceId: number
+  addressId: number
   description: string
   clientPrice: number
   validMinutes?: number // Opcional, por defecto 5 minutos
@@ -153,3 +156,37 @@ export interface AcceptRequestRequest {
 export interface ScheduleRequestRequest {
   scheduledAt: string
 }
+
+// Direcciones
+export interface Address {
+  id: number
+  street: string
+  number: string
+  apartment?: string
+  neighborhood: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+  additionalInfo?: string
+  isDefault: boolean
+  userId: number
+  createdAt: string
+  updatedAt: string
+  fullAddress: string
+}
+
+export interface CreateAddressRequest {
+  street: string
+  number: string
+  apartment?: string
+  neighborhood: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+  additionalInfo?: string
+  isDefault?: boolean
+}
+
+export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}

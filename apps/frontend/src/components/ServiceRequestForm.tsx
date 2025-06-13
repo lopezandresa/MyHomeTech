@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { applianceService } from '../services/applianceService'
 import { serviceRequestService } from '../services/serviceRequestService'
+import AddressSelector from './common/AddressSelector'
 import type { Appliance } from '../types/index'
 
 interface ServiceRequestFormProps {
@@ -27,6 +28,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
   const [selectedBrand, setSelectedBrand] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedAppliance, setSelectedAppliance] = useState<Appliance | null>(null)
+  const [selectedAddressId, setSelectedAddressId] = useState<number | undefined>()
   
   // Datos del formulario
   const [description, setDescription] = useState('')
@@ -120,6 +122,11 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       return
     }
 
+    if (!selectedAddressId) {
+      setError('Debes seleccionar una dirección para el servicio')
+      return
+    }
+
     if (!description.trim()) {
       setError('Debes describir el problema')
       return
@@ -136,6 +143,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
 
       await serviceRequestService.createRequest({
         applianceId: selectedAppliance.id,
+        addressId: selectedAddressId,
         description: description.trim(),
         clientPrice: parseFloat(clientPrice),
         // validMinutes se omite para usar el valor por defecto de 5 minutos
@@ -146,7 +154,8 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       // Llamar callback de éxito después de un momento
       setTimeout(() => {
         onSuccess?.()
-      }, 2000)    } catch (error) {
+      }, 2000)
+    } catch (error) {
       console.error('Error creating request:', error)
       const errorMessage = 'Error al crear la solicitud. Inténtalo de nuevo.'
       setError(errorMessage)
@@ -161,6 +170,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
     setSelectedBrand('')
     setSelectedModel('')
     setSelectedAppliance(null)
+    setSelectedAddressId(undefined)
     setDescription('')
     setClientPrice('')
     setError(null)
@@ -315,6 +325,13 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
           )}
         </div>
 
+        {/* Selección de Dirección */}
+        <AddressSelector
+          selectedAddressId={selectedAddressId}
+          onAddressSelect={setSelectedAddressId}
+          error={error?.includes('dirección') ? error : undefined}
+        />
+
         {/* Descripción del problema */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -367,7 +384,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
         <div className="flex space-x-4">
           <button
             type="submit"
-            disabled={!selectedAppliance || !description.trim() || !clientPrice || isSubmitting}
+            disabled={!selectedAppliance || !selectedAddressId || !description.trim() || !clientPrice || isSubmitting}
             className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? 'Creando solicitud...' : 'Crear Solicitud'}

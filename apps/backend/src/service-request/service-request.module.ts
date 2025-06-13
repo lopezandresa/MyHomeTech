@@ -5,10 +5,11 @@ import { ServiceRequestService } from './service-request.service';
 import { ServiceRequestController } from './service-request.controller';
 import { Identity } from '../identity/identity.entity';
 import { Appliance } from '../appliance/appliance.entity';
+import { Address } from '../address/address.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ServiceRequest, Identity, Appliance]),
+    TypeOrmModule.forFeature([ServiceRequest, Identity, Appliance, Address]),
   ],
   providers: [ServiceRequestService],
   controllers: [ServiceRequestController],

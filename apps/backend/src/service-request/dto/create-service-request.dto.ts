@@ -12,6 +12,10 @@ export class CreateServiceRequestDto {
   @IsInt()
   applianceId: number;
 
+  @ApiProperty({ description: 'ID de la dirección donde se realizará el servicio' })
+  @IsInt()
+  addressId: number;
+
   @ApiProperty({ description: 'Descripción del fallo' })
   @IsString()
   description: string;

@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Identity } from '../identity/identity.entity';
 import { Appliance } from '../appliance/appliance.entity';
+import { Address } from '../address/address.entity';
 
 export enum ServiceRequestStatus {
   PENDING      = 'pending',
@@ -72,6 +73,13 @@ export class ServiceRequest {
   technician?: Identity;
   @Column({ nullable: true })
   technicianId?: number;
+
+  /** Dirección donde se realizará el servicio */
+  @ManyToOne(() => Address, { eager: true })
+  @JoinColumn({ name: 'addressId' })
+  address: Address;
+  @Column()
+  addressId: number;
 
   /** Timestamps de los distintos hitos */
   @Column({ type: 'timestamp', nullable: true })

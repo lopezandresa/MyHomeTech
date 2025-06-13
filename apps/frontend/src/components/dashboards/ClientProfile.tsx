@@ -17,6 +17,7 @@ import { authService } from '../../services/authService'
 import type { ClientProfile as ClientProfileType, CreateClientProfileRequest } from '../../types/index'
 import ChangePassword from './ChangePassword'
 import ProfilePhotoUpload from '../common/ProfilePhotoUpload'
+import AddressManagement from '../common/AddressManagement'
 
 const ClientProfile: React.FC = () => {
   const { user, refreshUser } = useAuth()
@@ -412,6 +413,11 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
                   previewUrl={profilePhotoPreview}
                 />
               )}
+            </div>
+
+            {/* Address Management Section */}
+            <div className="md:col-span-2">
+              <AddressManagement isEditing={isEditing} />
             </div>
 
             {/* First Name */}
