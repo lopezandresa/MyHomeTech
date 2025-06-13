@@ -47,12 +47,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             <div className="flex items-center">
               <button 
                 onClick={() => onNavigate?.('home')}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-3"
               >
                 <img 
                   src="/MyHomeTech-Logo-1.svg" 
                   alt="MyHomeTech" 
-                  className="h-10 w-10"
+                  className="h-14 w-14"
                 />
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                   MyHomeTech

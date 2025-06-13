@@ -98,11 +98,11 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
       className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto"
     >
       <div className="text-center mb-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
+        <div className="flex items-center justify-center space-x-3 mb-4">
           <img 
             src="/MyHomeTech-Logo-1.svg" 
             alt="MyHomeTech" 
-            className="h-10 w-10"
+            className="h-14 w-14"
           />
           <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
             MyHomeTech

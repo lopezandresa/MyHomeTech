@@ -65,11 +65,11 @@ const Footer = () => {
       <div className="mx-auto max-w-7xl px-6 pb-8 pt-16 sm:pt-24 lg:px-8 lg:pt-32">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <img 
                 src="/MyHomeTech-Logo-1.svg" 
                 alt="MyHomeTech" 
-                className="h-10 w-10"
+                className="h-14 w-14"
               />
               <span className="text-2xl font-bold text-white">MyHomeTech</span>
             </div>

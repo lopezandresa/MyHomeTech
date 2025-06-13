@@ -90,7 +90,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <img 
               src="/MyHomeTech-Logo-1.svg" 
               alt="MyHomeTech" 
-              className="h-10 w-10"
+              className="h-14 w-14"
             />
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
