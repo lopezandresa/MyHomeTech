@@ -66,10 +66,12 @@ const Footer = () => {
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
             <div className="flex items-center space-x-2">
-              <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">HT</span>
-              </div>
-              <span className="text-2xl font-bold text-white">HomeTech</span>
+              <img 
+                src="/MyHomeTech-Logo-1.svg" 
+                alt="MyHomeTech" 
+                className="h-10 w-10"
+              />
+              <span className="text-2xl font-bold text-white">MyHomeTech</span>
             </div>
             <p className="text-sm leading-6 text-gray-300">
               Conectamos hogares con técnicos especializados en reparación de electrodomésticos. 
@@ -147,7 +149,7 @@ const Footer = () => {
             </p>
           </div>
           <p className="mt-8 text-xs leading-5 text-gray-400 md:order-1 md:mt-0">
-            &copy; 2025 HomeTech. Todos los derechos reservados.
+            &copy; 2025 MyHomeTech. Todos los derechos reservados.
           </p>
         </div>
       </div>

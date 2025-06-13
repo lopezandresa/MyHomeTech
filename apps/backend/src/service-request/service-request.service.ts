@@ -5,13 +5,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan } from 'typeorm';
+import { Repository, LessThan, MoreThan, In } from 'typeorm';
 import { ServiceRequest, ServiceRequestStatus } from './service-request.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { OfferPriceDto } from './dto/offer-price.dto';
 import { AcceptRequestDto } from './dto/accept-request.dto';
 import { ScheduleRequestDto } from './dto/schedule-request.dto';
 import { Address } from '../address/address.entity';
+import { Technician } from '../technician/technician.entity';
+import { Appliance } from '../appliance/appliance.entity';
+import { ServiceRequestGateway } from './service-request.gateway';
 
 @Injectable()
 export class ServiceRequestService {
@@ -20,6 +23,11 @@ export class ServiceRequestService {
     private readonly srRepo: Repository<ServiceRequest>,
     @InjectRepository(Address)
     private readonly addressRepo: Repository<Address>,
+    @InjectRepository(Technician)
+    private readonly technicianRepo: Repository<Technician>,
+    @InjectRepository(Appliance)
+    private readonly applianceRepo: Repository<Appliance>,
+    private readonly gateway: ServiceRequestGateway,
   ) {}
 
   async create(clientId: number, dto: CreateServiceRequestDto): Promise<ServiceRequest> {
@@ -48,7 +56,123 @@ export class ServiceRequestService {
       expiresAt,
       status: ServiceRequestStatus.PENDING,
     });
-    return this.srRepo.save(req);
+    
+    const savedRequest = await this.srRepo.save(req);
+    
+    // Cargar la solicitud completa con relaciones para notificaciones
+    const fullRequest = await this.srRepo.findOne({
+      where: { id: savedRequest.id },
+      relations: ['client', 'appliance', 'address']
+    });
+
+    // Notificar a técnicos que tienen la especialidad correspondiente
+    if (fullRequest) {
+      await this.notifyEligibleTechnicians(fullRequest);
+    }
+
+    return savedRequest;
+  }
+
+  // Método para encontrar técnicos elegibles y notificarlos
+  private async notifyEligibleTechnicians(serviceRequest: ServiceRequest): Promise<void> {
+    try {
+      // Obtener el electrodoméstico de la solicitud
+      const appliance = await this.applianceRepo.findOne({
+        where: { id: serviceRequest.applianceId }
+      });
+
+      if (!appliance) {
+        return;
+      }
+
+      // Encontrar técnicos que tienen esta especialidad por tipo de string
+      // Buscar ApplianceType que coincida con el tipo del electrodoméstico
+      const eligibleTechnicians = await this.technicianRepo
+        .createQueryBuilder('technician')
+        .innerJoin('technician.specialties', 'specialty')
+        .where('specialty.name = :typeName', { typeName: appliance.type })
+        .getMany();
+
+      // Extraer IDs de técnicos elegibles
+      const technicianIds = eligibleTechnicians.map(tech => tech.identityId);
+
+      if (technicianIds.length > 0) {
+        // Notificar a través del gateway
+        this.gateway.notifyNewServiceRequest(serviceRequest, technicianIds);
+      }
+    } catch (error) {
+      console.error('Error notifying technicians:', error);
+    }
+  }
+
+  /** Técnicos: solicitudes pendientes filtradas por especialidad */
+  async findPendingForTechnician(technicianId: number): Promise<ServiceRequest[]> {
+    // Primero, marcar como expiradas las solicitudes que han vencido
+    await this.markExpiredRequests();
+
+    // Obtener el perfil del técnico con sus especialidades
+    const technician = await this.technicianRepo.findOne({
+      where: { identityId: technicianId },
+      relations: ['specialties']
+    });
+
+    if (!technician || !technician.specialties.length) {
+      return [];
+    }
+
+    // Obtener nombres de tipos de electrodomésticos que maneja el técnico
+    const specialtyNames = technician.specialties.map(specialty => specialty.name);
+
+    // Buscar solicitudes pendientes que coincidan con las especialidades y NO estén expiradas
+    return this.srRepo
+      .createQueryBuilder('serviceRequest')
+      .innerJoin('serviceRequest.appliance', 'appliance')
+      .leftJoinAndSelect('serviceRequest.client', 'client')
+      .leftJoinAndSelect('serviceRequest.appliance', 'applianceData')
+      .leftJoinAndSelect('serviceRequest.address', 'address')
+      .where('serviceRequest.status = :status', { status: ServiceRequestStatus.PENDING })
+      .andWhere('serviceRequest.expiresAt > :now', { now: new Date() })
+      .andWhere('appliance.type IN (:...typeNames)', { typeNames: specialtyNames })
+      .getMany();
+  }
+
+  /** Método para marcar solicitudes expiradas */
+  private async markExpiredRequests(): Promise<void> {
+    const now = new Date();
+    
+    // Buscar solicitudes pendientes que han expirado
+    const expiredRequests = await this.srRepo.find({
+      where: {
+        status: ServiceRequestStatus.PENDING,
+        expiresAt: LessThan(now)
+      },
+      relations: ['client', 'appliance', 'address'] // Cargar relaciones para notificaciones
+    });
+
+    // Marcar como expiradas
+    for (const request of expiredRequests) {
+      request.status = ServiceRequestStatus.EXPIRED;
+      request.expiredAt = now;
+      await this.srRepo.save(request);
+      
+      // Notificar a técnicos que la solicitud ya no está disponible
+      await this.notifyRequestExpired(request.id);
+      
+      // Notificar al cliente que su solicitud ha expirado
+      this.gateway.notifyClientRequestExpired(request);
+    }
+  }
+
+  /** Notificar que una solicitud ha expirado */
+  private async notifyRequestExpired(serviceRequestId: number): Promise<void> {
+    try {
+      const allTechnicians = await this.technicianRepo.find();
+      const technicianIds = allTechnicians.map(tech => tech.identityId);
+      
+      this.gateway.notifyServiceRequestRemoved(serviceRequestId, technicianIds);
+    } catch (error) {
+      console.error('Error notifying request expiration:', error);
+    }
   }
 
   /** Técnicos: solicitudes pendientes y no expiradas */
@@ -67,12 +191,22 @@ export class ServiceRequestService {
     technicianId: number,
     dto: OfferPriceDto,
   ): Promise<ServiceRequest> {
-    const req = await this.srRepo.findOne({ where: { id, status: ServiceRequestStatus.PENDING }});
+    const req = await this.srRepo.findOne({ 
+      where: { id, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
+    });
     if (!req) throw new NotFoundException('Solicitud no disponible para oferta');
+    
     req.technicianId = technicianId;
     req.technicianPrice = dto.technicianPrice;
     req.status = ServiceRequestStatus.OFFERED;
-    return this.srRepo.save(req);
+    
+    const updatedRequest = await this.srRepo.save(req);
+    
+    // Notificar al cliente sobre la nueva oferta
+    this.gateway.notifyClientNewOffer(updatedRequest);
+    
+    return updatedRequest;
   }
 
   /** Cliente acepta precio */
@@ -122,6 +256,7 @@ export class ServiceRequestService {
   ): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { id, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
     });
     if (!req) {
       throw new NotFoundException('Solicitud no disponible para aceptar');
@@ -129,11 +264,18 @@ export class ServiceRequestService {
 
     req.technicianId = technicianId;
     req.acceptedAt = new Date();
-    // la agendamos al momento de aceptar
     req.scheduledAt = new Date();
     req.status = ServiceRequestStatus.SCHEDULED;
 
-    return this.srRepo.save(req);
+    const updatedRequest = await this.srRepo.save(req);
+    
+    // Notificar al cliente que su solicitud fue aceptada
+    this.gateway.notifyClientRequestAccepted(updatedRequest);
+    
+    // Notificar a otros técnicos que la solicitud ya no está disponible
+    await this.notifyRequestNoLongerAvailable(id);
+    
+    return updatedRequest;
   }
 
   /** Cliente marca como completada la solicitud */
@@ -154,6 +296,7 @@ export class ServiceRequestService {
   async rejectByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { id, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
     });
     if (!req) {
       throw new NotFoundException('Solicitud no disponible para rechazar');
@@ -163,7 +306,25 @@ export class ServiceRequestService {
     req.status = ServiceRequestStatus.CANCELLED;
     req.cancelledAt = new Date();
 
-    return this.srRepo.save(req);
+    const updatedRequest = await this.srRepo.save(req);
+    
+    // Notificar a otros técnicos que la solicitud ya no está disponible
+    await this.notifyRequestNoLongerAvailable(id);
+    
+    return updatedRequest;
+  }
+
+  // Método para notificar que una solicitud ya no está disponible
+  private async notifyRequestNoLongerAvailable(serviceRequestId: number): Promise<void> {
+    try {
+      // Obtener todos los técnicos que podrían estar viendo esta solicitud
+      const allTechnicians = await this.technicianRepo.find();
+      const technicianIds = allTechnicians.map(tech => tech.identityId);
+      
+      this.gateway.notifyServiceRequestRemoved(serviceRequestId, technicianIds);
+    } catch (error) {
+      console.error('Error notifying request removal:', error);
+    }
   }
 
   // métodos auxiliares:

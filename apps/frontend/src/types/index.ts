@@ -123,7 +123,7 @@ export interface ServiceRequest {
   description: string
   clientPrice: number
   technicianPrice?: number
-  status: 'pending' | 'offered' | 'accepted' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'pending' | 'offered' | 'accepted' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'expired'
   createdAt: string
   expiresAt?: string
   technicianId?: number
@@ -131,6 +131,7 @@ export interface ServiceRequest {
   scheduledAt?: string
   completedAt?: string
   cancelledAt?: string
+  expiredAt?: string
   client: User
   appliance: Appliance
   address: Address

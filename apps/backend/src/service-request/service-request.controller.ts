@@ -53,6 +53,15 @@ export class ServiceRequestController {
     return this.svc.findPending();
   }
 
+  // 2b) Técnico ve pendientes filtradas por especialidad
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('technician')
+  @Get('pending/for-me')
+  @ApiOperation({ summary: 'Técnico lista solicitudes pendientes que coinciden con sus especialidades' })
+  findPendingForMe(@Request() req): Promise<ServiceRequest[]> {
+    return this.svc.findPendingForTechnician(req.user.id);
+  }
+
   // 3) Técnico contraoferta
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('technician')

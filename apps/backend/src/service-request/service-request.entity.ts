@@ -18,6 +18,7 @@ export enum ServiceRequestStatus {
   IN_PROGRESS  = 'in_progress',
   COMPLETED    = 'completed',
   CANCELLED    = 'cancelled',
+  EXPIRED      = 'expired',
 }
 
 @Entity()
@@ -93,4 +94,7 @@ export class ServiceRequest {
 
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiredAt?: Date;
 }

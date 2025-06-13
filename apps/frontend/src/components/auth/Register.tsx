@@ -99,15 +99,17 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     >
       <div className="text-center mb-8">
         <div className="flex items-center justify-center space-x-2 mb-4">
-          <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">HT</span>
-          </div>
+          <img 
+            src="/MyHomeTech-Logo-1.svg" 
+            alt="MyHomeTech" 
+            className="h-10 w-10"
+          />
           <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            HomeTech
+            MyHomeTech
           </span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Crear Cuenta</h2>
-        <p className="text-gray-600 mt-2">Únete a la comunidad HomeTech</p>
+        <p className="text-gray-600 mt-2">Únete a la comunidad MyHomeTech</p>
       </div>
 
       {error && (

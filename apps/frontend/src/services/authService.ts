@@ -1,17 +1,11 @@
 import api from './api'
-import type {
-  User,
-  LoginRequest,
-  RegisterRequest,
-  AuthResponse,
-  UpdateProfileRequest
-} from '../types/index'
-
-// Tipos para cambio de contraseña
-export interface ChangePasswordRequest {
-  currentPassword: string
-  newPassword: string
-}
+import type { 
+  User, 
+  LoginRequest, 
+  RegisterRequest, 
+  AuthResponse, 
+  UpdateProfileRequest 
+} from '../types'
 
 class AuthService {
   // Login
@@ -40,45 +34,102 @@ class AuthService {
 
   // Logout
   logout(): void {
+    try {
+      // Llamar al endpoint de logout del backend de forma asíncrona
+      api.post('/auth/logout').catch((error) => {
+        console.warn('Error en logout del backend (ignorado):', error)
+      })
+    } catch (error) {
+      console.warn('Error iniciando logout del backend:', error)
+    }
+    
+    // Siempre limpiar localStorage
     localStorage.removeItem('authToken')
     localStorage.removeItem('user')
-    // Opcional: llamar al endpoint de logout del backend
-    api.post('/auth/logout').catch(() => {})
-  }
-
-  // Obtener usuario actual
-  getCurrentUser(): User | null {
-    const userStr = localStorage.getItem('user')
-    return userStr ? JSON.parse(userStr) : null
   }
 
   // Verificar si está autenticado
   isAuthenticated(): boolean {
     const token = localStorage.getItem('authToken')
-    const user = this.getCurrentUser()
-    return !!(token && user)
+    const user = localStorage.getItem('user')
+    
+    if (!token || !user) {
+      return false
+    }
+
+    try {
+      // Verificar si el token no está expirado
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const currentTime = Date.now() / 1000
+      
+      if (payload.exp && payload.exp < currentTime) {
+        console.warn('Token expirado, limpiando sesión...')
+        this.logout()
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      console.error('Error verificando token:', error)
+      this.logout()
+      return false
+    }
   }
 
-  // Obtener perfil actualizado
+  // Obtener perfil del usuario actual con manejo de errores mejorado
   async getProfile(): Promise<User> {
-    const response = await api.get<User>('/identity/me')
-    const user = response.data
-    localStorage.setItem('user', JSON.stringify(user))
-    return user
+    try {
+      const response = await api.get<User>('/identity/me')
+      const user = response.data
+      
+      // Actualizar usuario en localStorage
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      return user
+    } catch (error: any) {
+      // Si es error 401, podría ser token expirado
+      if (error.response?.status === 401) {
+        console.warn('Error 401 al obtener perfil, posible token expirado')
+        throw error // Dejar que el interceptor maneje el logout
+      }
+      
+      // Para otros errores, no hacer logout automático
+      console.error('Error obteniendo perfil:', error)
+      throw error
+    }
   }
 
-  // Actualizar perfil
+  // Actualizar perfil con manejo de errores mejorado
   async updateProfile(data: UpdateProfileRequest): Promise<User> {
-    const response = await api.post<User>('/identity/me/update', data)
-    const user = response.data
-    localStorage.setItem('user', JSON.stringify(user))
-    return user
+    try {
+      const response = await api.patch<User>('/identity/profile', data)
+      const updatedUser = response.data
+      
+      // Actualizar usuario en localStorage
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      
+      return updatedUser
+    } catch (error: any) {
+      console.error('Error actualizando perfil:', error)
+      throw error
+    }
   }
 
   // Cambiar contraseña
-  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
-    const response = await api.post<{ message: string }>('/identity/change-password', data)
-    return response.data
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    if (!this.isAuthenticated()) {
+      throw new Error('Usuario no autenticado')
+    }
+
+    try {
+      await api.put('/auth/change-password', {
+        currentPassword,
+        newPassword
+      })
+    } catch (error: any) {
+      console.error('Error cambiando contraseña:', error)
+      throw new Error(error.response?.data?.message || 'Error al cambiar la contraseña')
+    }
   }
 
   // Subir foto de perfil
@@ -122,6 +173,18 @@ class AuthService {
   // Verificar si es admin
   isAdmin(): boolean {
     return this.hasRole('admin')
+  }
+
+  // Obtener usuario del localStorage
+  getCurrentUser(): User | null {
+    try {
+      const userStr = localStorage.getItem('user')
+      return userStr ? JSON.parse(userStr) : null
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error)
+      localStorage.removeItem('user') // Limpiar datos corruptos
+      return null
+    }
   }
 }
 

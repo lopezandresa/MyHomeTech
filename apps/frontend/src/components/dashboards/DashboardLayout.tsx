@@ -16,13 +16,15 @@ interface DashboardLayoutProps {
   title: string
   subtitle?: string
   onNavigate?: (page: string) => void
+  rightContent?: React.ReactNode
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
   children, 
   title, 
   subtitle,
-  onNavigate 
+  onNavigate,
+  rightContent
 }) => {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('main')
@@ -85,12 +87,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             onClick={() => onNavigate?.('home')}
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
-            <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">HT</span>
-            </div>
+            <img 
+              src="/MyHomeTech-Logo-1.svg" 
+              alt="MyHomeTech" 
+              className="h-10 w-10"
+            />
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                HomeTech
+                MyHomeTech
               </h1>
               <p className="text-xs text-gray-500">Dashboard</p>
             </div>
@@ -154,7 +158,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <DashboardHeader title={title} subtitle={subtitle} />        <main className="flex-1 p-6">
+        <DashboardHeader title={title} subtitle={subtitle} rightContent={rightContent} />        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             {typeof children === 'function' 
               ? children({ activeTab, setActiveTab })

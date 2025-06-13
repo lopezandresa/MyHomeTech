@@ -20,6 +20,12 @@ class ServiceRequestService {
     return response.data
   }
 
+  // Técnico ve solicitudes pendientes filtradas por sus especialidades
+  async getPendingRequestsForMe(): Promise<ServiceRequest[]> {
+    const response = await api.get<ServiceRequest[]>('/service-requests/pending/for-me')
+    return response.data
+  }
+
   // Técnico hace contraoferta
   async offerPrice(id: number, data: OfferPriceRequest): Promise<ServiceRequest> {
     const response = await api.post<ServiceRequest>(`/service-requests/${id}/offer`, data)

@@ -12,10 +12,12 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { serviceRequestService } from '../../services/serviceRequestService'
+import { useRealTimeClientNotifications } from '../../hooks/useRealTimeClientNotifications'
 import type { ServiceRequest } from '../../types/index'
 import DashboardLayout from './DashboardLayout'
 import ServiceRequestForm from '../ServiceRequestForm'
 import ClientProfile from './ClientProfile'
+import { ClientNotifications } from '../ClientNotifications'
 
 interface ClientDashboardProps {
   onNavigate?: (page: string) => void
@@ -28,6 +30,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const [error, setError] = useState<string | null>(null)
   const [requestFilter, setRequestFilter] = useState<'in-progress' | 'all'>('in-progress')
   const [showNewRequestModal, setShowNewRequestModal] = useState(false)
+
+  // Usar el hook de notificaciones para clientes
+  const { 
+    notifications, 
+    isConnected, 
+    hasUnreadNotifications, 
+    markAsRead, 
+    markAllAsRead, 
+    clearNotifications,
+    dismissNotification
+  } = useRealTimeClientNotifications(user?.id)
 
   useEffect(() => {
     if (user) {
@@ -272,7 +285,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
                 {request.technician && (
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-500">Técnico asignado:</span>
-                    <p className="font-medium">{request.technician.name}</p>
+                    <p className="font-medium">
+                      {request.technician 
+                        ? `${request.technician.firstName} ${request.technician.firstLastName}`
+                        : 'No asignado'
+                      }
+                    </p>
                   </div>
                 )}
 
@@ -338,6 +356,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
         title="Dashboard Cliente"
         subtitle="Gestiona tus solicitudes de servicio"
         onNavigate={onNavigate}
+        rightContent={
+          <ClientNotifications 
+            notifications={notifications}
+            isConnected={isConnected}
+            hasUnreadNotifications={hasUnreadNotifications}
+            onDismiss={dismissNotification}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onClear={clearNotifications}
+          />
+        }
       >
         {({ activeTab }) => renderContent(activeTab)}
       </DashboardLayout>

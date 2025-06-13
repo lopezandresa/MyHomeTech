@@ -6,9 +6,10 @@ import UserAvatar from './common/UserAvatar'
 interface DashboardHeaderProps {
   title: string
   subtitle?: string
+  rightContent?: React.ReactNode
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle, rightContent }) => {
   const { user } = useAuth()
 
   return (
@@ -24,22 +25,29 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle }) =>
 
         {/* User Section */}
         <div className="flex items-center space-x-4">
-          {/* Notifications */}
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <BellIcon className="h-6 w-6" />
-            <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-400 ring-2 ring-white"></span>
-          </button>
+          {/* Right Side Content */}
+          {rightContent ? (
+            rightContent
+          ) : (
+            <>
+              {/* Default Notifications */}
+              <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <BellIcon className="h-6 w-6" />
+                <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-400 ring-2 ring-white"></span>
+              </button>
 
-          {/* User Profile */}
-          <div className="flex items-center space-x-3">
-            <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.firstLastName}</p>
-              <p className="text-xs text-gray-500 capitalize">
-                {user?.role === 'client' ? 'Cliente' : 'Técnico'}
-              </p>
-            </div>
-            {user && <UserAvatar user={user} size="md" />}
-          </div>
+              {/* Default User Profile */}
+              <div className="flex items-center space-x-3">
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.firstLastName}</p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user?.role === 'client' ? 'Cliente' : 'Técnico'}
+                  </p>
+                </div>
+                {user && <UserAvatar user={user} size="md" />}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

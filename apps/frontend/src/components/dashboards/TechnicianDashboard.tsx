@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   WrenchScrewdriverIcon, 
   CheckCircleIcon,
-  BriefcaseIcon
+  BriefcaseIcon,
+  BellIcon,
+  WifiIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { serviceRequestService } from '../../services/serviceRequestService'
+import { useRealTimeServiceRequests } from '../../hooks/useRealTimeServiceRequests'
 import type { ServiceRequest } from '../../types/index'
 import DashboardLayout from './DashboardLayout'
 import TechnicianProfile from './TechnicianProfile'
+import CountdownTimer from '../CountdownTimer'
 
 interface TechnicianDashboardProps {
   onNavigate?: (page: string) => void
@@ -25,17 +30,55 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
   const [offerPrice, setOfferPrice] = useState('')
   const [scheduleDate, setScheduleDate] = useState('')
 
+  // Integrar sistema de notificaciones en tiempo real
+  const {
+    notifications,
+    isConnected,
+    requestNotificationPermission,
+    clearNotifications,
+    dismissNotification,
+    hasUnreadNotifications
+  } = useRealTimeServiceRequests(user?.id)
+
+  // Estado para mostrar panel de notificaciones
+  const [showNotifications, setShowNotifications] = useState(false)
+
   useEffect(() => {
     if (user) {
       loadData()
+      // Solicitar permisos de notificación cuando el componente se monta
+      requestNotificationPermission()
     }
-  }, [user])
+  }, [user, requestNotificationPermission])
+
+  // Efecto para recargar datos cuando lleguen nuevas notificaciones
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0]
+      if (latestNotification.type === 'new') {
+        // Agregar la nueva solicitud a la lista sin hacer una nueva petición
+        setPendingRequests(prev => {
+          const exists = prev.some(req => req.id === latestNotification.serviceRequest.id)
+          if (!exists) {
+            return [latestNotification.serviceRequest, ...prev]
+          }
+          return prev
+        })
+      } else if (latestNotification.type === 'removed') {
+        // Remover solicitud de la lista
+        setPendingRequests(prev => 
+          prev.filter(req => req.id !== latestNotification.serviceRequest.id)
+        )
+      }
+    }
+  }, [notifications])
 
   const loadData = async () => {
     try {
       setIsLoading(true)
       const [pending, assigned] = await Promise.all([
-        serviceRequestService.getPendingRequests(),
+        // Usar el endpoint filtrado por especialidades en lugar del general
+        serviceRequestService.getPendingRequestsForMe(),
         user ? serviceRequestService.getTechnicianRequests(user.id) : Promise.resolve([])
       ])
       setPendingRequests(pending)
@@ -116,6 +159,8 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
         return 'bg-gray-100 text-gray-800'
       case 'cancelled':
         return 'bg-red-100 text-red-800'
+      case 'expired':
+        return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -137,6 +182,8 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
         return 'Completada'
       case 'cancelled':
         return 'Cancelada'
+      case 'expired':
+        return 'Expirada'
       default:
         return status
     }
@@ -202,25 +249,59 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
                     <WrenchScrewdriverIcon className="h-6 w-6 text-blue-600" />
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {request.appliance.name}
+                        {request.appliance?.name || 'Electrodoméstico no disponible'}
                       </h3>
                       <p className="text-gray-600">
-                        Cliente: {request.client.name}
+                        Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
                       </p>
                       <p className="text-sm text-gray-500">
                         Publicada el {new Date(request.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
-                    {getStatusText(request.status)}
-                  </span>
+                  <div className="flex flex-col items-end space-y-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
+                      {getStatusText(request.status)}
+                    </span>
+                    {/* Countdown Timer */}
+                    {request.expiresAt && (
+                      <CountdownTimer
+                        expiresAt={request.expiresAt}
+                        size="sm"
+                        onExpire={() => {
+                          // Remover la solicitud de la lista cuando expire
+                          setPendingRequests(prev => 
+                            prev.filter(req => req.id !== request.id)
+                          )
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-900 mb-2">Problema reportado:</h4>
                   <p className="text-gray-600">{request.description}</p>
                 </div>
+
+                {/* Información de dirección */}
+                {request.address && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Dirección del servicio:</h4>
+                    <p className="text-gray-700">
+                      {request.address.street} {request.address.number}
+                      {request.address.apartment && `, Apt. ${request.address.apartment}`}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {request.address.city}, {request.address.state} - {request.address.postalCode}
+                    </p>
+                    {request.address.isDefault && (
+                      <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        Dirección principal
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="mb-4">
                   <span className="text-sm font-medium text-gray-500">Precio ofrecido por el cliente:</span>
@@ -289,10 +370,10 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
                   <CheckCircleIcon className="h-6 w-6 text-green-600" />
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {request.appliance.name}
+                      {request.appliance?.name || 'Electrodoméstico no disponible'}
                     </h3>
                     <p className="text-gray-600">
-                      Cliente: {request.client.name}
+                      Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
                     </p>
                   </div>
                 </div>
@@ -360,6 +441,120 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ onNavigate })
         title="Dashboard Técnico"
         subtitle="Gestiona tus trabajos y ofertas"
         onNavigate={onNavigate}
+        // Agregar indicadores en la barra superior
+        rightContent={
+          <div className="flex items-center space-x-4">
+            {/* Indicador de conexión WebSocket */}
+            <div className="flex items-center space-x-2">
+              <WifiIcon className={`h-5 w-5 ${isConnected ? 'text-green-500' : 'text-red-500'}`} />
+              <span className={`text-sm ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                {isConnected ? 'Conectado' : 'Desconectado'}
+              </span>
+            </div>
+
+            {/* Botón de notificaciones */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2 rounded-lg transition-colors ${
+                  hasUnreadNotifications 
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <BellIcon className="h-6 w-6" />
+                {hasUnreadNotifications && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+                )}
+              </button>
+
+              {/* Panel de notificaciones */}
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden"
+                  >
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+                      <div className="flex items-center space-x-2">
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={clearNotifications}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <BellIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500">No hay notificaciones</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-100">
+                          {notifications.map((notification, index) => (
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="p-4 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <WrenchScrewdriverIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                      notification.type === 'new' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : notification.type === 'updated'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {notification.type === 'new' ? 'Nueva' : 
+                                       notification.type === 'updated' ? 'Actualizada' : 'Removida'}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-medium text-gray-900 text-sm">
+                                    {notification.serviceRequest.appliance.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mb-1">
+                                    ${notification.serviceRequest.clientPrice.toLocaleString()} COP
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {notification.timestamp.toLocaleTimeString()}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => dismissNotification(index)}
+                                  className="text-gray-400 hover:text-gray-600 ml-2"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        }
       >
         {({ activeTab }) => renderContent(activeTab)}
       </DashboardLayout>
