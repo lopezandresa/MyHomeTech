@@ -120,12 +120,15 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     }
     
     this.logger.log(`Client ${clientId} left room with socket ${client.id}`);
-  }
-
-  // Método para notificar nuevas solicitudes a técnicos específicos
+  }  // Método para notificar nuevas solicitudes a técnicos específicos
   notifyNewServiceRequest(serviceRequest: ServiceRequest, technicianIds: number[]) {
+    console.log(`📡 Gateway: Notifying ${technicianIds.length} technicians about new service request ${serviceRequest.id}`);
+    
     technicianIds.forEach(technicianId => {
-      this.server.to(`technician-${technicianId}`).emit('new-service-request', {
+      const room = `technician-${technicianId}`;
+      console.log(`🏠 Sending to room ${room}`);
+      
+      this.server.to(room).emit('new-service-request', {
         serviceRequest,
         message: 'Nueva solicitud de servicio disponible'
       });

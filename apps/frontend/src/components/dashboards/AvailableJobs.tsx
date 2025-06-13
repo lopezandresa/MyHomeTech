@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { serviceRequestService } from '../../services/serviceRequestService'
+import { useRealTimeServiceRequests } from '../../hooks/useRealTimeServiceRequests'
 import type { ServiceRequest } from '../../types/index'
 import { formatDate } from '../../utils/dateUtils'
 import { useAuth } from '../../contexts/AuthContext'
@@ -14,11 +15,46 @@ const AvailableJobs: React.FC<AvailableJobsProps> = ({ activeTab }) => {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
 
+  // Hook para notificaciones en tiempo real
+  const technicianNotifications = useRealTimeServiceRequests(user?.role === 'technician' ? user?.id : undefined)
+
   useEffect(() => {
     if (activeTab === 'main' && user?.role === 'technician') {
       fetchPendingRequests()
     }
   }, [activeTab, user])
+
+  // Efecto para manejar notificaciones en tiempo real
+  useEffect(() => {
+    if (technicianNotifications.notifications.length > 0) {
+      const latestNotification = technicianNotifications.notifications[0]
+      
+      if (latestNotification.type === 'new') {
+        // Agregar nueva solicitud a la lista
+        setRequests(prev => {
+          const exists = prev.some(req => req.id === latestNotification.serviceRequest.id)
+          if (!exists) {
+            return [latestNotification.serviceRequest, ...prev]
+          }
+          return prev
+        })
+      } else if (latestNotification.type === 'removed') {
+        // Remover solicitud de la lista (expirada o aceptada por otro técnico)
+        setRequests(prev => 
+          prev.filter(req => req.id !== latestNotification.serviceRequest.id)
+        )
+      } else if (latestNotification.type === 'updated') {
+        // Actualizar solicitud existente
+        setRequests(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id 
+              ? latestNotification.serviceRequest 
+              : req
+          )
+        )
+      }
+    }
+  }, [technicianNotifications.notifications.length])
 
   const fetchPendingRequests = async () => {
     try {

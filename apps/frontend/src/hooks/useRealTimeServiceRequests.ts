@@ -90,15 +90,26 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
   }, [])
-
   // Callback para solicitudes removidas
   const handleServiceRequestRemoved = useCallback((data: { serviceRequestId: number, message: string }) => {
     console.log('❌ Service request removed:', data)
     
-    // Remover notificaciones de esta solicitud
-    setNotifications(prev => 
-      prev.filter(notif => notif.serviceRequest.id !== data.serviceRequestId)
-    )
+    // Crear notificación de solicitud removida
+    const notification: ServiceRequestNotification = {
+      serviceRequest: { id: data.serviceRequestId } as ServiceRequest, // Crear objeto mínimo
+      message: data.message,
+      timestamp: new Date(),
+      type: 'removed'
+    }
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 9)])
+    
+    // También remover notificaciones previas de esta solicitud para evitar confusión
+    setTimeout(() => {
+      setNotifications(prev => 
+        prev.filter(notif => notif.serviceRequest.id !== data.serviceRequestId || notif.type === 'removed')
+      )
+    }, 100)
   }, [])
 
   // Callback para ofertas rechazadas

@@ -78,18 +78,22 @@ export class ServiceRequestService {
 
     return savedRequest;
   }
-
   // Método para encontrar técnicos elegibles y notificarlos
   private async notifyEligibleTechnicians(serviceRequest: ServiceRequest): Promise<void> {
     try {
+      console.log(`🔍 Finding eligible technicians for service request ${serviceRequest.id}`);
+      
       // Obtener el electrodoméstico de la solicitud
       const appliance = await this.applianceRepo.findOne({
         where: { id: serviceRequest.applianceId }
       });
 
       if (!appliance) {
+        console.log(`❌ Appliance not found for service request ${serviceRequest.id}`);
         return;
       }
+
+      console.log(`🔧 Appliance type: ${appliance.type}`);
 
       // Encontrar técnicos que tienen esta especialidad por tipo de string
       // Buscar ApplianceType que coincida con el tipo del electrodoméstico
@@ -102,12 +106,17 @@ export class ServiceRequestService {
       // Extraer IDs de técnicos elegibles
       const technicianIds = eligibleTechnicians.map(tech => tech.identityId);
 
+      console.log(`👥 Found ${eligibleTechnicians.length} eligible technicians:`, technicianIds);
+
       if (technicianIds.length > 0) {
         // Notificar a través del gateway
+        console.log(`📡 Notifying technicians about new service request ${serviceRequest.id}`);
         this.gateway.notifyNewServiceRequest(serviceRequest, technicianIds);
+      } else {
+        console.log(`⚠️ No eligible technicians found for appliance type: ${appliance.type}`);
       }
     } catch (error) {
-      console.error('Error notifying technicians:', error);
+      console.error('❌ Error notifying technicians:', error);
     }
   }
 

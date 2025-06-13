@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import serviceRequestService from '../../services/serviceRequestService'
+import { useRealTimeClientNotifications } from '../../hooks/useRealTimeClientNotifications'
 import type { ServiceRequest } from '../../types/index'
 
 interface MyRequestsProps {
@@ -14,6 +15,9 @@ const MyRequests: React.FC<MyRequestsProps> = ({ activeTab }) => {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'in-progress' | 'all'>('in-progress')
 
+  // Hook para notificaciones en tiempo real
+  const clientNotifications = useRealTimeClientNotifications(user?.role === 'client' ? user?.id : undefined)
+
   useEffect(() => {
     if (activeTab === 'main' && user?.role === 'client') {
       fetchRequests()
@@ -23,6 +27,41 @@ const MyRequests: React.FC<MyRequestsProps> = ({ activeTab }) => {
   useEffect(() => {
     applyFilter()
   }, [requests, filter])
+
+  // Efecto para manejar notificaciones en tiempo real
+  useEffect(() => {
+    if (clientNotifications.notifications.length > 0) {
+      const latestNotification = clientNotifications.notifications[0]
+      
+      // Si hay una nueva oferta, actualizar o agregar la solicitud
+      if (latestNotification.type === 'offer' || latestNotification.type === 'accepted' || 
+          latestNotification.type === 'scheduled' || latestNotification.type === 'completed') {
+        setRequests(prev => {
+          const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest.id)
+          if (existingIndex >= 0) {
+            // Actualizar solicitud existente
+            const updated = [...prev]
+            updated[existingIndex] = latestNotification.serviceRequest
+            return updated
+          } else {
+            // Agregar nueva solicitud (por si acaso)
+            return [latestNotification.serviceRequest, ...prev]
+          }
+        })
+      }
+      
+      // Si la solicitud expiró, marcarla como expirada
+      if (latestNotification.type === 'expired') {
+        setRequests(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id 
+              ? { ...req, status: 'expired' }
+              : req
+          )
+        )
+      }
+    }
+  }, [clientNotifications.notifications.length])
 
   const fetchRequests = async () => {
     try {

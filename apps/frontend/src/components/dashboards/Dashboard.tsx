@@ -30,6 +30,7 @@ import CountdownTimer from '../CountdownTimer'
 import { MultiOfferDebug } from '../MultiOfferDebug'
 import { OfferCard } from '../OfferCard'
 import { useOfferThrottle } from '../../hooks/useOfferThrottle'
+import WebSocketDebug from '../WebSocketDebug'
 
 interface DashboardProps {
   onNavigate?: (page: string) => void
@@ -99,35 +100,142 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       
       return () => clearInterval(debugInterval);
     }
-  }, [user?.id, isTechnician]); // Solo depende de user.id, no del objeto completo
-  // ---- EFECTO PARA TÉCNICOS: ACTUALIZAR LISTA CON NOTIFICACIONES ----
+  }, [user?.id, isTechnician]); // Solo depende de user.id, no del objeto completo  // ---- EFECTO PARA TÉCNICOS: ACTUALIZAR LISTA CON NOTIFICACIONES ----
   useEffect(() => {
     if (isTechnician && technicianNotifications.notifications.length > 0) {
       const latestNotification = technicianNotifications.notifications[0]
+      console.log('🔔 Processing technician notification:', latestNotification)
+      
       if (latestNotification.type === 'new') {
         // Agregar la nueva solicitud a la lista sin hacer una nueva petición
         setPendingRequests(prev => {
           const exists = prev.some(req => req.id === latestNotification.serviceRequest.id)
           if (!exists) {
+            console.log('➕ Adding new request to list:', latestNotification.serviceRequest.id)
             return [latestNotification.serviceRequest, ...prev]
           }
           return prev
         })
       } else if (latestNotification.type === 'removed') {
         // Remover solicitud de la lista
+        console.log('➖ Removing request from list:', latestNotification.serviceRequest.id)
         setPendingRequests(prev => 
           prev.filter(req => req.id !== latestNotification.serviceRequest.id)
         )
+      } else if (latestNotification.type === 'updated') {
+        // Actualizar solicitud existente
+        console.log('🔄 Updating request in list:', latestNotification.serviceRequest.id)
+        setPendingRequests(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id 
+              ? latestNotification.serviceRequest 
+              : req
+          )
+        )
+      }
+      
+      // También recargar las solicitudes asignadas por si hay cambios
+      if (latestNotification.type === 'new' || latestNotification.type === 'updated') {
+        setTimeout(() => {
+          console.log('🔄 Recargando solicitudes asignadas después de notificación...');
+          serviceRequestService.getTechnicianRequests(user!.id).then(setMyRequests);
+        }, 500);
       }
     }
-  }, [isTechnician, technicianNotifications.notifications.length]) // Solo dependemos de la longitud, no del array completo  // ---- EFECTO PARA RECARGAR DATOS CUANDO SE RECONECTA (TÉCNICOS) ----
+  }, [isTechnician, technicianNotifications.notifications, user?.id]) // Cambiar a dependencias completas
+    // ---- EFECTO PARA CLIENTES: ACTUALIZAR LISTA CON NOTIFICACIONES ----
+  useEffect(() => {
+    if (isClient && clientNotifications.notifications.length > 0) {
+      const latestNotification = clientNotifications.notifications[0]
+      console.log('🔔 Processing client notification:', latestNotification)
+      
+      if (latestNotification.type === 'offer' || latestNotification.type === 'accepted' || 
+          latestNotification.type === 'scheduled' || latestNotification.type === 'completed') {
+        // Actualizar o agregar la solicitud
+        setClientRequests(prev => {
+          const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest.id)
+          if (existingIndex >= 0) {
+            // Actualizar solicitud existente
+            console.log('🔄 Updating client request:', latestNotification.serviceRequest.id)
+            const updated = [...prev]
+            updated[existingIndex] = latestNotification.serviceRequest
+            return updated
+          } else {
+            // Agregar nueva solicitud (por si acaso)
+            console.log('➕ Adding new client request:', latestNotification.serviceRequest.id)
+            return [latestNotification.serviceRequest, ...prev]
+          }
+        })
+        
+        // Recargar datos completos después de un breve delay para asegurar consistencia
+        setTimeout(() => {
+          console.log('🔄 Recargando datos completos del cliente después de notificación...');
+          serviceRequestService.getClientRequests(user!.id).then(setClientRequests);
+        }, 1000);
+      }
+      
+      // Si la solicitud expiró, marcarla como expirada
+      if (latestNotification.type === 'expired') {
+        console.log('⏰ Marking request as expired:', latestNotification.serviceRequest.id)
+        setClientRequests(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id 
+              ? { ...req, status: 'expired' }
+              : req
+          )
+        )
+      }
+    }
+  }, [isClient, clientNotifications.notifications, user?.id]) // Cambiar a dependencias completas// ---- EFECTO PARA RECARGAR DATOS CUANDO SE RECONECTA (TÉCNICOS) ----
   useEffect(() => {
     if (isTechnician && technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED && user?.id) {
       // When we reconnect, reload the data
-      console.log('✅ Conexión WebSocket restablecida, recargando datos...');
+      console.log('✅ Conexión WebSocket restablecida para técnico, recargando datos...');
       loadData();
     }
   }, [isTechnician, technicianNotifications.connectionStatus.state, user?.id])
+
+  // ---- EFECTO PARA RECARGAR DATOS CUANDO SE RECONECTA (CLIENTES) ----
+  useEffect(() => {
+    if (isClient && clientNotifications.isConnected && user?.id) {
+      // When client reconnects, reload the data
+      console.log('✅ Conexión WebSocket restablecida para cliente, recargando datos...');
+      loadData();
+    }
+  }, [isClient, clientNotifications.isConnected, user?.id])
+
+  // ---- EFECTO PARA ACTUALIZACIÓN AUTOMÁTICA PERIÓDICA (RESPALDO) ----
+  useEffect(() => {
+    if (!user) return;
+
+    // Actualización automática cada 30 segundos como respaldo
+    const interval = setInterval(() => {
+      // Solo actualizar si no estamos cargando datos actualmente
+      if (!isLoading) {
+        console.log('🔄 Actualización automática periódica...');
+        loadData();
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [user?.id, isLoading])
+
+  // ---- EFECTO PARA RECARGA CUANDO SE CREA UNA NUEVA SOLICITUD ----
+  useEffect(() => {
+    if (isClient && clientRequests.length > 0) {
+      // Detectar si se agregó una nueva solicitud (la más reciente)
+      const latestRequest = clientRequests[0];
+      const now = new Date();
+      const requestCreated = new Date(latestRequest.createdAt);
+      const timeDiff = now.getTime() - requestCreated.getTime();
+      
+      // Si la solicitud se creó hace menos de 5 segundos, actualizar datos
+      if (timeDiff < 5000) {
+        console.log('🆕 Nueva solicitud detectada, actualizando datos...');
+        setTimeout(() => loadData(), 1000); // Pequeño delay para asegurar consistencia
+      }
+    }
+  }, [isClient, clientRequests.length])
 
   // ---- EFECTO PARA MOSTRAR ALERTA DE NUEVOS TRABAJOS ----
   useEffect(() => {
@@ -143,15 +251,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       }
     }
   }, [isTechnician, technicianNotifications.notifications.length])
-
   // ---- FUNCIONES COMPARTIDAS ----
   const loadData = async () => {
     try {
       setIsLoading(true)
+      setError(null)
+      console.log('🔄 Loading dashboard data for user:', user?.role, user?.id)
       
       if (isClient) {
         // Cargar datos para clientes
+        console.log('📋 Loading client requests...')
         const clientData = await serviceRequestService.getClientRequests(user!.id)
+        console.log('✅ Client requests loaded:', clientData.length)
         setClientRequests(clientData)
       } else if (isTechnician) {
         // No cargar datos si no estamos conectados (técnicos)
@@ -162,15 +273,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         }
         
         // Cargar datos para técnicos
+        console.log('🔧 Loading technician data...')
         const [pending, assigned] = await Promise.all([
           serviceRequestService.getPendingRequestsForMe(),
           serviceRequestService.getTechnicianRequests(user!.id)
         ])
+        console.log('✅ Technician data loaded:', { pending: pending.length, assigned: assigned.length })
         setPendingRequests(pending)
         setMyRequests(assigned)
       }
     } catch (error) {
-      console.error('Error loading data:', error)
+      console.error('❌ Error loading data:', error)
       setError('Error al cargar los datos')
     } finally {
       setIsLoading(false)
@@ -238,24 +351,54 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return <XCircleIcon className="h-5 w-5" />
       default:
         return <ClipboardDocumentListIcon className="h-5 w-5" />
-    }
-  }
+    }  }
+  
   // ---- FUNCIONES ESPECÍFICAS PARA CLIENTES ----
   const handleCompleteService = async (requestId: number) => {
     try {
       await serviceRequestService.completeRequest(requestId)
-      await loadData()
+      
+      // Actualizar la solicitud en las listas correspondientes
+      if (isClient) {
+        setClientRequests(prev => 
+          prev.map(req => 
+            req.id === requestId 
+              ? { ...req, status: 'completed', completedAt: new Date().toISOString() }
+              : req
+          )
+        )
+      }
+      
+      if (isTechnician) {
+        setMyRequests(prev => 
+          prev.map(req => 
+            req.id === requestId 
+              ? { ...req, status: 'completed', completedAt: new Date().toISOString() }
+              : req
+          )
+        )
+      }
+      
+      console.log('✅ Servicio completado, listas actualizadas automáticamente')
     } catch (error) {
       console.error('Error completing service:', error)
       setError('Error al marcar como completado')
     }
   }
-
   const handleAcceptSpecificOffer = async (serviceRequestId: number, offerId: number) => {
     try {
-      await serviceRequestService.acceptSpecificOffer(serviceRequestId, offerId)
-      // Remover la solicitud de la lista ya que fue aceptada
-      setClientRequests(prev => prev.filter(req => req.id !== serviceRequestId))
+      const updatedRequest = await serviceRequestService.acceptSpecificOffer(serviceRequestId, offerId)
+      
+      // Actualizar la solicitud en la lista con la nueva información
+      setClientRequests(prev => 
+        prev.map(req => 
+          req.id === serviceRequestId 
+            ? { ...req, status: 'accepted', technicianId: updatedRequest.technicianId }
+            : req
+        )
+      )
+      
+      console.log('✅ Oferta aceptada, solicitud actualizada automáticamente')
     } catch (error) {
       console.error('Error accepting specific offer:', error)
       setError('Error al aceptar la oferta')
@@ -265,8 +408,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const handleCancelRequest = async (requestId: number) => {
     try {
       await serviceRequestService.cancelRequest(requestId)
-      // Remover la solicitud de la lista ya que fue cancelada
-      setClientRequests(prev => prev.filter(req => req.id !== requestId))
+      
+      // Actualizar el estado de la solicitud en lugar de removerla
+      setClientRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'cancelled', cancelledAt: new Date().toISOString() }
+            : req
+        )
+      )
+      
+      console.log('✅ Solicitud cancelada, lista actualizada automáticamente')
     } catch (error) {
       console.error('Error cancelling request:', error)
       setError('Error al cancelar la solicitud')
@@ -327,11 +479,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       setError('Error al hacer la oferta')
     }
   }
-
   const handleAcceptDirectly = async (requestId: number) => {
     try {
       await serviceRequestService.acceptAndSchedule(requestId)
-      await loadData()
+      
+      // Remover la solicitud de la lista de pendientes automáticamente
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId))
+      
+      // Recargar solicitudes asignadas para reflejar la nueva asignación
+      const myUpdatedRequests = await serviceRequestService.getTechnicianRequests(user!.id)
+      setMyRequests(myUpdatedRequests)
+      
+      console.log('✅ Solicitud aceptada directamente, listas actualizadas automáticamente')
     } catch (error) {
       console.error('Error accepting request:', error)
       setError('Error al aceptar la solicitud')
@@ -347,17 +506,30 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       })
       setScheduleDate('')
       setSelectedRequest(null)
-      await loadData()
+      
+      // Actualizar la solicitud en la lista de asignadas
+      setMyRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'scheduled', scheduledAt: scheduleDate }
+            : req
+        )
+      )
+      
+      console.log('✅ Solicitud programada, lista actualizada automáticamente')
     } catch (error) {
       console.error('Error scheduling:', error)
       setError('Error al programar el servicio')
     }
   }
-
   const handleReject = async (requestId: number) => {
     try {
       await serviceRequestService.rejectRequest(requestId)
-      await loadData()
+      
+      // Remover la solicitud de la lista de pendientes
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId))
+      
+      console.log('✅ Solicitud rechazada, lista actualizada automáticamente')
     } catch (error) {
       console.error('Error rejecting request:', error)
       setError('Error al rechazar la solicitud')
@@ -454,8 +626,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     })
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6">        <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">Mis Solicitudes</h2>
           <button
             onClick={() => setShowNewRequestModal(true)}
@@ -653,11 +824,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6">        <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">Trabajos Disponibles</h2>
           <span className="text-sm text-gray-600">{pendingRequests.length} solicitudes</span>
-        </div>        {/* Mostrar alerta de conexión */}
+        </div>{/* Mostrar alerta de conexión */}
         <AnimatePresence>
           {renderConnectionAlert()}
         </AnimatePresence>
@@ -1318,9 +1488,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </motion.div>
         </div>
-      )}
-
-      {/* Debug Panel - Only in development */}
+      )}      {/* Debug Panel - Only in development */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mb-6">
           <MultiOfferDebug 
@@ -1329,6 +1497,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
         </div>
       )}
+
+      {/* WebSocket Debug Component */}
+      <WebSocketDebug />
     </>
   )
 }
