@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  PencilIcon,
   CheckIcon,
-  XMarkIcon,
   IdentificationIcon,
   CalendarDaysIcon,
   UserIcon,
   WrenchScrewdriverIcon,
   PlusIcon,
   TrashIcon,
-  ExclamationTriangleIcon,
   CloudArrowUpIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,6 +16,9 @@ import { authService } from '../../services/authService'
 import type { TechnicianProfile as TechnicianProfileType, CreateTechnicianProfileRequest, ApplianceType } from '../../types/index'
 import UserInfoPanel from '../common/UserInfoPanel'
 import ChangePassword from './ChangePassword'
+import DashboardTabs from '../common/DashboardTabs'
+import DashboardSection from '../common/DashboardSection'
+import { FormField, FormGrid, Input, FormActions } from '../common/DashboardForm'
 import { formatDate, toInputDateFormat } from '../../utils/dateUtils'
 
 const TechnicianProfile: React.FC = () => {
@@ -303,453 +303,100 @@ const TechnicianProfile: React.FC = () => {
         </div>
       </div>
     )
-  }
-
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Configurar Mi Perfil</h1>
-        <p className="text-gray-600">Gestiona tu información personal, profesional y configuración de seguridad</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-lg">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('user')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'user'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Información de Usuario</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('professional')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'professional'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <WrenchScrewdriverIcon className="h-4 w-4" />
-                <span>Información Profesional</span>
-                {!hasProfile && (
-                  <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />
-                )}
-              </div>
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="p-6">          {activeTab === 'user' && (
-            <>
-              <UserInfoPanel
-                user={user}
-                isEditing={isEditing}
-                formData={formData}
-                error={error}
-                success={success}
-                isLoading={isLoading}
-                showChangePassword={showChangePassword}
-                onInputChange={handleInputChange}
-                onEdit={() => setIsEditing(true)}
-                onSave={async () => {
-                  try {
-                    await authService.updateProfile({
-                      firstName: formData.firstName,
-                      middleName: formData.middleName,
-                      firstLastName: formData.firstLastName,
-                      secondLastName: formData.secondLastName
-                    });
-                    await refreshUser();
-                    setIsEditing(false);
-                    setSuccess('Información actualizada correctamente');
-                  } catch (error: any) {
-                    setError(error.response?.data?.message || 'Error al actualizar información');
-                  }
+  }  return (
+    <DashboardTabs
+      title="Configurar Mi Perfil"
+      subtitle="Gestiona tu información personal, profesional y configuración de seguridad"
+      tabs={[
+        {
+          id: 'user',
+          label: 'Información de Usuario',
+          icon: UserIcon
+        },
+        {
+          id: 'professional',
+          label: 'Información Profesional',
+          icon: WrenchScrewdriverIcon,
+          subtitle: !hasProfile ? 'Completa tu perfil profesional' : undefined
+        }
+      ]}
+      activeTab={activeTab}
+      onTabChange={(tabId: string) => setActiveTab(tabId as 'user' | 'professional')}
+      error={error}
+      success={success}
+      isLoading={isLoading}
+    >
+      {activeTab === 'user' && (
+        <>
+          <UserInfoPanel
+            user={user}
+            isEditing={isEditing}
+            formData={formData}
+            error={error}
+            success={success}
+            isLoading={isLoading}
+            showChangePassword={showChangePassword}
+            onInputChange={handleInputChange}
+            onEdit={() => setIsEditing(true)}
+            onSave={async () => {
+              try {
+                await authService.updateProfile({
+                  firstName: formData.firstName,
+                  middleName: formData.middleName,
+                  firstLastName: formData.firstLastName,
+                  secondLastName: formData.secondLastName
+                });
+                await refreshUser();
+                setIsEditing(false);
+                setSuccess('Información actualizada correctamente');
+              } catch (error: any) {
+                setError(error.response?.data?.message || 'Error al actualizar información');
+              }
+            }}
+            onCancel={handleCancel}
+            setShowChangePassword={setShowChangePassword}
+            refreshUser={refreshUser}
+            title="Información de Usuario"
+            subtitle="Gestiona tu información básica de cuenta"
+          />
+          
+          {/* Mostrar el componente ChangePassword cuando showChangePassword es true */}
+          {showChangePassword && (
+            <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <ChangePassword
+                onSuccess={() => {
+                  setShowChangePassword(false);
+                  setSuccess('Contraseña actualizada correctamente');
                 }}
-                onCancel={handleCancel}
-                setShowChangePassword={setShowChangePassword}
-                refreshUser={refreshUser}
-                title="Información de Usuario"
-                subtitle="Gestiona tu información básica de cuenta"
+                onCancel={() => {
+                  setShowChangePassword(false);
+                }}
               />
-              
-              {/* Mostrar el componente ChangePassword cuando showChangePassword es true */}
-              {showChangePassword && (
-                <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
-                  <ChangePassword
-                    onSuccess={() => {
-                      setShowChangePassword(false);
-                      setSuccess('Contraseña actualizada correctamente');
-                    }}
-                    onCancel={() => {
-                      setShowChangePassword(false);
-                    }}
-                  />
-                </div>
-              )}
-            </>
+            </div>
           )}
-          {activeTab === 'professional' && (
-            <ProfessionalInfoTab
-              profile={profile}
-              hasProfile={hasProfile}
-              isEditing={isEditing}
-              formData={formData}
-              error={error}
-              success={success}
-              isLoading={isLoading}
-              availableSpecialties={availableSpecialties}
-              showSpecialtiesModal={showSpecialtiesModal}
-              selectedFile={profilePhotoFile}
-              previewUrl={profilePhotoPreview}
-              onInputChange={handleInputChange}
-              onFileChange={handleFileChange}
-              onSpecialtyToggle={handleSpecialtyToggle}
-              onEdit={() => setIsEditing(true)}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              onAddSpecialty={handleAddSpecialty}
-              onRemoveSpecialty={handleRemoveSpecialty}
-              setShowSpecialtiesModal={setShowSpecialtiesModal}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Componente para información profesional
-interface ProfessionalInfoTabProps {
-  profile: TechnicianProfileType | null
-  hasProfile: boolean
-  isEditing: boolean
-  formData: any
-  error: string | null
-  success: string | null
-  isLoading: boolean
-  availableSpecialties: ApplianceType[]
-  showSpecialtiesModal: boolean
-  selectedFile: File | null
-  previewUrl: string | null
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  onSpecialtyToggle: (specialtyId: number) => void
-  onEdit: () => void
-  onSave: () => void
-  onCancel: () => void
-  onAddSpecialty: (specialtyId: number) => void
-  onRemoveSpecialty: (specialtyId: number) => void
-  setShowSpecialtiesModal: (show: boolean) => void
-}
-
-const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
-  profile, hasProfile, isEditing, formData, error, success, isLoading,
-  availableSpecialties, showSpecialtiesModal, selectedFile, previewUrl, onInputChange, onFileChange, 
-  onSpecialtyToggle, onEdit, onSave, onCancel, onAddSpecialty, onRemoveSpecialty, setShowSpecialtiesModal
-}) => {
-  return (
-    <>
-      {/* Alerts */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <p className="text-red-800">{error}</p>
-        </motion.div>
+        </>
       )}
-
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
-        >
-          <p className="text-green-800">{success}</p>
-        </motion.div>
+      {activeTab === 'professional' && (        <ProfessionalInfoTab
+          profile={profile}
+          hasProfile={hasProfile}
+          isEditing={isEditing}
+          formData={formData}
+          error={error}
+          success={success}
+          isLoading={isLoading}
+          availableSpecialties={availableSpecialties}
+          selectedFile={profilePhotoFile}
+          previewUrl={profilePhotoPreview}
+          onInputChange={handleInputChange}
+          onFileChange={handleFileChange}
+          onSpecialtyToggle={handleSpecialtyToggle}
+          onEdit={() => setIsEditing(true)}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          onRemoveSpecialty={handleRemoveSpecialty}
+          setShowSpecialtiesModal={setShowSpecialtiesModal}
+        />
       )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
-              <WrenchScrewdriverIcon className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                Información Profesional
-                {!hasProfile && (
-                  <ExclamationTriangleIcon className="h-5 w-5 text-orange-500 ml-2" />
-                )}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {hasProfile ? 'Actualiza tu información y especialidades' : 'Completa tu perfil profesional para continuar'}
-              </p>
-            </div>
-          </div>
-          {hasProfile && !isEditing && (
-            <button
-              onClick={onEdit}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <PencilIcon className="h-4 w-4" />
-              <span>Editar</span>
-            </button>
-          )}
-        </div>
-
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cedula */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <IdentificationIcon className="h-4 w-4" />
-                <span>Cédula</span>
-              </label>
-              {isEditing || !hasProfile ? (
-                <input
-                  type="text"
-                  name="cedula"
-                  value={formData.cedula}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="123456789"
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{profile?.cedula}</p>
-              )}
-            </div>
-
-            {/* Birth Date */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <CalendarDaysIcon className="h-4 w-4" />
-                <span>Fecha de Nacimiento</span>
-              </label>
-              {isEditing || !hasProfile ? (                <input
-                  type="date"
-                  name="birthDate"
-                  value={formData.birthDate}
-                  onChange={onInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="dd/mm/aaaa"
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">
-                  {profile && formatDate(profile.birthDate)}
-                </p>
-              )}
-            </div>
-
-            {/* Experience Years */}
-            <div>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <WrenchScrewdriverIcon className="h-4 w-4" />
-                <span>Años de Experiencia</span>
-              </label>
-              {isEditing || !hasProfile ? (
-                <input
-                  type="number"
-                  name="experienceYears"
-                  value={formData.experienceYears}
-                  onChange={onInputChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="5"
-                />
-              ) : (
-                <p className="text-lg text-gray-900 py-2">{profile?.experienceYears} años</p>
-              )}
-            </div>
-
-            {/* ID Photo Upload */}
-            <div className="md:col-span-2">
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                <CloudArrowUpIcon className="h-4 w-4" />
-                <span>Foto de Cédula</span>
-              </label>
-              {isEditing || !hasProfile ? (
-                <div className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={onFileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {selectedFile && (
-                    <div className="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckIcon className="h-5 w-5 text-green-600" />
-                      <span className="text-green-700">Archivo seleccionado: {selectedFile.name}</span>
-                    </div>
-                  )}
-                  {previewUrl && (
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-600 mb-2">Vista previa:</p>
-                      <img
-                        src={previewUrl}
-                        alt="Vista previa"
-                        className="max-w-xs max-h-48 object-cover rounded-lg border border-gray-300"
-                      />
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <p className="text-lg text-gray-900 py-2 flex-1">
-                    {profile?.idPhotoPath ? 'Foto de cédula subida' : 'Sin foto de cédula'}
-                  </p>
-                  {profile?.idPhotoPath && (
-                    <span className="text-green-600 text-sm">✓ Archivo subido</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Specialties Selection (for creation) */}
-            {(!hasProfile && (isEditing || !hasProfile)) && (
-              <div className="md:col-span-2">
-                <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-3">
-                  <WrenchScrewdriverIcon className="h-4 w-4" />
-                  <span>Seleccionar Especialidades</span>
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                  {availableSpecialties.map(specialty => (
-                    <label
-                      key={specialty.id}
-                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.specialties.includes(specialty.id)}
-                        onChange={() => onSpecialtyToggle(specialty.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
-                        {specialty.description && (
-                          <p className="text-xs text-gray-500 truncate">{specialty.description}</p>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Selecciona las especialidades en las que tienes experiencia
-                </p>
-              </div>
-            )}
-
-            {/* Existing Specialties (for updates) */}
-            {hasProfile && (
-              <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                    <WrenchScrewdriverIcon className="h-4 w-4" />
-                    <span>Especialidades en Electrodomésticos</span>
-                  </label>
-                  {!isEditing && (
-                    <button
-                      onClick={() => setShowSpecialtiesModal(true)}
-                      className="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                      <span>Agregar</span>
-                    </button>
-                  )}
-                </div>
-
-                {profile?.specialties && profile.specialties.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {profile.specialties.map(specialty => (
-                      <div
-                        key={specialty.id}
-                        className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
-                      >
-                        <div className="flex items-center">
-                          <CheckIcon className="h-4 w-4 text-blue-600 mr-3" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
-                            {specialty.description && (
-                              <p className="text-xs text-gray-500">{specialty.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        {!isEditing && (
-                          <button
-                            onClick={() => onRemoveSpecialty(specialty.id)}
-                            className="text-red-600 hover:text-red-700 p-1"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                    <WrenchScrewdriverIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No tienes especialidades asignadas</p>
-                    <p className="text-sm text-gray-400">Agrega especialidades para recibir trabajos específicos</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-gray-200">
-            {isEditing && hasProfile && (
-              <button
-                onClick={onCancel}
-                disabled={isLoading}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <XMarkIcon className="h-4 w-4" />
-                <span>Cancelar</span>
-              </button>
-            )}
-            <button
-              onClick={onSave}
-              disabled={isLoading}
-              className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <CheckIcon className="h-4 w-4" />
-              )}
-              <span>{hasProfile ? 'Actualizar Perfil' : 'Crear Perfil'}</span>
-            </button>
-          </div>
-
-          {/* Profile Status */}
-          {hasProfile && !isEditing && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center space-x-2 text-sm text-green-600">
-                <CheckIcon className="h-4 w-4" />
-                <span>Perfil profesional completado</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Modal para agregar especialidades */}
       {showSpecialtiesModal && (
@@ -770,7 +417,7 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
                 .map(specialty => (
                 <button
                   key={specialty.id}
-                  onClick={() => onAddSpecialty(specialty.id)}
+                  onClick={() => handleAddSpecialty(specialty.id)}
                   className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
                 >
                   <p className="font-medium text-gray-900">{specialty.name}</p>
@@ -792,7 +439,262 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
           </motion.div>
         </div>
       )}
-    </>
+    </DashboardTabs>
+  )
+}
+
+// Componente para información profesional
+interface ProfessionalInfoTabProps {
+  profile: TechnicianProfileType | null
+  hasProfile: boolean
+  isEditing: boolean
+  formData: any
+  error: string | null
+  success: string | null
+  isLoading: boolean
+  availableSpecialties: ApplianceType[]
+  selectedFile: File | null
+  previewUrl: string | null
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onSpecialtyToggle: (specialtyId: number) => void
+  onEdit: () => void
+  onSave: () => void
+  onCancel: () => void
+  onRemoveSpecialty: (specialtyId: number) => void
+  setShowSpecialtiesModal: (show: boolean) => void
+}
+
+const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
+  profile, hasProfile, isEditing, formData, error, success, isLoading,
+  availableSpecialties, selectedFile, previewUrl, onInputChange, onFileChange, 
+  onSpecialtyToggle, onEdit, onSave, onCancel, onRemoveSpecialty, setShowSpecialtiesModal
+}) => {
+  return (
+    <DashboardSection
+      title="Información Profesional"
+      subtitle={hasProfile ? 'Actualiza tu información y especialidades' : 'Completa tu perfil profesional para continuar'}
+      icon={WrenchScrewdriverIcon}
+      error={error}
+      success={success}
+      canEdit={hasProfile}
+      isEditing={isEditing}
+      onEdit={onEdit}
+    >
+      <FormGrid>
+        <FormField
+          label="Cédula"
+          icon={IdentificationIcon}
+          required={!hasProfile}
+        >
+          {isEditing || !hasProfile ? (
+            <Input
+              name="cedula"
+              value={formData.cedula}
+              onChange={onInputChange}
+              placeholder="123456789"
+            />
+          ) : (
+            <p className="text-lg text-gray-900 py-2">{profile?.cedula}</p>
+          )}
+        </FormField>
+
+        <FormField
+          label="Fecha de Nacimiento"
+          icon={CalendarDaysIcon}
+          required={!hasProfile}
+        >
+          {isEditing || !hasProfile ? (
+            <Input
+              type="date"
+              name="birthDate"
+              value={formData.birthDate}
+              onChange={onInputChange}
+            />
+          ) : (
+            <p className="text-lg text-gray-900 py-2">
+              {profile && formatDate(profile.birthDate)}
+            </p>
+          )}
+        </FormField>
+
+        <FormField
+          label="Años de Experiencia"
+          icon={WrenchScrewdriverIcon}
+          required={!hasProfile}
+        >
+          {isEditing || !hasProfile ? (
+            <Input
+              type="number"
+              name="experienceYears"
+              value={formData.experienceYears}
+              onChange={onInputChange}
+              min="0"
+              placeholder="5"
+            />
+          ) : (
+            <p className="text-lg text-gray-900 py-2">{profile?.experienceYears} años</p>
+          )}
+        </FormField>
+
+        <div className="md:col-span-2">
+          <FormField
+            label="Foto de Cédula"
+            icon={CloudArrowUpIcon}
+            required={!hasProfile}
+          >
+            {isEditing || !hasProfile ? (
+              <div className="space-y-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={onFileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {selectedFile && (
+                  <div className="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckIcon className="h-5 w-5 text-green-600" />
+                    <span className="text-green-700">Archivo seleccionado: {selectedFile.name}</span>
+                  </div>
+                )}
+                {previewUrl && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 mb-2">Vista previa:</p>
+                    <img
+                      src={previewUrl}
+                      alt="Vista previa"
+                      className="max-w-xs max-h-48 object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">
+                  Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <p className="text-lg text-gray-900 py-2 flex-1">
+                  {profile?.idPhotoPath ? 'Foto de cédula subida' : 'Sin foto de cédula'}
+                </p>
+                {profile?.idPhotoPath && (
+                  <span className="text-green-600 text-sm">✓ Archivo subido</span>
+                )}
+              </div>
+            )}
+          </FormField>
+        </div>
+
+        {/* Specialties Selection (for creation) */}
+        {(!hasProfile && (isEditing || !hasProfile)) && (
+          <div className="md:col-span-2">
+            <FormField
+              label="Seleccionar Especialidades"
+              icon={WrenchScrewdriverIcon}
+              required
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                {availableSpecialties.map(specialty => (
+                  <label
+                    key={specialty.id}
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.specialties.includes(specialty.id)}
+                      onChange={() => onSpecialtyToggle(specialty.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
+                      {specialty.description && (
+                        <p className="text-xs text-gray-500 truncate">{specialty.description}</p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Selecciona las especialidades en las que tienes experiencia
+              </p>
+            </FormField>
+          </div>
+        )}
+
+        {/* Existing Specialties (for updates) */}
+        {hasProfile && (
+          <div className="md:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <WrenchScrewdriverIcon className="h-4 w-4" />
+                <span>Especialidades en Electrodomésticos</span>
+              </label>
+              {!isEditing && (
+                <button
+                  onClick={() => setShowSpecialtiesModal(true)}
+                  className="flex items-center space-x-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  <span>Agregar</span>
+                </button>
+              )}
+            </div>
+
+            {profile?.specialties && profile.specialties.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {profile.specialties.map(specialty => (
+                  <div
+                    key={specialty.id}
+                    className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                  >
+                    <div className="flex items-center">
+                      <CheckIcon className="h-4 w-4 text-blue-600 mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{specialty.name}</p>
+                        {specialty.description && (
+                          <p className="text-xs text-gray-500">{specialty.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    {!isEditing && (
+                      <button
+                        onClick={() => onRemoveSpecialty(specialty.id)}
+                        className="text-red-600 hover:text-red-700 p-1"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                <WrenchScrewdriverIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No tienes especialidades asignadas</p>
+                <p className="text-sm text-gray-400">Agrega especialidades para recibir trabajos específicos</p>
+              </div>
+            )}
+          </div>
+        )}
+      </FormGrid>
+
+      <FormActions
+        isEditing={isEditing}
+        isLoading={isLoading}
+        onSave={onSave}
+        onCancel={onCancel}
+        saveText={hasProfile ? 'Actualizar Perfil' : 'Crear Perfil'}
+      />
+
+      {/* Profile Status */}
+      {hasProfile && !isEditing && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center space-x-2 text-sm text-green-600">
+            <CheckIcon className="h-4 w-4" />
+            <span>Perfil profesional completado</span>
+          </div>
+        </div>
+      )}
+    </DashboardSection>
   )
 }
 

@@ -9,6 +9,7 @@ import {
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
+import DashboardSection from '../common/DashboardSection'
 import type { ServiceRequest } from '../../types/index'
 
 interface TechnicianJobsProps {
@@ -72,14 +73,12 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
       </motion.div>
     )
   }
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Mis Trabajos Asignados</h2>
-        <span className="text-sm text-gray-600">{myRequests.length} trabajos</span>
-      </div>
-
+    <DashboardSection
+      title="Mis Trabajos Asignados"
+      subtitle={`${myRequests.length} trabajos`}
+      icon={BriefcaseIcon}
+    >
       <AnimatePresence>
         {renderConnectionAlert()}
       </AnimatePresence>
@@ -153,6 +152,6 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
           ))}
         </div>
       )}
-    </div>
+    </DashboardSection>
   )
 }

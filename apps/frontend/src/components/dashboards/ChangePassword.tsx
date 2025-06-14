@@ -6,7 +6,9 @@ import {
   EyeSlashIcon,
   CheckIcon
 } from '@heroicons/react/24/outline'
-import { authService, type ChangePasswordRequest } from '../../services/authService'
+import { authService } from '../../services/authService'
+import DashboardSection from '../common/DashboardSection'
+import { FormField } from '../common/DashboardForm'
 
 interface ChangePasswordProps {
   onSuccess?: () => void
@@ -69,17 +71,11 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
     if (formData.currentPassword === formData.newPassword) {
       setError('La nueva contraseña debe ser diferente a la actual')
       return
-    }
-
-    try {
+    }    try {
       setIsLoading(true)
-      const data: ChangePasswordRequest = {
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword
-      }
-
-      const response = await authService.changePassword(data)
-      setSuccess(response.message)
+      
+      await authService.changePassword(formData.currentPassword, formData.newPassword)
+      setSuccess('Contraseña cambiada exitosamente')
       
       // Limpiar formulario
       setFormData({
@@ -100,23 +96,12 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
       setIsLoading(false)
     }
   }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+    <DashboardSection
+      title="Cambiar Contraseña"
+      subtitle="Actualiza tu contraseña de acceso"
+      icon={LockClosedIcon}
     >
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <LockClosedIcon className="h-5 w-5 text-blue-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Cambiar Contraseña</h3>
-          <p className="text-sm text-gray-600">Actualiza tu contraseña de acceso</p>
-        </div>
-      </div>
-
       {/* Messages */}
       {error && (
         <motion.div
@@ -136,95 +121,86 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
         >
           <p className="text-green-800 text-sm">{success}</p>
         </motion.div>
-      )}
+      )}      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-6">
+          {/* Current Password */}
+          <FormField label="Contraseña Actual">
+            <div className="relative">
+              <input
+                type={showPasswords.current ? 'text' : 'password'}
+                id="currentPassword"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ingresa tu contraseña actual"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('current')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                {showPasswords.current ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </FormField>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Current Password */}
-        <div>
-          <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-            Contraseña Actual
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.current ? 'text' : 'password'}
-              id="currentPassword"
-              name="currentPassword"
-              value={formData.currentPassword}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ingresa tu contraseña actual"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility('current')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              {showPasswords.current ? (
-                <EyeSlashIcon className="h-5 w-5" />
-              ) : (
-                <EyeIcon className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-        </div>
+          {/* New Password */}
+          <FormField label="Nueva Contraseña">
+            <div className="relative">
+              <input
+                type={showPasswords.new ? 'text' : 'password'}
+                id="newPassword"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ingresa tu nueva contraseña"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('new')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                {showPasswords.new ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
+          </FormField>
 
-        {/* New Password */}
-        <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-            Nueva Contraseña
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.new ? 'text' : 'password'}
-              id="newPassword"
-              name="newPassword"
-              value={formData.newPassword}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ingresa tu nueva contraseña"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility('new')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              {showPasswords.new ? (
-                <EyeSlashIcon className="h-5 w-5" />
-              ) : (
-                <EyeIcon className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
-        </div>
-
-        {/* Confirm Password */}
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-            Confirmar Nueva Contraseña
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.confirm ? 'text' : 'password'}
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Confirma tu nueva contraseña"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility('confirm')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              {showPasswords.confirm ? (
-                <EyeSlashIcon className="h-5 w-5" />
-              ) : (
-                <EyeIcon className="h-5 w-5" />
-              )}
-            </button>
-          </div>
+          {/* Confirm Password */}
+          <FormField label="Confirmar Nueva Contraseña">
+            <div className="relative">
+              <input
+                type={showPasswords.confirm ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Confirma tu nueva contraseña"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                {showPasswords.confirm ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </FormField>
         </div>
 
         {/* Action Buttons */}
@@ -253,7 +229,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
           </button>
         </div>
       </form>
-    </motion.div>
+    </DashboardSection>
   )
 }
 

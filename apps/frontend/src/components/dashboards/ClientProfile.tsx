@@ -16,6 +16,7 @@ import type { ClientProfile as ClientProfileType, CreateClientProfileRequest } f
 import AddressManagement from '../common/AddressManagement'
 import UserInfoPanel from '../common/UserInfoPanel'
 import ChangePassword from './ChangePassword'
+import DashboardTabs from '../common/DashboardTabs'
 import { formatDate, toInputDateFormat } from '../../utils/dateUtils'
 
 const ClientProfile: React.FC = () => {
@@ -194,114 +195,94 @@ const ClientProfile: React.FC = () => {
     // Only remove extra spaces for first and middle names, preserve spaces in last names
     return isLastName ? capitalized : capitalized.replace(/\s+/g, ' ').trim()
   }
-
+  const tabs = [
+    {
+      id: 'user',
+      label: 'Información Personal',
+      icon: UserIcon
+    },
+    {
+      id: 'client',
+      label: 'Datos del Cliente',
+      icon: IdentificationIcon
+    }
+  ]
   if (isLoading && !profile) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando perfil...</p>
-          </div>
-        </div>
-      </div>
+      <DashboardTabs 
+        title="Configurar Mi Perfil"
+        subtitle="Gestiona tu información personal y configuración de seguridad"
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as 'user' | 'client')}
+        isLoading={true}
+      >
+        <></>
+      </DashboardTabs>
     )
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Configurar Mi Perfil</h1>
-        <p className="text-gray-600">Gestiona tu información personal y configuración de seguridad</p>
-      </div>      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-lg">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('user')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'user'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Información Personal</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('client')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'client'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <IdentificationIcon className="h-4 w-4" />
-                <span>Datos del Cliente</span>
-              </div>
-            </button>
-          </nav>
-        </div>
-        {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'user' && (
-            <>
-              <UserInfoPanel
-                user={user}
-                isEditing={isEditing}
-                formData={formData}
-                error={error}
-                success={success}
-                isLoading={isLoading}
-                showChangePassword={showChangePassword}
-                onInputChange={handleInputChange}
-                onEdit={() => setIsEditing(true)}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                setShowChangePassword={setShowChangePassword}
-                refreshUser={refreshUser}
-                title="Información Personal"
-                subtitle={hasProfile ? 'Gestiona tu información personal' : 'Completa tu perfil para continuar'}
+    <DashboardTabs
+      title="Configurar Mi Perfil"
+      subtitle="Gestiona tu información personal y configuración de seguridad"
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(tabId) => setActiveTab(tabId as 'user' | 'client')}
+      error={error}
+      success={success}
+    >
+      {activeTab === 'user' && (
+        <>
+          <UserInfoPanel
+            user={user}
+            isEditing={isEditing}
+            formData={formData}
+            error={error}
+            success={success}
+            isLoading={isLoading}
+            showChangePassword={showChangePassword}
+            onInputChange={handleInputChange}
+            onEdit={() => setIsEditing(true)}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            setShowChangePassword={setShowChangePassword}
+            refreshUser={refreshUser}
+            title="Información Personal"
+            subtitle={hasProfile ? 'Gestiona tu información personal' : 'Completa tu perfil para continuar'}
+          />
+          
+          {showChangePassword && (
+            <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <ChangePassword
+                onSuccess={() => {
+                  setShowChangePassword(false);
+                  setSuccess('Contraseña actualizada correctamente');
+                }}
+                onCancel={() => {
+                  setShowChangePassword(false);
+                }}
               />
-              
-              {/* Mostrar el componente ChangePassword cuando showChangePassword es true */}
-              {showChangePassword && (
-                <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
-                  <ChangePassword
-                    onSuccess={() => {
-                      setShowChangePassword(false);
-                      setSuccess('Contraseña actualizada correctamente');
-                    }}
-                    onCancel={() => {
-                      setShowChangePassword(false);
-                    }}
-                  />
-                </div>
-              )}
-            </>
+            </div>
           )}
-          {activeTab === 'client' && (
-            <ClientDataTab
-              user={user}
-              profile={profile}
-              hasProfile={hasProfile}
-              isEditing={isEditing}
-              formData={formData}
-              error={error}
-              success={success}
-              isLoading={isLoading}
-              onInputChange={handleInputChange}
-              onEdit={() => setIsEditing(true)}
-              onSave={handleSave}
-              onCancel={handleCancel}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+      {activeTab === 'client' && (
+        <ClientDataTab
+          user={user}
+          profile={profile}
+          hasProfile={hasProfile}
+          isEditing={isEditing}
+          formData={formData}
+          error={error}
+          success={success}
+          isLoading={isLoading}
+          onInputChange={handleInputChange}
+          onEdit={() => setIsEditing(true)}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      )}    </DashboardTabs>
   )
 }
 

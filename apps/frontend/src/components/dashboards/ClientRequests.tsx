@@ -8,12 +8,12 @@ import {
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
+import DashboardSection from '../common/DashboardSection'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
   isLoading: boolean
   error: string | null
-  setError: (error: string | null) => void
   clientRequests: ServiceRequest[]
   requestFilter: 'in-progress' | 'all'
   setRequestFilter: (filter: 'in-progress' | 'all') => void
@@ -25,7 +25,6 @@ interface ClientRequestsProps {
 export const ClientRequests: React.FC<ClientRequestsProps> = ({
   isLoading,
   error,
-  setError,
   clientRequests,
   requestFilter,
   setRequestFilter,
@@ -51,11 +50,12 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
     }
     return true
   })
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Mis Solicitudes</h2>
+    <DashboardSection
+      title="Mis Solicitudes"
+      icon={ClipboardDocumentListIcon}
+      error={error}
+      actions={
         <button
           onClick={() => setShowNewRequestModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
@@ -63,8 +63,8 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
           <PlusIcon className="h-4 w-4" />
           <span>Nueva Solicitud</span>
         </button>
-      </div>
-
+      }
+    >
       {/* Filter buttons */}
       <div className="flex items-center space-x-4 mb-6">
         <FunnelIcon className="h-5 w-5 text-gray-500" />
@@ -91,22 +91,6 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
           </button>
         </div>
       </div>
-
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <p className="text-red-800">{error}</p>
-          <button 
-            onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
-          >
-            Cerrar
-          </button>
-        </motion.div>
-      )}
 
       {filteredRequests.length === 0 ? (
         <motion.div
@@ -195,13 +179,12 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         Marcar como completada
                       </button>
                     </div>
-                  )}
-                </div>
+                  )}                </div>
               </div>
             </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </DashboardSection>
   )
 }
