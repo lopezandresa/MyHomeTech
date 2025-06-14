@@ -112,17 +112,74 @@ export const useDashboardData = (): DashboardData => {
     }
   }, [user, dataFetched, fetchTechnicianData, fetchClientData])
 
+  // Función para cargar datos
   const loadData = useCallback(async () => {
-    setDataFetched(false) // Reset flag para permitir nueva carga
-    await refetchData()
-  }, [refetchData])
+    if (!user) return
 
-  // Initial data fetch - solo una vez cuando el usuario cambia
-  useEffect(() => {
-    if (user && !dataFetched) {
-      refetchData()
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (user.role === 'client') {
+        await fetchClientData()
+      } else if (user.role === 'technician') {
+        await fetchTechnicianData()
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+      setError('Error al cargar los datos del dashboard')
+    } finally {
+      setLoading(false)
     }
-  }, [user?.id, user?.role]) // Solo depende del ID y rol del usuario
+  }, [user, fetchClientData, fetchTechnicianData])
+
+  // Escuchar evento de refresh desde las acciones
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadData()
+    }
+
+    window.addEventListener('refreshDashboardData', handleRefresh)
+    return () => window.removeEventListener('refreshDashboardData', handleRefresh)
+  }, [loadData])
+
+  // Integrar notificaciones en tiempo real para actualizar datos automáticamente
+  useEffect(() => {
+    if (user?.role === 'client') {
+      // Escuchar notificaciones del cliente y refrescar datos cuando sea necesario
+      const handleClientNotification = () => {
+        // Refrescar datos del cliente cuando hay cambios importantes
+        setTimeout(() => loadData(), 1000) // Delay para permitir que el backend procese
+      }
+
+      // Agregar listeners para eventos específicos que requieren refresh
+      if (clientNotifications.notifications.length > 0) {
+        const latestNotification = clientNotifications.notifications[0]
+        if (['accepted', 'scheduled', 'completed', 'cancelled'].includes(latestNotification.type)) {
+          handleClientNotification()
+        }
+      }
+    } else if (user?.role === 'technician') {
+      // Escuchar notificaciones del técnico y refrescar datos cuando sea necesario
+      const handleTechnicianNotification = () => {
+        // Refrescar datos del técnico cuando hay cambios importantes
+        setTimeout(() => loadData(), 1000) // Delay para permitir que el backend procese
+      }
+
+      // Agregar listeners para eventos específicos que requieren refresh
+      if (technicianNotifications.notifications.length > 0) {
+        const latestNotification = technicianNotifications.notifications[0]
+        if (['new', 'updated', 'removed'].includes(latestNotification.type)) {
+          handleTechnicianNotification()
+        }
+      }
+    }
+  }, [user?.role, clientNotifications.notifications, technicianNotifications.notifications, loadData])
+
+  // Cargar datos inicial
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   // Update clientRequests when real-time notifications arrive
   useEffect(() => {
@@ -165,6 +222,77 @@ export const useDashboardData = (): DashboardData => {
       }
     }
   }, [user?.role, technicianNotifications.notifications])
+
+  // Escuchar eventos custom de WebSocket para actualizar datos automáticamente
+  useEffect(() => {
+    const handleNewServiceRequest = (event: any) => {
+      const { serviceRequest } = event.detail
+      if (user?.role === 'technician') {
+        setAvailableRequests(prev => {
+          const exists = prev.some(req => req.id === serviceRequest.id)
+          if (!exists) {
+            return [serviceRequest, ...prev]
+          }
+          return prev
+        })
+      }
+    }
+
+    const handleServiceRequestUpdated = (event: any) => {
+      const { serviceRequest } = event.detail
+      if (user?.role === 'technician') {
+        setAvailableRequests(prev => 
+          prev.map(req => 
+            req.id === serviceRequest.id ? serviceRequest : req
+          )
+        )
+        setTechnicianJobs(prev => 
+          prev.map(req => 
+            req.id === serviceRequest.id ? serviceRequest : req
+          )
+        )
+      }
+    }
+
+    const handleServiceRequestRemoved = (event: any) => {
+      const { serviceRequestId } = event.detail
+      if (user?.role === 'technician') {
+        setAvailableRequests(prev => 
+          prev.filter(req => req.id !== serviceRequestId)
+        )
+      }
+    }
+
+    const handleClientNotification = (event: any) => {
+      const { serviceRequest, type } = event.detail
+      if (user?.role === 'client') {
+        if (['accepted', 'scheduled', 'completed', 'cancelled'].includes(type)) {
+          setClientRequests(prev => {
+            const existingIndex = prev.findIndex(req => req.id === serviceRequest.id)
+            if (existingIndex >= 0) {
+              const updated = [...prev]
+              updated[existingIndex] = serviceRequest
+              return updated
+            }
+            return prev
+          })
+        }
+      }
+    }
+
+    // Agregar listeners para eventos custom
+    window.addEventListener('newServiceRequestReceived', handleNewServiceRequest)
+    window.addEventListener('serviceRequestUpdated', handleServiceRequestUpdated)
+    window.addEventListener('serviceRequestRemoved', handleServiceRequestRemoved)
+    window.addEventListener('clientNotificationReceived', handleClientNotification)
+
+    return () => {
+      window.removeEventListener('newServiceRequestReceived', handleNewServiceRequest)
+      window.removeEventListener('serviceRequestUpdated', handleServiceRequestUpdated)
+      window.removeEventListener('serviceRequestRemoved', handleServiceRequestRemoved)
+      window.removeEventListener('clientNotificationReceived', handleClientNotification)
+    }
+  }, [user?.role])
 
   return {
     availableRequests,

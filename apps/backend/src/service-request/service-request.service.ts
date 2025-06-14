@@ -138,25 +138,71 @@ export class ServiceRequestService {
 
   /** Verificar disponibilidad de técnico para una fecha específica */
   async checkTechnicianAvailability(technicianId: number, proposedDateTime: Date): Promise<boolean> {
-    const date = new Date(proposedDateTime);
+    const proposedDate = new Date(proposedDateTime);
     
-    // Crear rango de 6 horas para el día completo de trabajo
-    const startOfWorkDay = new Date(date);
-    startOfWorkDay.setHours(6, 0, 0, 0);
-    
-    const endOfWorkDay = new Date(date);
-    endOfWorkDay.setHours(18, 0, 0, 0);
+    // Crear ventana de 6 horas alrededor del horario propuesto para evitar solapamientos
+    const startWindow = new Date(proposedDate.getTime() - 3 * 60 * 60 * 1000); // 3 horas antes
+    const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después
 
-    // Buscar si el técnico ya tiene algo agendado ese día
+    // Buscar si el técnico ya tiene algo agendado en esa ventana de tiempo
     const conflictingRequest = await this.srRepo.findOne({
       where: {
         technicianId,
         status: ServiceRequestStatus.SCHEDULED,
-        scheduledAt: Between(startOfWorkDay, endOfWorkDay)
+        scheduledAt: Between(startWindow, endWindow)
       }
     });
 
     return !!conflictingRequest; // true si hay conflicto
+  }
+
+  /** Verificar disponibilidad detallada del técnico para mostrar al usuario */
+  async checkTechnicianAvailabilityDetailed(technicianId: number, proposedDateTime: Date): Promise<{
+    available: boolean;
+    reason?: string;
+    conflictingService?: {
+      id: number;
+      scheduledAt: Date;
+      appliance: string;
+      clientName: string;
+    }
+  }> {
+    const proposedDate = new Date(proposedDateTime);
+    
+    // Crear ventana de 6 horas alrededor del horario propuesto
+    const startWindow = new Date(proposedDate.getTime() - 3 * 60 * 60 * 1000); // 3 horas antes
+    const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después
+
+    // Buscar servicios conflictivos con información detallada
+    const conflictingRequest = await this.srRepo.findOne({
+      where: {
+        technicianId,
+        status: ServiceRequestStatus.SCHEDULED,
+        scheduledAt: Between(startWindow, endWindow)
+      },
+      relations: ['client', 'appliance']
+    });
+
+    if (conflictingRequest) {
+      const scheduledTime = new Date(conflictingRequest.scheduledAt!);
+      const proposedTime = new Date(proposedDateTime);
+      
+      const timeDiff = Math.abs(scheduledTime.getTime() - proposedTime.getTime());
+      const hoursDiff = Math.round(timeDiff / (1000 * 60 * 60));
+      
+      return {
+        available: false,
+        reason: `Ya tienes un servicio programado ${hoursDiff === 0 ? 'a la misma hora' : `${hoursDiff} hora(s) ${scheduledTime < proposedTime ? 'antes' : 'después'}`}`,
+        conflictingService: {
+          id: conflictingRequest.id,
+          scheduledAt: conflictingRequest.scheduledAt!,
+          appliance: conflictingRequest.appliance.name,
+          clientName: `${conflictingRequest.client.firstName} ${conflictingRequest.client.firstLastName}`
+        }
+      };
+    }
+
+    return { available: true };
   }
 
   /** Marcar solicitudes expiradas */
@@ -176,48 +222,44 @@ export class ServiceRequestService {
 
   /** Técnicos: solicitudes pendientes filtradas por especialidad y disponibilidad */
   async findPendingForTechnician(technicianId: number): Promise<ServiceRequest[]> {
-    // Marcar como expiradas las solicitudes que han vencido
-    await this.markExpiredRequests();
-
-    // Obtener el perfil del técnico con sus especialidades
+    // Obtener el técnico con sus especialidades
     const technician = await this.technicianRepo.findOne({
       where: { identityId: technicianId },
       relations: ['specialties']
     });
 
-    if (!technician || !technician.specialties.length) {
+    if (!technician || !technician.specialties) {
       return [];
     }
 
-    // Obtener nombres de tipos de electrodomésticos que maneja el técnico
+    // Extraer los nombres de especialidades del técnico
     const specialtyNames = technician.specialties.map(specialty => specialty.name);
-
-    // Buscar solicitudes pendientes que coincidan con las especialidades
-    const pendingRequests = await this.srRepo
-      .createQueryBuilder('serviceRequest')
-      .innerJoin('serviceRequest.appliance', 'appliance')
-      .leftJoinAndSelect('serviceRequest.client', 'client')
-      .leftJoinAndSelect('serviceRequest.appliance', 'applianceData')
-      .leftJoinAndSelect('serviceRequest.address', 'address')
-      .where('serviceRequest.status = :status', { status: ServiceRequestStatus.PENDING })
-      .andWhere('serviceRequest.expiresAt > :now', { now: new Date() })
-      .andWhere('appliance.type IN (:...typeNames)', { typeNames: specialtyNames })
-      .getMany();
-
-    // Filtrar por disponibilidad del técnico
-    const availableRequests: ServiceRequest[] = [];
-    for (const request of pendingRequests) {
-      const hasConflict = await this.checkTechnicianAvailability(
-        technicianId, 
-        request.proposedDateTime
-      );
-      
-      if (!hasConflict) {
-        availableRequests.push(request);
-      }
+    
+    if (specialtyNames.length === 0) {
+      return [];
     }
 
-    return availableRequests;
+    // Buscar solicitudes pendientes que coincidan con las especialidades del técnico
+    const requests = await this.srRepo.find({
+      where: {
+        status: ServiceRequestStatus.PENDING,
+        appliance: {
+          type: In(specialtyNames)
+        }
+      },
+      relations: [
+        'client',
+        'appliance',
+        'address',
+        'offers',
+        'offers.technician'
+      ],
+      order: {
+        createdAt: 'DESC'
+      }
+    });
+
+    return requests;
   }
 
   /** Todas las solicitudes pendientes (para admin) */
@@ -241,14 +283,24 @@ export class ServiceRequestService {
       throw new NotFoundException('Solicitud no disponible para aceptar');
     }
 
-    // Verificar disponibilidad del técnico
-    const hasConflict = await this.checkTechnicianAvailability(
+    // Verificar disponibilidad del técnico con información detallada
+    const availabilityCheck = await this.checkTechnicianAvailabilityDetailed(
       technicianId, 
       req.proposedDateTime
     );
 
-    if (hasConflict) {
-      throw new ConflictException('Ya tienes un servicio agendado para ese día');
+    if (!availabilityCheck.available) {
+      let errorMessage = availabilityCheck.reason || 'Ya tienes un servicio agendado para ese horario';
+      
+      if (availabilityCheck.conflictingService) {
+        const conflictTime = new Date(availabilityCheck.conflictingService.scheduledAt).toLocaleString('es-ES', {
+          dateStyle: 'short',
+          timeStyle: 'short'
+        });
+        errorMessage += `. Servicio conflictivo: ${availabilityCheck.conflictingService.appliance} para ${availabilityCheck.conflictingService.clientName} programado el ${conflictTime}`;
+      }
+      
+      throw new ConflictException(errorMessage);
     }
 
     req.technicianId = technicianId;

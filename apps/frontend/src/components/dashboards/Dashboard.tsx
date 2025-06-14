@@ -109,6 +109,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               isLoading={dashboardData.isLoading}
               error={dashboardData.error}
               setError={dashboardData.setError}
+              success={dashboardActions.success}
+              setSuccess={dashboardActions.setSuccess}
               pendingRequests={dashboardData.pendingRequests}
               setPendingRequests={dashboardData.setPendingRequests}
               showRecentJobAlert={showRecentJobAlert}
@@ -137,6 +139,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               isLoading={dashboardData.isLoading}
               error={dashboardData.error}
               setError={dashboardData.setError}
+              success={dashboardActions.success}
+              setSuccess={dashboardActions.setSuccess}
               pendingRequests={dashboardData.pendingRequests}
               setPendingRequests={dashboardData.setPendingRequests}
               showRecentJobAlert={showRecentJobAlert}
@@ -577,16 +581,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           }}
           onSubmit={dashboardActions.handleSubmitRating}
         />
-      )}
-
-      {/* Debug Panel - Only in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-6">
-          <MultiOfferDebug 
-            clientId={dashboardData.isClient ? dashboardData.user?.id : undefined}
-            technicianId={dashboardData.isTechnician ? dashboardData.user?.id : undefined}
-          />
-        </div>
       )}
     </>
   )

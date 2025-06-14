@@ -8,6 +8,8 @@ interface DashboardActionsState {
   setSelectedRequest: (request: ServiceRequest | null) => void
   error: string | null
   setError: (error: string | null) => void
+  success: string | null
+  setSuccess: (success: string | null) => void
   availableRequests: ServiceRequest[]
   setAvailableRequests: (requests: ServiceRequest[] | ((prev: ServiceRequest[]) => ServiceRequest[])) => void
   technicianJobs: ServiceRequest[]
@@ -41,6 +43,7 @@ interface DashboardActionsState {
 export const useDashboardActions = (): DashboardActionsState => {
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [availableRequests, setAvailableRequests] = useState<ServiceRequest[]>([])
   const [technicianJobs, setTechnicianJobs] = useState<ServiceRequest[]>([])
   const [clientRequests, setClientRequests] = useState<ServiceRequest[]>([])
@@ -52,29 +55,26 @@ export const useDashboardActions = (): DashboardActionsState => {
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [selectedRequestForRating, setSelectedRequestForRating] = useState<ServiceRequest | null>(null)
 
+  // Función para refrescar datos después de cambios
+  const refreshData = useCallback(async () => {
+    try {
+      // Esta función será llamada desde useDashboardData para refrescar
+      window.dispatchEvent(new CustomEvent('refreshDashboardData'))
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    }
+  }, [])
+
   const handleAcceptRequest = async (requestId: number) => {
     try {
       setError(null)
       const updatedRequest = await serviceRequestService.acceptRequest(requestId)
       
-      // Remover de solicitudes disponibles
-      setAvailableRequests(prev => 
-        prev.filter(req => req.id !== requestId)
-      )
-      
-      // Agregar a trabajos del técnico
-      setTechnicianJobs(prev => [...prev, updatedRequest])
-      
-      // Actualizar en solicitudes del cliente si está en la vista
-      setClientRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'scheduled', technicianId: updatedRequest.technicianId, scheduledAt: updatedRequest.scheduledAt }
-            : req
-        )
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
 
       setSelectedRequest(null)
+      setSuccess('Solicitud aceptada con éxito')
     } catch (error) {
       console.error('Error accepting request:', error)
       setError('Error al aceptar la solicitud')
@@ -86,23 +86,9 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError(null)
       const updatedRequest = await serviceRequestService.completeRequest(requestId)
       
-      // Actualizar en trabajos del técnico
-      setTechnicianJobs(prev => 
-        prev.map(job => 
-          job.id === requestId 
-            ? { ...job, status: 'completed', completedAt: updatedRequest.completedAt }
-            : job
-        )
-      )
-      
-      // Actualizar en solicitudes del cliente
-      setClientRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'completed', completedAt: updatedRequest.completedAt }
-            : req
-        )
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
+      setSuccess('Solicitud completada con éxito')
     } catch (error) {
       console.error('Error completing request:', error)
       setError('Error al completar la solicitud')
@@ -114,19 +100,9 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError(null)
       await serviceRequestService.cancelRequest(requestId)
       
-      // Remover de solicitudes del cliente
-      setClientRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'cancelled', cancelledAt: new Date().toISOString() }
-            : req
-        )
-      )
-      
-      // Remover de solicitudes disponibles si estaba ahí
-      setAvailableRequests(prev => 
-        prev.filter(req => req.id !== requestId)
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
+      setSuccess('Solicitud cancelada con éxito')
     } catch (error) {
       console.error('Error cancelling request:', error)
       setError('Error al cancelar la solicitud')
@@ -141,19 +117,14 @@ export const useDashboardActions = (): DashboardActionsState => {
         return
       }
 
-      // Llamar al servicio para proponer fecha alternativa
+      const updatedRequest = await serviceRequestService.proposeAlternativeDate(requestId, alternativeDate)
       
-      // Actualizar en solicitudes disponibles
-      setAvailableRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'pending' as const, proposedAlternativeDate: alternativeDate }
-            : req
-        )
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
 
       setAlternativeDate('')
       setSelectedRequest(null)
+      setSuccess('Fecha alternativa propuesta con éxito')
 
     } catch (error) {
       console.error('Error proposing alternative date:', error)
@@ -193,7 +164,7 @@ export const useDashboardActions = (): DashboardActionsState => {
             : req
         )
       )
-      
+      setSuccess('Oferta aceptada con éxito')
     } catch (error) {
       console.error('Error accepting specific offer:', error)
       setError('Error al aceptar la oferta')
@@ -224,28 +195,15 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError(null)
       const updatedRequest = await serviceRequestService.acceptRequest(requestId)
       
-      // Remover de solicitudes disponibles
-      setAvailableRequests(prev => 
-        prev.filter(req => req.id !== requestId)
-      )
-      
-      // Agregar a trabajos del técnico
-      setTechnicianJobs(prev => [...prev, updatedRequest])
-      
-      // Actualizar en solicitudes del cliente si está en la vista
-      setClientRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'scheduled', technicianId: updatedRequest.technicianId, scheduledAt: updatedRequest.scheduledAt }
-            : req
-        )
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
+      setSuccess('Solicitud aceptada directamente con éxito')
 
     } catch (error) {
       console.error('Error accepting request directly:', error)
       setError('Error al aceptar la solicitud')
     }
-  }, [])
+  }, [refreshData])
 
   // Función para enviar rating
   const handleSubmitRating = useCallback(async (rating: number, comment: string) => {
@@ -266,37 +224,34 @@ export const useDashboardActions = (): DashboardActionsState => {
       
       // Luego enviar la calificación usando el servicio de rating
       await ratingService.createRating({
-        raterId: selectedRequestForRating.clientId, // El cliente califica
-        ratedId: selectedRequestForRating.technicianId!, // Al técnico
+        raterId: selectedRequestForRating.clientId,
+        ratedId: selectedRequestForRating.technicianId!,
         score: rating,
         comment: comment || undefined,
         serviceRequestId: selectedRequestForRating.id
       })
       
-      // Actualizar en solicitudes del cliente
-      setClientRequests(prev => 
-        prev.map(req => 
-          req.id === selectedRequestForRating.id 
-            ? { ...req, status: 'completed', completedAt: new Date().toISOString() }
-            : req
-        )
-      )
+      // Refrescar datos después del cambio
+      await refreshData()
 
       // Cerrar modal de rating
       setShowRatingModal(false)
       setSelectedRequestForRating(null)
+      setSuccess('Calificación enviada con éxito')
 
     } catch (error) {
       console.error('Error submitting rating:', error)
       setError('Error al enviar la calificación')
     }
-  }, [selectedRequestForRating])
+  }, [selectedRequestForRating, refreshData])
 
   return {
     selectedRequest,
     setSelectedRequest,
     error,
     setError,
+    success,
+    setSuccess,
     availableRequests,
     setAvailableRequests,
     technicianJobs,

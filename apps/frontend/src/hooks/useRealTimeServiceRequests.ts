@@ -51,10 +51,15 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)]) // Keep last 10 notifications
     
+    // Disparar evento para actualizar datos del dashboard
+    window.dispatchEvent(new CustomEvent('newServiceRequestReceived', { 
+      detail: { serviceRequest: data.serviceRequest } 
+    }))
+    
     // Mostrar notificación del sistema si está soportada
     if ('Notification' in window && Notification.permission === 'granted') {
       const notif = new Notification('Nueva Solicitud de Servicio', {
-        body: `${data.serviceRequest.appliance.name} - $${data.serviceRequest.clientPrice}`,
+        body: `${data.serviceRequest.appliance.name} - Cliente: ${data.serviceRequest.client?.firstName}`,
         icon: '/favicon.ico',
         tag: `service-request-${data.serviceRequest.id}`
       });
@@ -75,6 +80,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       }
     }
   }, [])
+
   // Callback para solicitudes actualizadas
   const handleServiceRequestUpdated = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
     
@@ -86,7 +92,14 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     }
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
-  }, [])  // Callback para solicitudes removidas
+    
+    // Disparar evento para actualizar datos del dashboard
+    window.dispatchEvent(new CustomEvent('serviceRequestUpdated', { 
+      detail: { serviceRequest: data.serviceRequest } 
+    }))
+  }, [])
+
+  // Callback para solicitudes removidas
   const handleServiceRequestRemoved = useCallback((data: { serviceRequestId: number, message: string }) => {
     // Crear notificación de solicitud removida
     const notification: ServiceRequestNotification = {
@@ -98,6 +111,11 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
+    // Disparar evento para actualizar datos del dashboard
+    window.dispatchEvent(new CustomEvent('serviceRequestRemoved', { 
+      detail: { serviceRequestId: data.serviceRequestId } 
+    }))
+    
     // También remover notificaciones previas de esta solicitud para evitar confusión
     setTimeout(() => {
       setNotifications(prev => 
@@ -105,6 +123,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       )
     }, 100)
   }, [])
+
   // Callback para ofertas rechazadas
   const handleOfferRejected = useCallback((data: { serviceRequest: ServiceRequest, message: string, type: string }) => {
     const notification: ServiceRequestNotification = {
@@ -115,6 +134,11 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     }
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
+    
+    // Disparar evento para actualizar datos del dashboard
+    window.dispatchEvent(new CustomEvent('offerRejected', { 
+      detail: { serviceRequest: data.serviceRequest } 
+    }))
     
     // Mostrar notificación del sistema
     if ('Notification' in window && Notification.permission === 'granted') {

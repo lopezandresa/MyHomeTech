@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   WrenchScrewdriverIcon,
@@ -6,7 +6,8 @@ import {
   ArrowPathIcon,
   WifiIcon,
   CalendarDaysIcon,
-  ClockIcon
+  ClockIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
@@ -17,6 +18,8 @@ interface AvailableJobsProps {
   isLoading: boolean
   error: string | null
   setError: (error: string | null) => void
+  success: string | null
+  setSuccess: (success: string | null) => void
   pendingRequests: ServiceRequest[]
   setPendingRequests: React.Dispatch<React.SetStateAction<ServiceRequest[]>>
   showRecentJobAlert: boolean
@@ -32,6 +35,8 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   isLoading,
   error,
   setError,
+  success,
+  setSuccess,
   pendingRequests,
   showRecentJobAlert,
   setShowRecentJobAlert,
@@ -40,6 +45,36 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   setSelectedRequest,
   handleReconnect
 }) => {
+  const [conflictDetails, setConflictDetails] = useState<{[key: number]: string}>({})
+
+  // Función mejorada para manejar la aceptación con mejor manejo de errores
+  const handleAcceptWithErrorHandling = async (requestId: number) => {
+    try {
+      setError(null)
+      setConflictDetails(prev => ({ ...prev, [requestId]: '' }))
+      await handleAcceptDirectly(requestId)
+    } catch (error: any) {
+      console.error('Error accepting request:', error)
+      
+      // Extraer el mensaje de error del backend
+      let errorMessage = 'Error al aceptar la solicitud'
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+        
+        // Si el error contiene información de conflicto, guardarlo específicamente para esta solicitud
+        if (errorMessage.includes('Servicio conflictivo:')) {
+          setConflictDetails(prev => ({ ...prev, [requestId]: errorMessage }))
+          return // No mostrar en el error general
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+    }
+  }
+
   // Alerta de conexión para técnicos
   const renderConnectionAlert = () => {
     if (technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED) {
@@ -149,10 +184,41 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="p-4 bg-red-50 border border-red-200 rounded-lg"
         >
-          <p className="text-red-800">{error}</p>
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-red-800 font-medium">Error</p>
+              <p className="text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
           <button 
             onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
+            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Cerrar
+          </button>
+        </motion.div>
+      )}
+
+      {success && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="p-4 bg-green-50 border border-green-200 rounded-lg"
+        >
+          <div className="flex items-start">
+            <svg className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-green-800 font-medium">¡Éxito!</p>
+              <p className="text-green-700 mt-1">{success}</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setSuccess(null)}
+            className="mt-2 text-sm text-green-600 hover:text-green-800 underline"
           >
             Cerrar
           </button>
@@ -249,9 +315,35 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                 </div>
               </div>
 
+              {/* Mostrar detalles del conflicto si existe */}
+              {conflictDetails[request.id] && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+                >
+                  <div className="flex items-start">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-orange-500 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-orange-800 mb-1">Conflicto de horario detectado</h4>
+                      <p className="text-sm text-orange-700">{conflictDetails[request.id]}</p>
+                      <p className="text-xs text-orange-600 mt-2">
+                        💡 Tip: Puedes proponer una fecha alternativa para este servicio
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setConflictDetails(prev => ({ ...prev, [request.id]: '' }))}
+                      className="text-orange-400 hover:text-orange-600"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => handleAcceptDirectly(request.id)}
+                  onClick={() => handleAcceptWithErrorHandling(request.id)}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
                 >
                   <CalendarDaysIcon className="h-4 w-4" />

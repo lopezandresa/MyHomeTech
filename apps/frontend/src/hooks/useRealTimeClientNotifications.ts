@@ -94,6 +94,15 @@ export const useRealTimeClientNotifications = (
 
     setNotifications(prev => [newNotification, ...prev].slice(0, 50)) // Mantener solo 50 notificaciones
     showBrowserNotification(newNotification)
+    
+    // Disparar evento para actualizar datos del dashboard
+    window.dispatchEvent(new CustomEvent('clientNotificationReceived', { 
+      detail: { 
+        notification: newNotification,
+        serviceRequest: newNotification.serviceRequest,
+        type: newNotification.type
+      } 
+    }))
   }, [showBrowserNotification])
 
   const clearNotifications = useCallback(() => {
