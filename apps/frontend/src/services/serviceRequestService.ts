@@ -2,7 +2,6 @@ import api from './api'
 import type {
   ServiceRequest,
   CreateServiceRequestRequest,
-  CreateOfferRequest,
   AvailabilityCheckResponse,
   CalendarEvent,
   AlternativeDateProposal

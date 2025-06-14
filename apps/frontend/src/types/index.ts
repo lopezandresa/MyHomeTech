@@ -215,12 +215,6 @@ export interface CalendarEvent {
   serviceRequest: ServiceRequest
 }
 
-// Interfaz para crear ofertas
-export interface CreateOfferRequest {
-  price: number
-  message?: string
-}
-
 // Interfaz para ofertas de solicitudes de servicio
 export interface ServiceRequestOffer {
   id: number
