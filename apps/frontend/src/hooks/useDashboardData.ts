@@ -82,8 +82,8 @@ export const useDashboardData = (): DashboardData => {
     if (!user || user.role !== 'client') return
     
     try {
-      // Obtener solicitudes del cliente
-      const requests = await serviceRequestService.getClientRequests(user.id)
+      // Obtener solicitudes del cliente CON propuestas de fechas alternativas
+      const requests = await serviceRequestService.getMyRequestsWithOffers()
       setClientRequests(requests)
     } catch (error) {
       console.error('Error fetching client data:', error)

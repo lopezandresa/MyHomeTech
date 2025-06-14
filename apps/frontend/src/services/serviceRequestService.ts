@@ -63,6 +63,12 @@ class ServiceRequestService {
     return response.data
   }
 
+  // Cliente obtiene sus solicitudes con ofertas y propuestas
+  async getMyRequestsWithOffers(): Promise<ServiceRequest[]> {
+    const response = await api.get<ServiceRequest[]>('/service-requests/my-requests-with-offers')
+    return response.data
+  }
+
   // Técnico ve sus solicitudes asignadas
   async getTechnicianRequests(technicianId: number): Promise<ServiceRequest[]> {
     const response = await api.get<ServiceRequest[]>(`/service-requests/technician/${technicianId}`)

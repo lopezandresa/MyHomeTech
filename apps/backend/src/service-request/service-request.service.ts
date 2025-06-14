@@ -600,11 +600,21 @@ export class ServiceRequestService {
 
   /** Obtener solicitudes del cliente con ofertas */
   async getClientRequestsWithOffers(clientId: number): Promise<ServiceRequest[]> {
-    return this.srRepo.find({
-      where: { clientId },
-      relations: ['client', 'appliance', 'address', 'technician', 'offers', 'offers.technician'],
-      order: { createdAt: 'DESC' }
-    });
+    const req = this.srRepo
+    .createQueryBuilder('sr')
+    .leftJoinAndSelect('sr.client', 'client')
+    .leftJoinAndSelect('sr.appliance', 'appliance')
+    .leftJoinAndSelect('sr.address', 'address')
+    .leftJoinAndSelect('sr.technician', 'technician')
+    .leftJoinAndSelect('sr.offers', 'offers')
+    .leftJoinAndSelect('offers.technician', 'offerTechnician')
+    .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
+    .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
+    .where('sr.clientId = :clientId', { clientId })
+    .orderBy('sr.createdAt', 'DESC')
+    .getMany();
+    console.log('Solicitudes del cliente con ofertas:', req);
+    return req;
   }
 
   /** Cliente actualiza el precio de su solicitud */
