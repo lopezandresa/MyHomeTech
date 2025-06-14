@@ -18,7 +18,6 @@ import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
 import AlternativeDateProposalCard from '../AlternativeDateProposalCard'
 import TechnicianInfo from '../TechnicianInfo'
-import { useToast } from '../common/ToastProvider'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
@@ -50,7 +49,6 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
   const [expandedProposals, setExpandedProposals] = useState<Set<number>>(new Set())
-  const { showSuccess, showError } = useToast()
   
   // Función para alternar la expansión de propuestas
   const toggleProposalsExpansion = (requestId: number) => {
@@ -84,15 +82,8 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
     try {
       setIsCancelling(true)
       await handleCancelRequest(requestToCancel)
-      showSuccess(
-        'Solicitud Cancelada',
-        'La solicitud ha sido cancelada exitosamente'
-      )
     } catch (error) {
-      showError(
-        'Error al Cancelar',
-        'No se pudo cancelar la solicitud. Inténtalo de nuevo.'
-      )
+      console.error('Error in handleConfirmCancel:', error)
     } finally {
       setIsCancelling(false)
       setRequestToCancel(null)
