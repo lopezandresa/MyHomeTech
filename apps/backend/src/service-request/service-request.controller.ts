@@ -53,10 +53,10 @@ export class ServiceRequestController {
   @UseGuards(JwtAuthGuard)
   @Roles('technician')
   @Get('available-for-me')
-  @ApiOperation({ summary: 'Técnico lista solicitudes disponibles para él (por especialidad y horario)' })
-  findAvailableForMe(@Request() req): Promise<ServiceRequest[]> {
+  @ApiOperation({ summary: 'Técnico lista solicitudes disponibles para él (por especialidad y horario)' })  findAvailableForMe(@Request() req): Promise<ServiceRequest[]> {
     return this.svc.findPendingForTechnician(req.user.id);
   }
+
   // 3) Técnico acepta una solicitud directamente (sin negociación de precio)
   @UseGuards(JwtAuthGuard)
   @Roles('technician')

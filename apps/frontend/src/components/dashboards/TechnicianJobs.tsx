@@ -122,9 +122,7 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
               <div className="mb-4">
                 <h4 className="font-medium text-gray-900 mb-2">Descripción:</h4>
                 <p className="text-gray-600">{request.description}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              </div>              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <span className="text-sm font-medium text-gray-500">Fecha programada:</span>
                   <p className="font-medium">
@@ -136,8 +134,7 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
                         })}
                       </>
                     ) : (
-                      'Fecha por programar'
-                    )}
+                      'Fecha por programar'                    )}
                   </p>
                 </div>
                 <div>

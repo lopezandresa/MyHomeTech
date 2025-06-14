@@ -239,31 +239,29 @@ export class ServiceRequestService {
     
     if (specialtyNames.length === 0) {
       return [];
-    }
+    }    // Buscar solicitudes pendientes que coincidan con las especialidades del técnico
+    const requests = await this.srRepo
+      .createQueryBuilder('sr')
+      .leftJoinAndSelect('sr.client', 'client')
+      .leftJoinAndSelect('sr.appliance', 'appliance')
+      .leftJoinAndSelect('sr.address', 'address')
+      .leftJoinAndSelect('sr.offers', 'offers')
+      .leftJoinAndSelect('offers.technician', 'offerTechnician')
+      .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
+      .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
+      .where('sr.status = :status', { status: ServiceRequestStatus.PENDING })
+      .andWhere('appliance.type IN (:...specialtyNames)', { specialtyNames })
+      .orderBy('sr.createdAt', 'DESC')
+      .getMany();    // Filtrar las propuestas para mostrar solo las del técnico actual
+    const result = requests.map(request => ({
+      ...request,
+      alternativeDateProposals: request.alternativeDateProposals?.filter(
+        proposal => proposal.technicianId === technicianId  // Usar technicianId (identityId) directamente
+      ) || []
+    }));
 
-    // Buscar solicitudes pendientes que coincidan con las especialidades del técnico
-    const requests = await this.srRepo.find({
-      where: {
-        status: ServiceRequestStatus.PENDING,
-        appliance: {
-          type: In(specialtyNames)
-        }
-      },
-      relations: [
-        'client',
-        'appliance',
-        'address',
-        'offers',
-        'offers.technician'
-      ],
-      order: {
-        createdAt: 'DESC'
-      }
-    });
-
-    return requests;
+    return result;
   }
-
   /** Todas las solicitudes pendientes (para admin) */
   async findPending(): Promise<ServiceRequest[]> {
     await this.markExpiredRequests();

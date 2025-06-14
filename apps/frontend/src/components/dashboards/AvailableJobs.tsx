@@ -34,7 +34,6 @@ interface AvailableJobsProps {
 
 export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   isLoading,
-  setError,
   success,
   setSuccess,
   pendingRequests,
@@ -44,8 +43,7 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   handleAcceptDirectly,
   setSelectedRequest,
   handleReconnect
-}) => {
-  const [conflictDetails, setConflictDetails] = useState<{[key: number]: string}>({})
+}) => {  const [conflictDetails, setConflictDetails] = useState<{[key: number]: string}>({})
 
   // Función simplificada - ahora los toasts se manejan en useDashboardActions
   const handleAcceptWithErrorHandling = async (requestId: number) => {
@@ -123,10 +121,8 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
         </div>
       </div>
     )
-  }  return (
-    <DashboardPanel
-      title="Trabajos Disponibles"
-      subtitle={`${pendingRequests.length} solicitudes`}
+  }  return (    <DashboardPanel
+      title="Trabajos Disponibles"      subtitle={`${pendingRequests.length} solicitudes`}
     >
       <AnimatePresence>
         {renderConnectionAlert()}
@@ -194,9 +190,8 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay solicitudes disponibles</h3>
           <p className="text-gray-600">Las nuevas solicitudes aparecerán aquí</p>
         </motion.div>
-      ) : (
-        <div className="grid gap-6">
-          {pendingRequests.map((request, index) => (
+      ) : (        <div className="grid gap-6">          {pendingRequests.map((request, index) => {
+            return (
             <motion.div
               key={request.id}
               initial={{ opacity: 0, y: 20 }}
@@ -296,8 +291,74 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                     >
                       <XMarkIcon className="h-4 w-4" />
                     </button>
+                  </div>                </motion.div>
+              )}              {/* Mis propuestas para esta solicitud */}
+              {request.alternativeDateProposals && request.alternativeDateProposals.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center mb-3">
+                    <ClockIcon className="h-5 w-5 text-blue-600 mr-2" />
+                    <h4 className="font-medium text-gray-900">
+                      Mis propuestas enviadas ({request.alternativeDateProposals?.length || 0}/3)
+                    </h4>
                   </div>
-                </motion.div>
+                  <div className="space-y-2">
+                    {request.alternativeDateProposals && request.alternativeDateProposals.length > 0 ? (
+                      request.alternativeDateProposals
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((proposal) => (
+                        <div key={proposal.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                Propuesta #{proposal.proposalCount}
+                              </span>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm text-gray-500">
+                                {new Date(proposal.proposedDateTime).toLocaleDateString('es-ES', {
+                                  weekday: 'short',
+                                  month: 'short', 
+                                  day: 'numeric'
+                                })} a las {new Date(proposal.proposedDateTime).toLocaleTimeString('es-ES', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              proposal.status === 'pending' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : proposal.status === 'accepted'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {proposal.status === 'pending' ? 'Pendiente' : 
+                               proposal.status === 'accepted' ? '✅ Aceptada' : '❌ Rechazada'}
+                            </span>
+                          </div>
+                          {proposal.comment && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              💬 {proposal.comment}
+                            </p>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            Enviada el {new Date(proposal.createdAt).toLocaleDateString('es-ES')}
+                            {proposal.resolvedAt && (
+                              <span> • {proposal.status === 'accepted' ? 'Aceptada' : 'Rechazada'} el {new Date(proposal.resolvedAt).toLocaleDateString('es-ES')}</span>
+                            )}                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded">
+                        No has enviado propuestas para esta solicitud aún
+                      </div>
+                    )}
+                  </div>
+                  {(request.alternativeDateProposals?.length || 0) >= 3 && (
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-700">
+                      ⚠️ Has alcanzado el límite de 3 propuestas para esta solicitud
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="flex flex-wrap gap-3">
@@ -313,11 +374,11 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                   className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center gap-2"
                 >
                   <ClockIcon className="h-4 w-4" />
-                  Proponer fecha alternativa
-                </button>
+                  Proponer fecha alternativa                </button>
               </div>
             </motion.div>
-          ))}
+            )
+          })}
         </div>
       )}    </DashboardPanel>
   )

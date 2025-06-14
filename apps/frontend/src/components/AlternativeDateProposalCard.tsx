@@ -13,16 +13,39 @@ import type { AlternativeDateProposal } from '../types'
 interface AlternativeDateProposalCardProps {
   proposal: AlternativeDateProposal
   isClient: boolean
-  onAccept?: (proposalId: number) => void
-  onReject?: (proposalId: number) => void
+  onAccept?: (proposalId: number) => Promise<void>
+  onReject?: (proposalId: number) => Promise<void>
+  isLoading?: boolean
 }
 
-export const AlternativeDateProposalCard: React.FC<AlternativeDateProposalCardProps> = ({
+const AlternativeDateProposalCard: React.FC<AlternativeDateProposalCardProps> = ({
   proposal,
   isClient,
   onAccept,
-  onReject
+  onReject,
+  isLoading = false
 }) => {
+  const [isProcessing, setIsProcessing] = React.useState(false)
+  const handleAccept = async () => {
+    if (!onAccept || isProcessing) return
+    setIsProcessing(true)
+    try {
+      await onAccept(proposal.id)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!onReject || isProcessing) return
+    setIsProcessing(true)
+    try {
+      await onReject(proposal.id)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -128,24 +151,42 @@ export const AlternativeDateProposalCard: React.FC<AlternativeDateProposalCardPr
             </span>
           )}
         </div>
-      </div>
-
-      {/* Botones de acción (solo para clientes y propuestas pendientes) */}
+      </div>      {/* Botones de acción (solo para clientes y propuestas pendientes) */}
       {isClient && proposal.status === 'pending' && onAccept && onReject && (
         <div className="flex space-x-3 pt-2 border-t">
           <button
-            onClick={() => onAccept(proposal.id)}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            onClick={handleAccept}
+            disabled={isProcessing || isLoading}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
-            <CheckIcon className="h-4 w-4" />
-            Aceptar fecha
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Procesando...
+              </>
+            ) : (
+              <>
+                <CheckIcon className="h-4 w-4" />
+                Aceptar fecha
+              </>
+            )}
           </button>
           <button
-            onClick={() => onReject(proposal.id)}
-            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            onClick={handleReject}
+            disabled={isProcessing || isLoading}
+            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
-            <XMarkIcon className="h-4 w-4" />
-            Rechazar
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Procesando...
+              </>
+            ) : (
+              <>
+                <XMarkIcon className="h-4 w-4" />
+                Rechazar
+              </>
+            )}
           </button>
         </div>
       )}

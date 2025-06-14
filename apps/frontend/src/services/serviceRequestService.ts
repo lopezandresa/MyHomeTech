@@ -135,9 +135,10 @@ class ServiceRequestService {
     if (dateTime <= new Date()) {
       return { valid: false, message: 'La fecha debe ser futura' }
     }
-    
-    return { valid: true }
-  }  // Proponer fecha alternativa (técnico)
+      return { valid: true }
+  }
+
+  // Proponer fecha alternativa (técnico)
   async proposeAlternativeDate(requestId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
     const response = await api.post<AlternativeDateProposal>(`/service-requests/${requestId}/propose-alternative-date`, {
       alternativeDateTime,
