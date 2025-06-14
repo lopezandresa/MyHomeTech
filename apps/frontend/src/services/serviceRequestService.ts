@@ -137,11 +137,10 @@ class ServiceRequestService {
     
     return { valid: true }
   }
-
   // Proponer fecha alternativa (técnico)
   async proposeAlternativeDate(requestId: number, alternativeDate: string): Promise<ServiceRequest> {
     const response = await api.post<ServiceRequest>(`/service-requests/${requestId}/propose-alternative-date`, {
-      alternativeDate
+      alternativeDateTime: alternativeDate
     })
     return response.data
   }

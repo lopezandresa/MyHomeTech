@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import serviceRequestService from '../services/serviceRequestService'
 import ratingService from '../services/ratingService'
+import { useToast } from '../components/common/ToastProvider'
 import type { ServiceRequest } from '../types'
 
 interface DashboardActionsState {
@@ -55,6 +56,9 @@ export const useDashboardActions = (): DashboardActionsState => {
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [selectedRequestForRating, setSelectedRequestForRating] = useState<ServiceRequest | null>(null)
 
+  // Hook para toasts
+  const { showSuccess, showError } = useToast()
+
   // Función para refrescar datos después de cambios
   const refreshData = useCallback(async () => {
     try {
@@ -64,7 +68,6 @@ export const useDashboardActions = (): DashboardActionsState => {
       console.error('Error refreshing data:', error)
     }
   }, [])
-
   const handleAcceptRequest = async (requestId: number) => {
     try {
       setError(null)
@@ -74,13 +77,20 @@ export const useDashboardActions = (): DashboardActionsState => {
       await refreshData()
 
       setSelectedRequest(null)
-      setSuccess('Solicitud aceptada con éxito')
-    } catch (error) {
+      showSuccess('¡Éxito!', 'Solicitud aceptada correctamente')
+    } catch (error: any) {
       console.error('Error accepting request:', error)
+      
+      if (error.response?.status === 409) {
+        showError('Conflicto de Horario', 'Ya tienes otro servicio programado en ese horario. No puedes aceptar esta solicitud.')
+      } else if (error.response?.status === 404) {
+        showError('Solicitud No Encontrada', 'La solicitud no existe o ya no está disponible.')
+      } else {
+        showError('Error', 'No se pudo aceptar la solicitud. Inténtalo de nuevo.')
+      }
       setError('Error al aceptar la solicitud')
     }
   }
-
   const handleCompleteRequest = async (requestId: number) => {
     try {
       setError(null)
@@ -88,13 +98,13 @@ export const useDashboardActions = (): DashboardActionsState => {
       
       // Refrescar datos después del cambio
       await refreshData()
-      setSuccess('Solicitud completada con éxito')
-    } catch (error) {
+      showSuccess('¡Servicio Completado!', 'El servicio se ha marcado como completado')
+    } catch (error: any) {
       console.error('Error completing request:', error)
+      showError('Error', 'No se pudo completar el servicio. Inténtalo de nuevo.')
       setError('Error al completar la solicitud')
     }
   }
-
   const handleCancelRequest = async (requestId: number) => {
     try {
       setError(null)
@@ -102,18 +112,18 @@ export const useDashboardActions = (): DashboardActionsState => {
       
       // Refrescar datos después del cambio
       await refreshData()
-      setSuccess('Solicitud cancelada con éxito')
-    } catch (error) {
+      showSuccess('Solicitud Cancelada', 'La solicitud ha sido cancelada exitosamente')
+    } catch (error: any) {
       console.error('Error cancelling request:', error)
+      showError('Error', 'No se pudo cancelar la solicitud. Inténtalo de nuevo.')
       setError('Error al cancelar la solicitud')
     }
   }
-
   const handleProposeAlternativeDate = async (requestId: number, alternativeDate: string) => {
     try {
       setError(null)
       if (!alternativeDate) {
-        setError('Por favor selecciona una fecha y hora')
+        showError('Fecha Requerida', 'Por favor selecciona una fecha y hora')
         return
       }
 
@@ -124,10 +134,21 @@ export const useDashboardActions = (): DashboardActionsState => {
 
       setAlternativeDate('')
       setSelectedRequest(null)
-      setSuccess('Fecha alternativa propuesta con éxito')
+      showSuccess('¡Fecha Propuesta!', 'La fecha alternativa ha sido enviada al cliente')
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error proposing alternative date:', error)
+      
+      if (error.response?.status === 409) {
+        showError('Conflicto de Horario', 'Ya tienes otro servicio programado en esa fecha y hora. Elige otra fecha.')
+      } else if (error.response?.status === 404) {
+        showError('Solicitud No Encontrada', 'La solicitud no existe o ya no está disponible.')
+      } else if (error.response?.status === 400) {
+        const message = error.response?.data?.message || 'Fecha inválida'
+        showError('Fecha Inválida', message)
+      } else {
+        showError('Error', 'No se pudo proponer la fecha alternativa. Inténtalo de nuevo.')
+      }
       setError('Error al proponer fecha alternativa')
     }
   }
@@ -187,9 +208,7 @@ export const useDashboardActions = (): DashboardActionsState => {
       console.error('Error updating client price:', error)
       setError('Error al actualizar el precio')
     }
-  }, [])
-
-  // Función para aceptar solicitud directamente (aceptar fecha propuesta)
+  }, [])  // Función para aceptar solicitud directamente (aceptar fecha propuesta)
   const handleAcceptDirectly = useCallback(async (requestId: number) => {
     try {
       setError(null)
@@ -197,13 +216,21 @@ export const useDashboardActions = (): DashboardActionsState => {
       
       // Refrescar datos después del cambio
       await refreshData()
-      setSuccess('Solicitud aceptada directamente con éxito')
+      showSuccess('¡Solicitud Aceptada!', 'Has aceptado la fecha propuesta por el cliente')
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accepting request directly:', error)
+      
+      if (error.response?.status === 409) {
+        showError('Conflicto de Horario', 'Ya tienes otro servicio programado en ese horario. No puedes aceptar esta solicitud.')
+      } else if (error.response?.status === 404) {
+        showError('Solicitud No Encontrada', 'La solicitud no existe o ya no está disponible.')
+      } else {
+        showError('Error', 'No se pudo aceptar la solicitud. Inténtalo de nuevo.')
+      }
       setError('Error al aceptar la solicitud')
     }
-  }, [refreshData])
+  }, [refreshData, showSuccess, showError])
 
   // Función para enviar rating
   const handleSubmitRating = useCallback(async (rating: number, comment: string) => {

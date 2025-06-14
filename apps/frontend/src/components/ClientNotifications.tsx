@@ -79,7 +79,6 @@ const formatTimeAgo = (timestamp: Date) => {
 export const ClientNotifications: React.FC<ClientNotificationsProps> = ({
   notifications,
   isConnected,
-  hasUnreadNotifications,
   onDismiss,
   onMarkAsRead,
   onMarkAllAsRead,

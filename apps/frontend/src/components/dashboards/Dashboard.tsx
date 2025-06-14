@@ -468,12 +468,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <CalendarIcon className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
+                      </div>                      <input
                         type="date"
-                        value={dashboardActions.alternativeDate.split('T')[0] || ''}
+                        value={dashboardActions.alternativeDate ? dashboardActions.alternativeDate.split('T')[0] : ''}
                         onChange={(e) => {
-                          const timeValue = dashboardActions.alternativeDate.split('T')[1] || '08:00'
+                          const timeValue = dashboardActions.alternativeDate ? 
+                            dashboardActions.alternativeDate.split('T')[1] || '08:00' : 
+                            '08:00'
                           dashboardActions.setAlternativeDate(`${e.target.value}T${timeValue}`)
                         }}
                         min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
@@ -490,11 +491,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <ClockIcon className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        value={dashboardActions.alternativeDate.split('T')[1] || '08:00'}
+                      </div>                      <select
+                        value={dashboardActions.alternativeDate ? 
+                          dashboardActions.alternativeDate.split('T')[1] || '08:00' : 
+                          '08:00'}
                         onChange={(e) => {
-                          const dateValue = dashboardActions.alternativeDate.split('T')[0] || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                          const dateValue = dashboardActions.alternativeDate ? 
+                            dashboardActions.alternativeDate.split('T')[0] : 
+                            new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
                           dashboardActions.setAlternativeDate(`${dateValue}T${e.target.value}`)
                         }}
                         className="w-full pl-10 appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -531,9 +535,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <p className="text-sm text-amber-800">
                   <strong>¿Qué sucede después?</strong> El cliente verá tu propuesta de fecha alternativa y podrá aceptarla o cancelar la solicitud. Si la acepta, el servicio quedará programado automáticamente.
                 </p>
-              </div>
-
-              {/* Botones */}
+              </div>              {/* Botones */}
               <div className="flex space-x-4">
                 <button
                   onClick={() => dashboardActions.handleProposeAlternativeDate(dashboardActions.selectedRequest!.id, dashboardActions.alternativeDate)}

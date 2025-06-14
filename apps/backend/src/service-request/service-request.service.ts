@@ -644,9 +644,64 @@ export class ServiceRequestService {
 
       for (const rejectedOffer of rejectedOffers) {
         this.gateway.notifyTechnicianOfferRejected(rejectedOffer.serviceRequest, rejectedOffer.technicianId!);
-      }
-    } catch (error) {
+      }    } catch (error) {
       this.logger.error('Error notifying rejected offers:', error);
     }
+  }  /** Técnico propone fecha alternativa */
+  async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string): Promise<ServiceRequest> {
+    // Verificar que la solicitud existe y está en estado correcto
+    const serviceRequest = await this.srRepo.findOne({
+      where: { 
+        id: serviceRequestId,
+        status: ServiceRequestStatus.PENDING
+      },
+      relations: ['client', 'appliance', 'address']
+    });
+
+    if (!serviceRequest) {
+      throw new NotFoundException('Solicitud no encontrada o no disponible');
+    }
+
+    // Verificar que no haya expirado
+    if (serviceRequest.expiresAt && serviceRequest.expiresAt < new Date()) {
+      throw new BadRequestException('Esta solicitud ha expirado');
+    }
+
+    const alternativeDate = new Date(alternativeDateTime);
+
+    // Validar horario de trabajo (6 AM - 6 PM)
+    const hours = alternativeDate.getHours();
+    if (hours < 6 || hours >= 18) {
+      throw new BadRequestException('La fecha alternativa debe estar dentro del horario de trabajo (6:00 AM - 6:00 PM)');
+    }
+
+    // Validar que la fecha alternativa no sea en el pasado
+    if (alternativeDate <= new Date()) {
+      throw new BadRequestException('La fecha alternativa debe ser en el futuro');
+    }
+
+    // Verificar disponibilidad del técnico para la fecha alternativa
+    const hasConflict = await this.checkTechnicianAvailability(technicianId, alternativeDate);
+
+    if (hasConflict) {
+      throw new ConflictException('No estás disponible en la fecha alternativa propuesta');
+    }
+
+    // TODO: Aquí se podría implementar lógica adicional como:
+    // - Crear una nueva solicitud con la fecha alternativa
+    // - Crear un registro de propuesta alternativa
+    // - Notificar al cliente sobre la propuesta
+    
+    // Por ahora, simplemente notificamos al cliente sobre la propuesta
+    // En una implementación completa, esto podría crear un nuevo registro
+    // o actualizar el estado de la solicitud
+    
+    this.logger.log(`Técnico ${technicianId} propuso fecha alternativa ${alternativeDateTime} para solicitud ${serviceRequestId}`);
+    
+    // Notificar al cliente sobre la propuesta de fecha alternativa
+    // Este método debería implementarse en el gateway
+    // this.gateway.notifyClientAlternativeDate(serviceRequest, technicianId, alternativeDate);
+    
+    return serviceRequest;
   }
 }

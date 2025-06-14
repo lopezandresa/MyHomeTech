@@ -36,21 +36,21 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
 }) => {  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
-  const { showSuccess, showError, showInfo, showWarning } = useToast()
+  const { showSuccess, showError, /*showInfo, showWarning*/ } = useToast()
 
   // Función temporal para probar los toasts
-  const testToasts = () => {
-    showSuccess('¡Éxito!', 'Este es un mensaje de éxito para probar el toast')
-    setTimeout(() => {
-      showError('Error', 'Este es un mensaje de error para probar')
-    }, 1000)
-    setTimeout(() => {
-      showInfo('Información', 'Este es un mensaje informativo')
-    }, 2000)
-    setTimeout(() => {
-      showWarning('Advertencia', 'Este es un mensaje de advertencia')
-    }, 3000)
-  }
+  // const testToasts = () => {
+  //   showSuccess('¡Éxito!', 'Este es un mensaje de éxito para probar el toast')
+  //   setTimeout(() => {
+  //     showError('Error', 'Este es un mensaje de error para probar')
+  //   }, 1000)
+  //   setTimeout(() => {
+  //     showInfo('Información', 'Este es un mensaje informativo')
+  //   }, 2000)
+  //   setTimeout(() => {
+  //     showWarning('Advertencia', 'Este es un mensaje de advertencia')
+  //   }, 3000)
+  // }
 
   // Función para iniciar el proceso de cancelación
   const handleCancelClick = (requestId: number) => {

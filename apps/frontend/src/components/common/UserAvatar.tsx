@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { UserIcon, PencilIcon } from '@heroicons/react/24/outline'
-import { authService } from '../../services/authService'
 import { useImageCache } from '../../services/imageCacheService'
 import type { User } from '../../types/index'
 

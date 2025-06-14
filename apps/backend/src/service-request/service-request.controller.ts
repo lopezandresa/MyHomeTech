@@ -55,7 +55,6 @@ export class ServiceRequestController {
   findAvailableForMe(@Request() req): Promise<ServiceRequest[]> {
     return this.svc.findPendingForTechnician(req.user.id);
   }
-
   // 3) Técnico acepta una solicitud directamente (sin negociación de precio)
   @UseGuards(JwtAuthGuard)
   @Roles('technician')

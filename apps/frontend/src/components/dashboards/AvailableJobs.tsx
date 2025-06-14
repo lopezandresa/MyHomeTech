@@ -34,7 +34,6 @@ interface AvailableJobsProps {
 
 export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   isLoading,
-  error,
   setError,
   success,
   setSuccess,
@@ -48,31 +47,14 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
 }) => {
   const [conflictDetails, setConflictDetails] = useState<{[key: number]: string}>({})
 
-  // Función mejorada para manejar la aceptación con mejor manejo de errores
+  // Función simplificada - ahora los toasts se manejan en useDashboardActions
   const handleAcceptWithErrorHandling = async (requestId: number) => {
     try {
-      setError(null)
       setConflictDetails(prev => ({ ...prev, [requestId]: '' }))
       await handleAcceptDirectly(requestId)
     } catch (error: any) {
+      // Los errores y toasts ya se manejan en useDashboardActions
       console.error('Error accepting request:', error)
-      
-      // Extraer el mensaje de error del backend
-      let errorMessage = 'Error al aceptar la solicitud'
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message
-        
-        // Si el error contiene información de conflicto, guardarlo específicamente para esta solicitud
-        if (errorMessage.includes('Servicio conflictivo:')) {
-          setConflictDetails(prev => ({ ...prev, [requestId]: errorMessage }))
-          return // No mostrar en el error general
-        }
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-      
-      setError(errorMessage)
     }
   }
 
@@ -175,27 +157,7 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
         )}
       </AnimatePresence>
 
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <div className="flex items-start">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-red-800 font-medium">Error</p>
-              <p className="text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-          >
-            Cerrar
-          </button>
-        </motion.div>
-      )}
+      
 
       {success && (
         <motion.div
