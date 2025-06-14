@@ -4,7 +4,8 @@ import {
   BriefcaseIcon,
   CheckCircleIcon,
   ArrowPathIcon,
-  WifiIcon
+  WifiIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
@@ -109,9 +110,25 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900">
                       {request.appliance?.name || 'Electrodoméstico no disponible'}
                     </h3>
-                    <p className="text-gray-600">
-                      Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
-                    </p>
+                    {/* Información del cliente con foto de perfil */}
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div className="relative">
+                        {request.client?.profilePhotoUrl ? (
+                          <img
+                            src={request.client.profilePhotoUrl}
+                            alt={`${request.client.firstName} ${request.client.firstLastName}`}
+                            className="h-8 w-8 rounded-full object-cover border-2 border-green-200"
+                          />
+                        ) : (
+                          <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">
+                          Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>

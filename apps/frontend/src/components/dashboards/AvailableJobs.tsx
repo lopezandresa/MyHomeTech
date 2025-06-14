@@ -7,7 +7,8 @@ import {
   WifiIcon,
   CalendarDaysIcon,
   ClockIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
@@ -213,12 +214,28 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900">
                       {request.appliance?.name || 'Electrodoméstico no disponible'}
                     </h3>
-                    <p className="text-gray-600">
-                      Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Publicada el {formatDate(request.createdAt)}
-                    </p>
+                    {/* Información del cliente con foto de perfil */}
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div className="relative">
+                        {request.client?.profilePhotoUrl ? (
+                          <img
+                            src={request.client.profilePhotoUrl}
+                            alt={`${request.client.firstName} ${request.client.firstLastName}`}
+                            className="h-8 w-8 rounded-full object-cover border-2 border-blue-200"
+                          />
+                        ) : (
+                          <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">
+                          Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Publicada el {formatDate(request.createdAt)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end space-y-2">
@@ -244,11 +261,6 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                   <p className="text-sm text-gray-600">
                     {request.address.city}, {request.address.state} - {request.address.postalCode}
                   </p>
-                  {request.address.isDefault && (
-                    <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                      Dirección principal
-                    </span>
-                  )}
                 </div>
               )}
 
