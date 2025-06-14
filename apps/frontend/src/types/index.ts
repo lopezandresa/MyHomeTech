@@ -136,6 +136,8 @@ export interface ServiceRequest {
   technicianPrice?: number
   offers?: ServiceRequestOffer[]
   selectedOfferId?: number
+  // Nueva propiedad para propuestas de fechas alternativas
+  alternativeDateProposals?: AlternativeDateProposal[]
   // Relaciones
   client: User
   technician?: User
@@ -228,6 +230,26 @@ export interface ServiceRequestOffer {
   createdAt: string
   updatedAt: string
   technician?: User
+}
+
+// Interfaz para propuestas de fechas alternativas
+export interface AlternativeDateProposal {
+  id: number
+  serviceRequestId: number
+  technicianId: number
+  proposedDateTime: string
+  status: 'pending' | 'accepted' | 'rejected'
+  comment?: string
+  createdAt: string
+  resolvedAt?: string
+  proposalCount: number
+  technician: User
+}
+
+// DTO para crear propuestas de fechas alternativas
+export interface CreateAlternativeDateProposalRequest {
+  alternativeDateTime: string
+  comment?: string
 }
 
 // Interfaz para calificaciones

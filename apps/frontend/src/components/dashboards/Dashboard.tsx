@@ -73,11 +73,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               setRequestFilter={dashboardData.setRequestFilter}              setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
               handleCancelRequest={dashboardActions.handleCancelRequest}
+              handleAcceptAlternativeDate={dashboardActions.handleAcceptAlternativeDate}
+              handleRejectAlternativeDate={dashboardActions.handleRejectAlternativeDate}
             />
           )
         case 'profile':
-          return <ClientProfile />
-        default:
+          return <ClientProfile />        
+          default:
           return (
             <ClientRequests
               isLoading={dashboardData.isLoading}
@@ -88,6 +90,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
               handleCancelRequest={dashboardActions.handleCancelRequest}
+              handleAcceptAlternativeDate={dashboardActions.handleAcceptAlternativeDate}
+              handleRejectAlternativeDate={dashboardActions.handleRejectAlternativeDate}
             />
           )
       }

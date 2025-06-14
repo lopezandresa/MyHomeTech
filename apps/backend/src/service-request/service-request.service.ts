@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, Between, In, Not } from 'typeorm';
 import { ServiceRequest, ServiceRequestStatus } from './service-request.entity';
 import { ServiceRequestOffer, OfferStatus } from './service-request-offer.entity';
+import { AlternativeDateProposal, AlternativeDateProposalStatus } from './alternative-date-proposal.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { ScheduleRequestDto } from './dto/schedule-request.dto';
 import { OfferPriceDto } from './dto/offer-price.dto';
@@ -23,9 +24,10 @@ export class ServiceRequestService {
 
   constructor(
     @InjectRepository(ServiceRequest)
-    private readonly srRepo: Repository<ServiceRequest>,
-    @InjectRepository(ServiceRequestOffer)
+    private readonly srRepo: Repository<ServiceRequest>,    @InjectRepository(ServiceRequestOffer)
     private readonly offerRepo: Repository<ServiceRequestOffer>,
+    @InjectRepository(AlternativeDateProposal)
+    private readonly proposalRepo: Repository<AlternativeDateProposal>,
     @InjectRepository(Address)
     private readonly addressRepo: Repository<Address>,
     @InjectRepository(Technician)
@@ -648,14 +650,14 @@ export class ServiceRequestService {
       this.logger.error('Error notifying rejected offers:', error);
     }
   }  /** Técnico propone fecha alternativa */
-  async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string): Promise<ServiceRequest> {
+  async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud existe y está en estado correcto
     const serviceRequest = await this.srRepo.findOne({
       where: { 
         id: serviceRequestId,
-        status: ServiceRequestStatus.PENDING
+        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
       },
-      relations: ['client', 'appliance', 'address']
+      relations: ['client', 'appliance', 'address', 'alternativeDateProposals']
     });
 
     if (!serviceRequest) {
@@ -687,21 +689,272 @@ export class ServiceRequestService {
       throw new ConflictException('No estás disponible en la fecha alternativa propuesta');
     }
 
-    // TODO: Aquí se podría implementar lógica adicional como:
-    // - Crear una nueva solicitud con la fecha alternativa
-    // - Crear un registro de propuesta alternativa
-    // - Notificar al cliente sobre la propuesta
-    
-    // Por ahora, simplemente notificamos al cliente sobre la propuesta
-    // En una implementación completa, esto podría crear un nuevo registro
-    // o actualizar el estado de la solicitud
-    
-    this.logger.log(`Técnico ${technicianId} propuso fecha alternativa ${alternativeDateTime} para solicitud ${serviceRequestId}`);
+    // Contar propuestas existentes del técnico para esta solicitud
+    const existingProposalsCount = await this.proposalRepo.count({
+      where: {
+        serviceRequestId,
+        technicianId,
+        status: In([AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED])
+      }
+    });
+
+    // Verificar límite de 3 propuestas por técnico
+    if (existingProposalsCount >= 3) {
+      throw new BadRequestException('Has alcanzado el límite máximo de 3 propuestas de fecha alternativa para esta solicitud');
+    }
+
+    // Crear la nueva propuesta de fecha alternativa
+    const proposal = this.proposalRepo.create({
+      serviceRequestId,
+      technicianId,
+      proposedDateTime: alternativeDate,
+      comment,
+      status: AlternativeDateProposalStatus.PENDING,
+      proposalCount: existingProposalsCount + 1
+    });
+
+    const savedProposal = await this.proposalRepo.save(proposal);
+
+    // Cargar la propuesta con la información del técnico
+    const proposalWithTechnician = await this.proposalRepo.findOne({
+      where: { id: savedProposal.id },
+      relations: ['technician']
+    });
+
+    this.logger.log(`Técnico ${technicianId} propuso fecha alternativa ${alternativeDateTime} para solicitud ${serviceRequestId} (propuesta #${existingProposalsCount + 1})`);
     
     // Notificar al cliente sobre la propuesta de fecha alternativa
-    // Este método debería implementarse en el gateway
-    // this.gateway.notifyClientAlternativeDate(serviceRequest, technicianId, alternativeDate);
+    if (this.gateway) {
+      this.gateway.notifyClientAlternativeDateProposal(serviceRequest, proposalWithTechnician!);
+    }
     
-    return serviceRequest;
+    return proposalWithTechnician!;
+  }
+
+  /** Cliente acepta una propuesta de fecha alternativa */
+  async acceptAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<ServiceRequest> {
+    // Verificar que la solicitud pertenece al cliente
+    const serviceRequest = await this.srRepo.findOne({
+      where: { 
+        id: serviceRequestId,
+        clientId,
+        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
+      },
+      relations: ['client', 'appliance', 'address', 'alternativeDateProposals']
+    });
+
+    if (!serviceRequest) {
+      throw new NotFoundException('Solicitud no encontrada o no tienes permisos para modificarla');
+    }
+
+    // Verificar que la propuesta existe y está pendiente
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        serviceRequestId,
+        status: AlternativeDateProposalStatus.PENDING
+      },
+      relations: ['technician']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    // Verificar disponibilidad del técnico una vez más
+    const hasConflict = await this.checkTechnicianAvailability(
+      proposal.technicianId,
+      proposal.proposedDateTime
+    );
+
+    if (hasConflict) {
+      throw new ConflictException('El técnico ya no está disponible para esa fecha');
+    }
+
+    // Actualizar la solicitud con la nueva fecha y técnico
+    serviceRequest.proposedDateTime = proposal.proposedDateTime;
+    serviceRequest.technicianId = proposal.technicianId;
+    serviceRequest.acceptedAt = new Date();
+    serviceRequest.scheduledAt = proposal.proposedDateTime;
+    serviceRequest.status = ServiceRequestStatus.SCHEDULED;
+
+    // Marcar la propuesta como aceptada
+    proposal.status = AlternativeDateProposalStatus.ACCEPTED;
+    proposal.resolvedAt = new Date();
+
+    // Rechazar todas las demás propuestas pendientes para esta solicitud
+    await this.proposalRepo.update(
+      { 
+        serviceRequestId,
+        status: AlternativeDateProposalStatus.PENDING,
+        id: Not(proposalId)
+      },
+      { 
+        status: AlternativeDateProposalStatus.REJECTED,
+        resolvedAt: new Date()
+      }
+    );
+
+    // Rechazar todas las ofertas pendientes para esta solicitud
+    await this.offerRepo.update(
+      { 
+        serviceRequestId,
+        status: OfferStatus.PENDING
+      },
+      { 
+        status: OfferStatus.REJECTED,
+        resolvedAt: new Date()
+      }
+    );
+
+    // Guardar cambios
+    await this.proposalRepo.save(proposal);
+    const updatedRequest = await this.srRepo.save(serviceRequest);
+
+    this.logger.log(`Cliente ${clientId} aceptó propuesta de fecha alternativa ${proposal.id} para solicitud ${serviceRequestId}`);
+
+    // Notificar al técnico que su propuesta fue aceptada
+    if (this.gateway) {
+      this.gateway.notifyTechnicianProposalAccepted(updatedRequest, proposal);
+    }
+
+    // Notificar a otros técnicos que la solicitud ya no está disponible
+    await this.notifyRejectedProposalsAndOffers(serviceRequestId, proposalId);
+
+    return updatedRequest;
+  }
+
+  /** Cliente rechaza una propuesta de fecha alternativa */
+  async rejectAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
+    // Verificar que la solicitud pertenece al cliente
+    const serviceRequest = await this.srRepo.findOne({
+      where: { 
+        id: serviceRequestId,
+        clientId,
+        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
+      }
+    });
+
+    if (!serviceRequest) {
+      throw new NotFoundException('Solicitud no encontrada o no tienes permisos para modificarla');
+    }
+
+    // Verificar que la propuesta existe y está pendiente
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        serviceRequestId,
+        status: AlternativeDateProposalStatus.PENDING
+      },
+      relations: ['technician']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    // Marcar la propuesta como rechazada
+    proposal.status = AlternativeDateProposalStatus.REJECTED;
+    proposal.resolvedAt = new Date();
+
+    const updatedProposal = await this.proposalRepo.save(proposal);
+
+    this.logger.log(`Cliente ${clientId} rechazó propuesta de fecha alternativa ${proposal.id} para solicitud ${serviceRequestId}`);
+
+    // Notificar al técnico que su propuesta fue rechazada
+    if (this.gateway) {
+      this.gateway.notifyTechnicianProposalRejected(serviceRequest, updatedProposal);
+    }
+
+    return updatedProposal;
+  }
+
+  /** Obtener propuestas de fechas alternativas para una solicitud */
+  async getAlternativeDateProposals(serviceRequestId: number): Promise<AlternativeDateProposal[]> {
+    return this.proposalRepo.find({
+      where: { serviceRequestId },
+      relations: ['technician'],
+      order: { createdAt: 'ASC' }
+    });
+  }
+
+  /** Obtener propuestas de fechas alternativas de un técnico */
+  async getTechnicianAlternativeDateProposals(technicianId: number): Promise<AlternativeDateProposal[]> {
+    return this.proposalRepo.find({
+      where: { technicianId },
+      relations: ['serviceRequest', 'serviceRequest.client', 'serviceRequest.appliance'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  // Método privado para notificar rechazos de propuestas y ofertas
+  private async notifyRejectedProposalsAndOffers(serviceRequestId: number, acceptedProposalId: number): Promise<void> {
+    // Obtener todas las propuestas rechazadas
+    const rejectedProposals = await this.proposalRepo.find({
+      where: { 
+        serviceRequestId,
+        status: AlternativeDateProposalStatus.REJECTED,
+        id: Not(acceptedProposalId)
+      },
+      relations: ['technician']
+    });
+
+    // Obtener todas las ofertas rechazadas
+    const rejectedOffers = await this.offerRepo.find({
+      where: { 
+        serviceRequestId,
+        status: OfferStatus.REJECTED
+      },
+      relations: ['technician']
+    });
+
+    // Notificar a técnicos con propuestas rechazadas
+    for (const proposal of rejectedProposals) {
+      if (this.gateway && proposal.technician) {
+        this.gateway.notifyTechnicianRequestUnavailable(proposal.technician.id, serviceRequestId);
+      }
+    }
+
+    // Notificar a técnicos con ofertas rechazadas
+    for (const offer of rejectedOffers) {
+      if (this.gateway && offer.technician) {
+        this.gateway.notifyTechnicianRequestUnavailable(offer.technician.id, serviceRequestId);
+      }
+    }
+  }
+
+  /** Métodos auxiliares para manejar propuestas por ID */
+  async acceptAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<ServiceRequest> {
+    // Primero obtener la propuesta para conocer el serviceRequestId
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        status: AlternativeDateProposalStatus.PENDING
+      },
+      relations: ['serviceRequest']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    return this.acceptAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
+  }
+
+  async rejectAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
+    // Primero obtener la propuesta para conocer el serviceRequestId
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        status: AlternativeDateProposalStatus.PENDING
+      },
+      relations: ['serviceRequest']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    return this.rejectAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
   }
 }

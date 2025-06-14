@@ -16,8 +16,10 @@ import { ServiceRequest } from './service-request.entity';
 import { ServiceRequestOffer } from './service-request-offer.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { OfferPriceDto } from './dto/offer-price.dto';
+import { ProposeAlternativeDateDto } from './dto/propose-alternative-date.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt.guard';
 import { Roles } from '../common/roles.decorator';
+import { AlternativeDateProposal } from './alternative-date-proposal.entity';
 
 @ApiTags('service-requests')
 @ApiBearerAuth('JWT')
@@ -244,9 +246,71 @@ export class ServiceRequestController {
       scheduledAt: Date;
       appliance: string;
       clientName: string;
-    }
-  }> {
+    }  }> {
     const proposedDate = new Date(dateTime);
     return this.svc.checkTechnicianAvailabilityDetailed(req.user.id, proposedDate);
+  }
+
+  // Técnico propone fecha alternativa
+  @UseGuards(JwtAuthGuard)
+  @Roles('technician')
+  @Post(':id/propose-alternative-date')
+  @ApiOperation({ summary: 'Técnico propone fecha alternativa para una solicitud' })
+  @ApiParam({ name: 'id', description: 'ID de la solicitud de servicio' })
+  @ApiBody({ type: ProposeAlternativeDateDto })
+  proposeAlternativeDate(
+    @Param('id', ParseIntPipe) serviceRequestId: number,
+    @Request() req,
+    @Body() dto: ProposeAlternativeDateDto,
+  ): Promise<AlternativeDateProposal> {
+    return this.svc.proposeAlternativeDate(serviceRequestId, req.user.id, dto.alternativeDateTime, dto.comment);
+  }
+
+  // Cliente acepta propuesta de fecha alternativa
+  @UseGuards(JwtAuthGuard)
+  @Roles('client')
+  @Post('proposals/:proposalId/accept')
+  @ApiOperation({ summary: 'Cliente acepta una propuesta de fecha alternativa' })
+  @ApiParam({ name: 'proposalId', description: 'ID de la propuesta de fecha alternativa' })
+  acceptAlternativeDateProposal(
+    @Param('proposalId', ParseIntPipe) proposalId: number,
+    @Request() req,
+  ): Promise<ServiceRequest> {
+    return this.svc.acceptAlternativeDateByProposalId(proposalId, req.user.id);
+  }
+
+  // Cliente rechaza propuesta de fecha alternativa
+  @UseGuards(JwtAuthGuard)
+  @Roles('client')
+  @Post('proposals/:proposalId/reject')
+  @ApiOperation({ summary: 'Cliente rechaza una propuesta de fecha alternativa' })
+  @ApiParam({ name: 'proposalId', description: 'ID de la propuesta de fecha alternativa' })
+  rejectAlternativeDateProposal(
+    @Param('proposalId', ParseIntPipe) proposalId: number,
+    @Request() req,
+  ): Promise<AlternativeDateProposal> {
+    return this.svc.rejectAlternativeDateByProposalId(proposalId, req.user.id);
+  }
+
+  // Obtener propuestas de fechas alternativas para una solicitud
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/alternative-date-proposals')
+  @ApiOperation({ summary: 'Obtener propuestas de fechas alternativas para una solicitud' })
+  @ApiParam({ name: 'id', description: 'ID de la solicitud de servicio' })
+  getAlternativeDateProposals(
+    @Param('id', ParseIntPipe) serviceRequestId: number,
+  ): Promise<AlternativeDateProposal[]> {
+    return this.svc.getAlternativeDateProposals(serviceRequestId);
+  }
+
+  // Técnico obtiene sus propuestas de fechas alternativas
+  @UseGuards(JwtAuthGuard)
+  @Roles('technician')
+  @Get('technician/alternative-date-proposals')
+  @ApiOperation({ summary: 'Técnico obtiene sus propuestas de fechas alternativas' })
+  getTechnicianAlternativeDateProposals(
+    @Request() req,
+  ): Promise<AlternativeDateProposal[]> {
+    return this.svc.getTechnicianAlternativeDateProposals(req.user.id);
   }
 }

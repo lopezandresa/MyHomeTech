@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { UseGuards, Logger } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt/jwt.guard';
 import { ServiceRequest } from '../service-request/service-request.entity';
+import { AlternativeDateProposal } from './alternative-date-proposal.entity';
 
 @WebSocketGateway({
   cors: {
@@ -262,5 +263,52 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     });
     
     this.logger.log(`Notified client ${serviceRequest.clientId} about accepted request ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar al cliente cuando un técnico propone una fecha alternativa
+  notifyClientAlternativeDateProposal(serviceRequest: ServiceRequest, proposal: AlternativeDateProposal) {
+    this.server.to(`client-${serviceRequest.clientId}`).emit('alternative-date-proposal', {
+      serviceRequest,
+      proposal,
+      message: `${proposal.technician.firstName} ${proposal.technician.firstLastName} ha propuesto una fecha alternativa`,
+      type: 'alternative_date_proposal'
+    });
+    
+    this.logger.log(`Notified client ${serviceRequest.clientId} about alternative date proposal ${proposal.id} from technician ${proposal.technicianId}`);
+  }
+
+  // NUEVO: Notificar al técnico cuando su propuesta de fecha alternativa es aceptada
+  notifyTechnicianProposalAccepted(serviceRequest: ServiceRequest, proposal: AlternativeDateProposal) {
+    this.server.to(`technician-${proposal.technicianId}`).emit('proposal-accepted', {
+      serviceRequest,
+      proposal,
+      message: 'El cliente ha aceptado tu propuesta de fecha alternativa',
+      type: 'proposal_accepted'
+    });
+    
+    this.logger.log(`Notified technician ${proposal.technicianId} about accepted proposal ${proposal.id} for request ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar al técnico cuando su propuesta de fecha alternativa es rechazada
+  notifyTechnicianProposalRejected(serviceRequest: ServiceRequest, proposal: AlternativeDateProposal) {
+    this.server.to(`technician-${proposal.technicianId}`).emit('proposal-rejected', {
+      serviceRequest,
+      proposal,
+      message: 'El cliente ha rechazado tu propuesta de fecha alternativa',
+      type: 'proposal_rejected'
+    });
+    
+    this.logger.log(`Notified technician ${proposal.technicianId} about rejected proposal ${proposal.id} for request ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar al técnico que una solicitud ya no está disponible
+  notifyTechnicianRequestUnavailable(technicianId: number, serviceRequestId: number) {
+    this.server.to(`technician-${technicianId}`).emit('request-unavailable', {
+      serviceRequestId,
+      message: 'Esta solicitud ya no está disponible',
+      type: 'request_unavailable'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} that request ${serviceRequestId} is no longer available`);
   }
 }

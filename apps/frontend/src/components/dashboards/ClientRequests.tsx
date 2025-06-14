@@ -10,6 +10,7 @@ import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/status
 import { formatDate } from '../../utils/dateUtils'
 import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
+import AlternativeDateProposalCard from '../AlternativeDateProposalCard'
 import { useToast } from '../common/ToastProvider'
 import type { ServiceRequest } from '../../types/index'
 
@@ -22,6 +23,8 @@ interface ClientRequestsProps {
   setShowNewRequestModal: (show: boolean) => void
   handleCompleteService: (requestId: number) => Promise<void>
   handleCancelRequest: (requestId: number) => Promise<void>
+  handleAcceptAlternativeDate?: (proposalId: number) => Promise<void>
+  handleRejectAlternativeDate?: (proposalId: number) => Promise<void>
 }
 
 export const ClientRequests: React.FC<ClientRequestsProps> = ({
@@ -32,8 +35,10 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   setRequestFilter,
   setShowNewRequestModal,
   handleCompleteService,
-  handleCancelRequest
-}) => {  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  handleCancelRequest,
+  handleAcceptAlternativeDate,
+  handleRejectAlternativeDate
+}) => {const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
   const { showSuccess, showError, /*showInfo, showWarning*/ } = useToast()
@@ -226,7 +231,29 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                       <p className="text-gray-900">{request.technician.firstName} {request.technician.firstLastName}</p>
                     </div>
                   )}
-                </div><div className="mt-4">
+                </div>
+
+                {/* Mostrar propuestas de fechas alternativas */}
+                {request.alternativeDateProposals && request.alternativeDateProposals.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      Propuestas de fechas alternativas ({request.alternativeDateProposals.length})
+                    </h4>
+                    {request.alternativeDateProposals
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map((proposal) => (
+                        <AlternativeDateProposalCard
+                          key={proposal.id}
+                          proposal={proposal}
+                          isClient={true}
+                          onAccept={handleAcceptAlternativeDate}
+                          onReject={handleRejectAlternativeDate}
+                        />
+                      ))}
+                  </div>
+                )}
+
+                <div className="mt-4">
                   {request.status === 'pending' && (
                     <div className="flex items-center justify-between p-3 rounded-lg">                      <button
                         onClick={() => handleCancelClick(request.id)}

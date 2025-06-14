@@ -11,6 +11,7 @@ import { Identity } from '../identity/identity.entity';
 import { Appliance } from '../appliance/appliance.entity';
 import { Address } from '../address/address.entity';
 import { ServiceRequestOffer } from './service-request-offer.entity';
+import { AlternativeDateProposal } from './alternative-date-proposal.entity';
 
 export enum ServiceRequestStatus {
   PENDING      = 'pending',    // Cliente creó solicitud con fecha propuesta
@@ -65,10 +66,13 @@ export class ServiceRequest {
     default: ServiceRequestStatus.PENDING,
   })
   status: ServiceRequestStatus;
-
   /** Ofertas de técnicos */
   @OneToMany(() => ServiceRequestOffer, offer => offer.serviceRequest)
   offers: ServiceRequestOffer[];
+
+  /** Propuestas de fechas alternativas */
+  @OneToMany(() => AlternativeDateProposal, proposal => proposal.serviceRequest)
+  alternativeDateProposals: AlternativeDateProposal[];
 
   /** Fecha de creación automática */
   @CreateDateColumn({ type: 'timestamp' })

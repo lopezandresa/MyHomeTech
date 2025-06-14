@@ -39,6 +39,9 @@ interface DashboardActionsState {
   handleAcceptSpecificOffer: (requestId: number, offerId: number) => Promise<void>
   handleUpdateClientPrice: (requestId: number, price: number) => Promise<void>
   handleAcceptDirectly: (requestId: number) => Promise<void>
+  // Nuevas funciones para propuestas de fechas alternativas
+  handleAcceptAlternativeDate: (proposalId: number) => Promise<void>
+  handleRejectAlternativeDate: (proposalId: number) => Promise<void>
 }
 
 export const useDashboardActions = (): DashboardActionsState => {
@@ -68,10 +71,9 @@ export const useDashboardActions = (): DashboardActionsState => {
       console.error('Error refreshing data:', error)
     }
   }, [])
-  const handleAcceptRequest = async (requestId: number) => {
-    try {
+  const handleAcceptRequest = async (requestId: number) => {    try {
       setError(null)
-      const updatedRequest = await serviceRequestService.acceptRequest(requestId)
+      await serviceRequestService.acceptRequest(requestId)
       
       // Refrescar datos después del cambio
       await refreshData()
@@ -89,12 +91,11 @@ export const useDashboardActions = (): DashboardActionsState => {
         showError('Error', 'No se pudo aceptar la solicitud. Inténtalo de nuevo.')
       }
       setError('Error al aceptar la solicitud')
-    }
-  }
+    }  }
   const handleCompleteRequest = async (requestId: number) => {
     try {
       setError(null)
-      const updatedRequest = await serviceRequestService.completeRequest(requestId)
+      await serviceRequestService.completeRequest(requestId)
       
       // Refrescar datos después del cambio
       await refreshData()
@@ -106,12 +107,12 @@ export const useDashboardActions = (): DashboardActionsState => {
     }
   }
   const handleCancelRequest = async (requestId: number) => {
-    try {
-      setError(null)
+    try {      setError(null)
       await serviceRequestService.cancelRequest(requestId)
       
       // Refrescar datos después del cambio
       await refreshData()
+      
       showSuccess('Solicitud Cancelada', 'La solicitud ha sido cancelada exitosamente')
     } catch (error: any) {
       console.error('Error cancelling request:', error)
@@ -119,7 +120,8 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError('Error al cancelar la solicitud')
     }
   }
-  const handleProposeAlternativeDate = async (requestId: number, alternativeDate: string) => {
+
+  const handleProposeAlternativeDate = async (requestId: number, alternativeDate: string, comment?: string) => {
     try {
       setError(null)
       if (!alternativeDate) {
@@ -127,7 +129,7 @@ export const useDashboardActions = (): DashboardActionsState => {
         return
       }
 
-      const updatedRequest = await serviceRequestService.proposeAlternativeDate(requestId, alternativeDate)
+      await serviceRequestService.proposeAlternativeDate(requestId, alternativeDate, comment)
       
       // Refrescar datos después del cambio
       await refreshData()
@@ -209,10 +211,9 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError('Error al actualizar el precio')
     }
   }, [])  // Función para aceptar solicitud directamente (aceptar fecha propuesta)
-  const handleAcceptDirectly = useCallback(async (requestId: number) => {
-    try {
+  const handleAcceptDirectly = useCallback(async (requestId: number) => {    try {
       setError(null)
-      const updatedRequest = await serviceRequestService.acceptRequest(requestId)
+      await serviceRequestService.acceptRequest(requestId)
       
       // Refrescar datos después del cambio
       await refreshData()
@@ -272,6 +273,52 @@ export const useDashboardActions = (): DashboardActionsState => {
     }
   }, [selectedRequestForRating, refreshData])
 
+  // Función para aceptar propuesta de fecha alternativa (cliente)
+  const handleAcceptAlternativeDate = useCallback(async (proposalId: number) => {
+    try {
+      setError(null)
+      await serviceRequestService.acceptAlternativeDateProposal(proposalId)
+      
+      // Refrescar datos después del cambio
+      await refreshData()
+      showSuccess('¡Propuesta Aceptada!', 'Has aceptado la fecha alternativa propuesta por el técnico')
+
+    } catch (error: any) {
+      console.error('Error accepting alternative date proposal:', error)
+      
+      if (error.response?.status === 409) {
+        showError('Conflicto de Horario', 'El técnico ya no está disponible en esa fecha.')
+      } else if (error.response?.status === 404) {
+        showError('Propuesta No Encontrada', 'La propuesta no existe o ya fue procesada.')
+      } else {
+        showError('Error', 'No se pudo aceptar la propuesta. Inténtalo de nuevo.')
+      }
+      setError('Error al aceptar propuesta de fecha alternativa')
+    }
+  }, [])
+
+  // Función para rechazar propuesta de fecha alternativa (cliente)
+  const handleRejectAlternativeDate = useCallback(async (proposalId: number) => {
+    try {
+      setError(null)
+      await serviceRequestService.rejectAlternativeDateProposal(proposalId)
+      
+      // Refrescar datos después del cambio
+      await refreshData()
+      showSuccess('Propuesta Rechazada', 'Has rechazado la fecha alternativa. El técnico puede enviar otra propuesta.')
+
+    } catch (error: any) {
+      console.error('Error rejecting alternative date proposal:', error)
+      
+      if (error.response?.status === 404) {
+        showError('Propuesta No Encontrada', 'La propuesta no existe o ya fue procesada.')
+      } else {
+        showError('Error', 'No se pudo rechazar la propuesta. Inténtalo de nuevo.')
+      }
+      setError('Error al rechazar propuesta de fecha alternativa')
+    }
+  }, [])
+
   return {
     selectedRequest,
     setSelectedRequest,
@@ -302,5 +349,7 @@ export const useDashboardActions = (): DashboardActionsState => {
     handleUpdateClientPrice,
     handleAcceptDirectly,
     handleSubmitRating,
+    handleAcceptAlternativeDate,
+    handleRejectAlternativeDate,
   }
 }

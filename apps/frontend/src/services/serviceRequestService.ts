@@ -4,7 +4,8 @@ import type {
   CreateServiceRequestRequest,
   CreateOfferRequest,
   AvailabilityCheckResponse,
-  CalendarEvent
+  CalendarEvent,
+  AlternativeDateProposal
 } from '../types/index'
 
 class ServiceRequestService {
@@ -136,12 +137,36 @@ class ServiceRequestService {
     }
     
     return { valid: true }
-  }
-  // Proponer fecha alternativa (técnico)
-  async proposeAlternativeDate(requestId: number, alternativeDate: string): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${requestId}/propose-alternative-date`, {
-      alternativeDateTime: alternativeDate
+  }  // Proponer fecha alternativa (técnico)
+  async proposeAlternativeDate(requestId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
+    const response = await api.post<AlternativeDateProposal>(`/service-requests/${requestId}/propose-alternative-date`, {
+      alternativeDateTime,
+      comment
     })
+    return response.data
+  }
+
+  // Cliente acepta propuesta de fecha alternativa
+  async acceptAlternativeDateProposal(proposalId: number): Promise<ServiceRequest> {
+    const response = await api.post<ServiceRequest>(`/service-requests/proposals/${proposalId}/accept`)
+    return response.data
+  }
+
+  // Cliente rechaza propuesta de fecha alternativa
+  async rejectAlternativeDateProposal(proposalId: number): Promise<AlternativeDateProposal> {
+    const response = await api.post<AlternativeDateProposal>(`/service-requests/proposals/${proposalId}/reject`)
+    return response.data
+  }
+
+  // Obtener propuestas de fechas alternativas para una solicitud
+  async getAlternativeDateProposals(requestId: number): Promise<AlternativeDateProposal[]> {
+    const response = await api.get<AlternativeDateProposal[]>(`/service-requests/${requestId}/alternative-date-proposals`)
+    return response.data
+  }
+
+  // Técnico obtiene sus propuestas de fechas alternativas
+  async getTechnicianAlternativeDateProposals(): Promise<AlternativeDateProposal[]> {
+    const response = await api.get<AlternativeDateProposal[]>('/service-requests/technician/alternative-date-proposals')
     return response.data
   }
 
