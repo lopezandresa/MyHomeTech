@@ -1,254 +1,272 @@
-import React, { useState, useEffect } from 'react'
-import { serviceRequestService } from '../../services/serviceRequestService'
-import { useRealTimeServiceRequests } from '../../hooks/useRealTimeServiceRequests'
+import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  WrenchScrewdriverIcon,
+  XMarkIcon,
+  ArrowPathIcon,
+  WifiIcon
+} from '@heroicons/react/24/outline'
+import { getStatusColor, getStatusText } from '../../utils/statusUtils'
+import CountdownTimer from '../CountdownTimer'
+import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import type { ServiceRequest } from '../../types/index'
-import { formatDate } from '../../utils/dateUtils'
-import { useAuth } from '../../contexts/AuthContext'
 
 interface AvailableJobsProps {
-  activeTab?: string
+  isLoading: boolean
+  error: string | null
+  setError: (error: string | null) => void
+  pendingRequests: ServiceRequest[]
+  setPendingRequests: React.Dispatch<React.SetStateAction<ServiceRequest[]>>
+  showRecentJobAlert: boolean
+  setShowRecentJobAlert: (show: boolean) => void
+  technicianNotifications: any
+  handleAcceptDirectly: (requestId: number) => Promise<void>
+  setSelectedRequest: (request: ServiceRequest) => void
+  handleReconnect: () => void
 }
 
-const AvailableJobs: React.FC<AvailableJobsProps> = ({ activeTab }) => {
-  const { user } = useAuth()
-  const [requests, setRequests] = useState<ServiceRequest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState<number | null>(null)
-
-  // Hook para notificaciones en tiempo real
-  const technicianNotifications = useRealTimeServiceRequests(user?.role === 'technician' ? user?.id : undefined)
-
-  useEffect(() => {
-    if (activeTab === 'main' && user?.role === 'technician') {
-      fetchPendingRequests()
+export const AvailableJobs: React.FC<AvailableJobsProps> = ({
+  isLoading,
+  error,
+  setError,
+  pendingRequests,
+  setPendingRequests,
+  showRecentJobAlert,
+  setShowRecentJobAlert,
+  technicianNotifications,
+  handleAcceptDirectly,
+  setSelectedRequest,
+  handleReconnect
+}) => {
+  // Alerta de conexión para técnicos
+  const renderConnectionAlert = () => {
+    if (technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED) {
+      return null
     }
-  }, [activeTab, user])
 
-  // Efecto para manejar notificaciones en tiempo real
-  useEffect(() => {
-    if (technicianNotifications.notifications.length > 0) {
-      const latestNotification = technicianNotifications.notifications[0]
-      
-      if (latestNotification.type === 'new') {
-        // Agregar nueva solicitud a la lista
-        setRequests(prev => {
-          const exists = prev.some(req => req.id === latestNotification.serviceRequest.id)
-          if (!exists) {
-            return [latestNotification.serviceRequest, ...prev]
-          }
-          return prev
-        })
-      } else if (latestNotification.type === 'removed') {
-        // Remover solicitud de la lista (expirada o aceptada por otro técnico)
-        setRequests(prev => 
-          prev.filter(req => req.id !== latestNotification.serviceRequest.id)
-        )
-      } else if (latestNotification.type === 'updated') {
-        // Actualizar solicitud existente
-        setRequests(prev => 
-          prev.map(req => 
-            req.id === latestNotification.serviceRequest.id 
-              ? latestNotification.serviceRequest 
-              : req
-          )
-        )
-      }
-    }
-  }, [technicianNotifications.notifications.length])
+    const isConnecting = technicianNotifications.connectionStatus.state === ConnectionState.CONNECTING
 
-  const fetchPendingRequests = async () => {
-    try {
-      setLoading(true)
-      const data = await serviceRequestService.getPendingRequests()
-      setRequests(data)
-    } catch (error) {
-      console.error('Error fetching pending requests:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleOfferPrice = async (requestId: number, technicianPrice: number) => {
-    try {
-      setActionLoading(requestId)
-      await serviceRequestService.offerPrice(requestId, { technicianPrice })
-      // Refresh the list
-      await fetchPendingRequests()
-    } catch (error) {
-      console.error('Error offering price:', error)
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const handleAcceptDirectly = async (requestId: number) => {
-    try {
-      setActionLoading(requestId)
-      await serviceRequestService.acceptAndSchedule(requestId)
-      // Refresh the list
-      await fetchPendingRequests()
-    } catch (error) {
-      console.error('Error accepting request:', error)
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const getTimeRemaining = (expiresAt: string) => {
-    const now = new Date()
-    const expiry = new Date(expiresAt)
-    const diff = expiry.getTime() - now.getTime()
-    
-    if (diff <= 0) return 'Expirada'
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m restantes`
-    }
-    return `${minutes}m restantes`
-  }
-
-  if (activeTab !== 'main' || user?.role !== 'technician') {
-    return null
-  }
-
-  if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className={`mb-4 p-4 rounded-lg border ${
+          isConnecting ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            {isConnecting ? (
+              <ArrowPathIcon className="h-5 w-5 text-yellow-600 mr-2 animate-spin" />
+            ) : (
+              <WifiIcon className="h-5 w-5 text-red-600 mr-2" />
+            )}
+            <div>
+              <h3 className={`font-medium ${isConnecting ? 'text-yellow-800' : 'text-red-800'}`}>
+                {isConnecting ? 'Conectando...' : 'Desconectado'}
+              </h3>
+              <p className="text-sm mt-1 text-gray-600">
+                {isConnecting 
+                  ? 'Reconectando al servidor. Por favor espere...' 
+                  : 'No se pudo conectar al servidor. Los datos pueden estar desactualizados.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleReconnect}
+            className={`px-3 py-1 rounded-lg text-sm font-medium ${
+              isConnecting 
+                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
+                : 'bg-red-100 text-red-800 hover:bg-red-200'
+            }`}
+          >
+            Reconectar ahora
+          </button>
+        </div>
+        {isConnecting && technicianNotifications.connectionStatus.nextAttemptIn && (
+          <div className="mt-2 text-xs text-gray-500">
+            Intento {technicianNotifications.connectionStatus.attempts} de {technicianNotifications.connectionStatus.maxAttempts} • 
+            Próximo intento en {Math.round(technicianNotifications.connectionStatus.nextAttemptIn / 1000)} segundos
+          </div>
+        )}
+      </motion.div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando trabajos disponibles...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Trabajos Disponibles</h1>
-        <p className="text-gray-600">Encuentra solicitudes de servicio pendientes de los clientes</p>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Trabajos Disponibles</h2>
+        <span className="text-sm text-gray-600">{pendingRequests.length} solicitudes</span>
       </div>
 
-      {/* Stats */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center">
-            <div className="text-3xl text-blue-600 mr-3">🔧</div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{requests.length}</p>
-              <p className="text-sm text-gray-600">Trabajos Disponibles</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center">
-            <div className="text-3xl text-green-600 mr-3">💰</div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                ${requests.reduce((sum, req) => sum + req.clientPrice, 0).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-600">Valor Total</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center">
-            <div className="text-3xl text-orange-600 mr-3">⏰</div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {requests.filter(req => req.expiresAt && new Date(req.expiresAt) > new Date()).length}
-              </p>
-              <p className="text-sm text-gray-600">Urgentes</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {renderConnectionAlert()}
+      </AnimatePresence>
 
-      {/* Jobs List */}
-      {requests.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">🔧</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No hay trabajos disponibles
-          </h3>
-          <p className="text-gray-600">
-            No hay solicitudes pendientes en este momento. Revisa más tarde.
-          </p>
-        </div>
+      <AnimatePresence>
+        {showRecentJobAlert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <WrenchScrewdriverIcon className="h-5 w-5 text-green-600 mr-2" />
+              <div>
+                <h3 className="font-medium text-green-800">¡Nueva solicitud disponible!</h3>
+                <p className="text-sm text-green-600">Revisa las solicitudes pendientes para ver los nuevos trabajos.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowRecentJobAlert(false)}
+              className="text-green-600 hover:text-green-800"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-red-50 border border-red-200 rounded-lg"
+        >
+          <p className="text-red-800">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="mt-2 text-sm text-red-600 hover:text-red-800"
+          >
+            Cerrar
+          </button>
+        </motion.div>
+      )}
+
+      {pendingRequests.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <WrenchScrewdriverIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay solicitudes disponibles</h3>
+          <p className="text-gray-600">Las nuevas solicitudes aparecerán aquí</p>
+        </motion.div>
       ) : (
         <div className="grid gap-6">
-          {requests.map((request) => (
-            <div key={request.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {request.appliance.name} - {request.appliance.brand}
-                  </h3>
-                  <p className="text-sm text-gray-600">Modelo: {request.appliance.model}</p>
-                  <p className="text-sm text-gray-600">Cliente: {request.client.firstName} {request.client.firstLastName}</p>
+          {pendingRequests.map((request, index) => (
+            <motion.div
+              key={request.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 relative overflow-hidden"
+            >
+              {/* Indicador de nueva solicitud */}
+              {request.createdAt && (Date.now() - new Date(request.createdAt).getTime() < 5 * 60 * 1000) && (
+                <div className="absolute top-0 right-0 bg-red-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg animate-pulse">
+                  NUEVA
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-green-600">${request.clientPrice.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">Precio ofrecido</p>
-                  {request.expiresAt && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      {getTimeRemaining(request.expiresAt)}
+              )}
+              
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <WrenchScrewdriverIcon className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {request.appliance?.name || 'Electrodoméstico no disponible'}
+                    </h3>
+                    <p className="text-gray-600">
+                      Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
                     </p>
+                    <p className="text-sm text-gray-500">
+                      Publicada el {new Date(request.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end space-y-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
+                    {getStatusText(request.status)}
+                  </span>
+                  {/* Countdown Timer */}
+                  {request.expiresAt && (
+                    <CountdownTimer
+                      expiresAt={request.expiresAt}
+                      size="sm"
+                      onExpire={() => {
+                        setPendingRequests(prev => 
+                          prev.filter(req => req.id !== request.id)
+                        )
+                      }}
+                    />
                   )}
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-4">{request.description}</p>
-
-              <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                <span>Publicada: {formatDate(request.createdAt)}</span>
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-900 mb-2">Problema reportado:</h4>
+                <p className="text-gray-600">{request.description}</p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Información de dirección */}
+              {request.address && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Dirección del servicio:</h4>
+                  <p className="text-gray-700">
+                    {request.address.street} {request.address.number}
+                    {request.address.apartment && `, Apt. ${request.address.apartment}`}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {request.address.city}, {request.address.state} - {request.address.postalCode}
+                  </p>
+                  {request.address.isDefault && (
+                    <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      Dirección principal
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mb-4">
+                <span className="text-sm font-medium text-gray-500">Precio ofrecido por el cliente:</span>
+                <p className="text-xl font-bold text-green-600">
+                  ${request.clientPrice.toLocaleString()} COP
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleAcceptDirectly(request.id)}
-                  disabled={actionLoading === request.id}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
                 >
-                  {actionLoading === request.id ? (
-                    <span className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Procesando...
-                    </span>
-                  ) : (
-                    'Aceptar Precio'
-                  )}
+                  Aceptar ${request.clientPrice.toLocaleString()}
                 </button>
-                
-                <div className="flex-1 flex">
-                  <input
-                    type="number"
-                    placeholder="Tu precio"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    id={`price-${request.id}`}
-                  />
-                  <button
-                    onClick={() => {
-                      const input = document.getElementById(`price-${request.id}`) as HTMLInputElement
-                      const price = parseFloat(input.value)
-                      if (price && price > 0) {
-                        handleOfferPrice(request.id, price)
-                      }
-                    }}
-                    disabled={actionLoading === request.id}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Contraoferta
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedRequest(request)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  Hacer Contraoferta
+                </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
     </div>
   )
 }
-
-export default AvailableJobs
