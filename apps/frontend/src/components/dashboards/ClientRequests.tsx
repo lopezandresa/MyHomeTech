@@ -4,12 +4,10 @@ import {
   ClipboardDocumentListIcon,
   FunnelIcon,
   PlusIcon,
-  CurrencyDollarIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
-import { OfferCard } from '../OfferCard'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
@@ -21,9 +19,7 @@ interface ClientRequestsProps {
   setRequestFilter: (filter: 'in-progress' | 'all') => void
   setShowNewRequestModal: (show: boolean) => void
   handleCompleteService: (requestId: number) => Promise<void>
-  handleAcceptSpecificOffer: (serviceRequestId: number, offerId: number) => Promise<void>
   handleCancelRequest: (requestId: number) => Promise<void>
-  handleUpdateClientPrice: (requestId: number, currentPrice: number) => Promise<void>
 }
 
 export const ClientRequests: React.FC<ClientRequestsProps> = ({
@@ -35,15 +31,12 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   setRequestFilter,
   setShowNewRequestModal,
   handleCompleteService,
-  handleAcceptSpecificOffer,
-  handleCancelRequest,
-  handleUpdateClientPrice
+  handleCancelRequest
 }) => {
   // Usar directamente los datos pasados como props, sin fetches adicionales
   
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
+    return (      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando tus solicitudes...</p>
@@ -54,7 +47,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
 
   const filteredRequests = clientRequests.filter(request => {
     if (requestFilter === 'in-progress') {
-      return ['pending', 'offered', 'accepted', 'scheduled'].includes(request.status)
+      return ['pending', 'accepted', 'scheduled', 'in_progress'].includes(request.status)
     }
     return true
   })
@@ -84,7 +77,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            En Curso ({clientRequests.filter(r => ['pending', 'offered', 'accepted', 'scheduled'].includes(r.status)).length})
+            En Curso ({clientRequests.filter(r => ['pending', 'accepted', 'scheduled', 'in_progress'].includes(r.status)).length})
           </button>
           <button
             onClick={() => setRequestFilter('all')}
@@ -154,77 +147,47 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         Creada: {formatDate(request.createdAt)}
                       </p>
                     </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
-                    {getStatusText(request.status, true)}
+                  </div>                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
+                    {getStatusText(request.status)}
                   </span>
                 </div>
-                
-                <div className="mt-4 text-gray-700">
+                  <div className="mt-4 text-gray-700">
                   <p>{request.description}</p>
                 </div>
 
-                <div className="mt-4">
-                  {request.offers && request.offers.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-800 flex items-center gap-2">
-                          <CurrencyDollarIcon className="h-5 w-5 text-blue-600" />
-                          Ofertas recibidas ({request.offers.filter(o => o.status === 'pending').length})
-                        </h4>
-                        <button
-                          onClick={() => handleCancelRequest(request.id)}
-                          className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                          Cancelar solicitud
-                        </button>
-                      </div>
-
-                      <div className="p-3 bg-gray-50 rounded-lg border">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600 mb-1">Tu oferta inicial</p>
-                            <p className="text-lg font-bold text-gray-800">${request.clientPrice?.toLocaleString() || 'N/A'} COP</p>
-                          </div>
-                          <button
-                            onClick={() => handleUpdateClientPrice(request.id, request.clientPrice || 0)}
-                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm flex items-center gap-1"
-                          >
-                            <CurrencyDollarIcon className="h-4 w-4" />
-                            Actualizar precio
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        {request.offers
-                          .filter(offer => offer.status === 'pending')
-                          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                          .map((offer, index) => (
-                            <OfferCard
-                              key={offer.id}
-                              offer={offer}
-                              index={index}
-                              requestId={request.id}
-                              onAccept={handleAcceptSpecificOffer}
-                            />
-                          ))
-                        }
-                      </div>
-                      
-                      {request.offers.filter(o => o.status === 'pending').length === 0 && (
-                        <div className="text-center py-6 text-gray-500">
-                          <CurrencyDollarIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                          <p>No hay ofertas pendientes</p>
-                        </div>
-                      )}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium text-gray-500">Fecha Propuesta:</p>
+                    <p className="text-gray-900">{formatDate(request.proposedDateTime)}</p>
+                  </div>
+                  {request.technician && (
+                    <div>
+                      <p className="font-medium text-gray-500">Técnico:</p>
+                      <p className="text-gray-900">{request.technician.firstName} {request.technician.firstLastName}</p>
                     </div>
                   )}
+                </div><div className="mt-4">
+                  {request.status === 'pending' && (
+                    <div className="flex items-center justify-between p-3 rounded-lg">
+                      <button
+                        onClick={() => handleCancelRequest(request.id)}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm flex items-center gap-1"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                        Cancelar solicitud
+                      </button>
+                    </div>
+                  )}
+
                   {request.status === 'scheduled' && (
                     <div className="p-4 bg-purple-50 rounded-lg">
                       <p className="font-medium text-purple-800 mb-2">Servicio programado:</p>
                       <p className="text-sm text-gray-600">Fecha: <span className="font-medium">{new Date(request.scheduledAt!).toLocaleString()}</span></p>
+                      {request.technician && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Técnico: <span className="font-medium">{request.technician.firstName} {request.technician.firstLastName}</span>
+                        </p>
+                      )}
                       <button
                         onClick={() => handleCompleteService(request.id)}
                         className="mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"

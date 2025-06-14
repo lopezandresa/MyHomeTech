@@ -4,72 +4,85 @@ API Backend para plataforma de servicios de mantenimiento de electrodomésticos 
 
 ## 📋 Descripción
 
-MyHomeTech es una aplicación web que conecta clientes que necesitan servicios de mantenimiento de electrodomésticos con técnicos especializados. El sistema permite solicitar, gestionar y calificar servicios de manera rápida y eficiente.
+MyHomeTech es una aplicación web que conecta clientes que necesitan servicios de mantenimiento de electrodomésticos con técnicos especializados. El sistema permite solicitar, gestionar y calificar servicios de manera rápida y eficiente con un moderno sistema de múltiples ofertas.
 
 ### ✨ Características Principales
 
-- **Sistema de Autenticación JWT** con roles diferenciados
-- **Gestión de Usuarios** (Clientes, Técnicos, Administradores)
-- **Solicitudes de Servicio** con sistema de ofertas/contraofertas
-- **Sistema de Calificaciones** al finalizar servicios
-- **Notificaciones** en tiempo real
-- **Gestión de Electrodomésticos** y especialidades técnicas
+- **Sistema de Autenticación JWT** con roles diferenciados (Cliente, Técnico, Admin)
+- **Gestión de Usuarios** con perfiles especializados y validación de identidad
+- **Sistema Multi-Ofertas** - Múltiples técnicos pueden ofertar en la misma solicitud
+- **Programación Inteligente** con validación de disponibilidad y conflictos
+- **Sistema de Calificaciones** y reputación de técnicos
+- **Notificaciones en Tiempo Real** con WebSockets
+- **Gestión de Electrodomésticos** con marcas, modelos y especialidades
 - **API RESTful** completamente documentada con Swagger
 - **Control de Acceso Basado en Roles** (RBAC)
-- **Base de Datos PostgreSQL** con TypeORM
+- **Base de Datos PostgreSQL** con TypeORM y migraciones automáticas
 
 ### 👥 Tipos de Usuario
 
-- **Clientes**: Pueden solicitar servicios, aceptar ofertas y calificar técnicos
-- **Técnicos**: Pueden ver solicitudes, hacer contraofertas, aceptar trabajos
-- **Administradores**: Gestión completa del sistema y usuarios
+- **Clientes**: Pueden crear solicitudes, recibir múltiples ofertas y seleccionar la mejor opción
+- **Técnicos**: Pueden ofertar en solicitudes, aceptar trabajos y gestionar su calendario
+- **Administradores**: Gestión completa del sistema, usuarios y parámetros
 
 ## 🏗️ Arquitectura
 
-El proyecto sigue una arquitectura modular basada en NestJS con los siguientes módulos:
+El proyecto sigue una arquitectura modular basada en NestJS con los siguientes módulos principales:
 
-- **Identity Module**: Gestión de usuarios base
-- **Auth Module**: Autenticación JWT y autorización
-- **Client Module**: Funcionalidades específicas de clientes
-- **Technician Module**: Funcionalidades específicas de técnicos
-- **Service Request Module**: Gestión de solicitudes de servicio
-- **Appliance Module**: Gestión de electrodomésticos
-- **Rating Module**: Sistema de calificaciones
-- **Notification Module**: Sistema de notificaciones
+- **Identity Module**: Gestión de usuarios base con autenticación y perfiles
+- **Auth Module**: Autenticación JWT, autorización y guards de seguridad
+- **Client Module**: Funcionalidades específicas de clientes y gestión de solicitudes
+- **Technician Module**: Funcionalidades específicas de técnicos y gestión de ofertas
+- **Service Request Module**: Gestión completa de solicitudes y sistema multi-ofertas
+- **Address Module**: Gestión de direcciones y ubicaciones de servicio
+- **Appliance Module**: Catálogo de electrodomésticos, marcas y modelos
+- **Rating Module**: Sistema de calificaciones y reputación
+- **Notification Module**: Sistema de notificaciones en tiempo real con WebSockets
 
 ## 📊 Modelo de Datos
 
 ### Entidades Principales
 
-- **Identity**: Usuario base con autenticación
-- **Client**: Extensión de Identity para clientes
-- **Technician**: Extensión de Identity para técnicos
-- **ServiceRequest**: Solicitudes de servicio con estados
-- **Appliance**: Catálogo de electrodomésticos
+- **Identity**: Usuario base con autenticación y información personal
+- **Client**: Extensión de Identity para clientes con direcciones y solicitudes
+- **Technician**: Extensión de Identity para técnicos con especialidades y calendario
+- **ServiceRequest**: Solicitudes de servicio con fechas propuestas y sistema de expiración
+- **ServiceRequestOffer**: Ofertas de técnicos en solicitudes específicas
+- **Address**: Direcciones de servicio vinculadas a clientes
+- **Appliance**: Catálogo completo de electrodomésticos con marcas y modelos
 - **Rating**: Calificaciones de servicios completados
-- **Notification**: Sistema de mensajería
+- **Notification**: Sistema de mensajería y notificaciones
 
 ### Estados de Solicitud de Servicio
 
-- `pending`: Solicitud creada, esperando ofertas
-- `offered`: Técnico ha hecho una oferta
-- `accepted`: Cliente acepta la oferta
-- `scheduled`: Servicio programado
-- `in_progress`: Servicio en progreso
-- `completed`: Servicio completado
-- `cancelled`: Solicitud cancelada
+- `pending`: Solicitud creada, esperando ofertas de técnicos
+- `offered`: Al menos un técnico ha hecho una oferta
+- `accepted`: Cliente acepta una oferta específica y se asigna técnico
+- `scheduled`: Servicio programado con fecha y técnico confirmados
+- `in_progress`: Servicio en ejecución por el técnico
+- `completed`: Servicio completado y confirmado por el cliente
+- `cancelled`: Solicitud cancelada por el cliente
+
+### Sistema Multi-Ofertas
+
+- **Ofertas Múltiples**: Varios técnicos pueden ofertar en la misma solicitud
+- **Estados de Ofertas**: `pending`, `accepted`, `rejected`
+- **Competencia de Precios**: Los técnicos compiten con diferentes precios y comentarios
+- **Selección por Cliente**: El cliente elige la mejor oferta entre todas las recibidas
 
 ## 🚀 Tecnologías Utilizadas
 
 - **Backend Framework**: NestJS 11.x
 - **Lenguaje**: TypeScript 5.x
-- **Base de Datos**: PostgreSQL
-- **ORM**: TypeORM 0.3.x
+- **Base de Datos**: PostgreSQL con TypeORM 0.3.x
 - **Autenticación**: JWT + Passport
 - **Validación**: Class Validator + Class Transformer
 - **Documentación**: Swagger/OpenAPI
-- **Testing**: Jest
-- **Linting**: ESLint + Prettier
+- **WebSockets**: Socket.IO para notificaciones en tiempo real
+- **Almacenamiento**: Cloudinary para archivos e imágenes
+- **Migraciones**: TypeORM CLI para control de esquema
+- **Testing**: Jest para pruebas unitarias e integración
+- **Linting**: ESLint + Prettier para calidad de código
 
 ## ⚙️ Instalación y Configuración
 
@@ -152,26 +165,50 @@ Una vez que la aplicación esté ejecutándose, puedes acceder a la documentaci�
 
 ### 🔧 Endpoints de Solicitudes de Servicio
 
+#### Gestión de Solicitudes
 - `GET /service-requests` - Listar solicitudes (con filtros por rol)
-- `POST /service-requests` - Crear nueva solicitud (Cliente)
-- `GET /service-requests/:id` - Obtener detalles de solicitud
-- `PUT /service-requests/:id/offer` - Hacer oferta (Técnico)
-- `PUT /service-requests/:id/counter-offer` - Hacer contraoferta (Técnico)
-- `PUT /service-requests/:id/accept` - Aceptar oferta (Cliente)
-- `PUT /service-requests/:id/reject` - Rechazar oferta (Cliente)
-- `PUT /service-requests/:id/schedule` - Programar servicio (Técnico)
+- `POST /service-requests` - Crear nueva solicitud con fecha propuesta
+- `GET /service-requests/:id` - Obtener detalles de solicitud específica
+- `PUT /service-requests/:id/update-price` - Actualizar precio de solicitud (Cliente)
+- `PUT /service-requests/:id/cancel` - Cancelar solicitud (Cliente)
+- `PUT /service-requests/:id/complete` - Marcar como completado (Cliente)
+
+#### Sistema Multi-Ofertas
+- `GET /service-requests/available-for-me` - Solicitudes disponibles para técnico
+- `POST /service-requests/:id/offer` - Hacer oferta en solicitud (Técnico)
+- `POST /service-requests/:id/accept-offer/:offerId` - Aceptar oferta específica (Cliente)
+- `GET /service-requests/my-requests-with-offers` - Solicitudes del cliente con todas las ofertas
+
+#### Gestión de Trabajos
+- `POST /service-requests/:id/accept` - Aceptar solicitud directamente (Técnico)
 - `PUT /service-requests/:id/start` - Iniciar servicio (Técnico)
 - `PUT /service-requests/:id/complete` - Completar servicio (Técnico)
-- `PUT /service-requests/:id/complete-by-client` - Confirmar completado (Cliente)
-- `PUT /service-requests/:id/cancel` - Cancelar solicitud
+
+#### Calendario y Disponibilidad
+- `GET /service-requests/calendar/technician/:id` - Calendario de técnico
+- `GET /service-requests/calendar/client/:id` - Calendario de cliente
+- `GET /service-requests/availability/check` - Verificar disponibilidad de técnico
 
 ### 🏠 Endpoints de Electrodomésticos
 
-- `GET /appliances` - Listar electrodomésticos
+- `GET /appliances` - Listar electrodomésticos con filtros
 - `POST /appliances` - Crear electrodoméstico (Admin)
-- `GET /appliances/:id` - Obtener detalles
+- `GET /appliances/:id` - Obtener detalles específicos
 - `PUT /appliances/:id` - Actualizar electrodoméstico (Admin)
 - `DELETE /appliances/:id` - Eliminar electrodoméstico (Admin)
+
+#### Gestión de Marcas y Modelos
+- `GET /appliance-brands` - Listar marcas disponibles
+- `GET /appliance-models` - Listar modelos por marca
+- `GET /appliance-types` - Listar tipos de electrodomésticos
+
+### 📍 Endpoints de Direcciones
+
+- `GET /addresses/my-addresses` - Direcciones del usuario autenticado
+- `POST /addresses` - Agregar nueva dirección
+- `PUT /addresses/:id` - Actualizar dirección existente
+- `DELETE /addresses/:id` - Eliminar dirección
+- `PUT /addresses/:id/set-default` - Establecer dirección por defecto
 
 ### ⭐ Endpoints de Calificaciones
 
@@ -210,20 +247,48 @@ $ npm run test:cov
 
 ```
 src/
-├── appliance/           # Módulo de electrodomésticos
-├── auth/               # Módulo de autenticación
-├── client/             # Módulo específico de clientes
-├── common/             # Utilidades compartidas
-│   ├── decorators/     # Decoradores personalizados
-│   ├── guards/         # Guards de autorización
-│   └── pipes/          # Pipes de validación
-├── identity/           # Módulo de gestión de usuarios
-├── notification/       # Módulo de notificaciones
-├── rating/            # Módulo de calificaciones
-├── service-request/   # Módulo de solicitudes de servicio
-├── technician/        # Módulo específico de técnicos
-├── app.module.ts      # Módulo principal
-└── main.ts           # Punto de entrada
+├── address/              # Módulo de gestión de direcciones
+│   ├── address.controller.ts
+│   ├── address.entity.ts
+│   ├── address.service.ts
+│   └── dto/
+├── appliance/            # Módulo de electrodomésticos
+│   ├── appliance.controller.ts
+│   ├── appliance.entity.ts
+│   ├── appliance.service.ts
+│   └── dto/
+├── appliance-brand/      # Gestión de marcas
+├── appliance-model/      # Gestión de modelos
+├── appliance-type/       # Tipos de electrodomésticos
+├── auth/                 # Módulo de autenticación
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   ├── jwt.strategy.ts
+│   ├── dto/
+│   └── jwt/
+├── client/               # Módulo específico de clientes
+├── common/               # Utilidades compartidas
+│   ├── cloudinary.service.ts
+│   ├── roles.decorator.ts
+│   └── guards/
+├── database/             # Configuración de BD y seeds
+│   ├── data-source.ts
+│   └── seed-appliance-structure.ts
+├── identity/             # Módulo de gestión de usuarios
+├── migrations/           # Migraciones de base de datos
+├── notification/         # Sistema de notificaciones
+├── rating/              # Módulo de calificaciones
+├── service-request/     # Módulo principal de solicitudes
+│   ├── service-request.controller.ts
+│   ├── service-request.entity.ts
+│   ├── service-request.service.ts
+│   ├── service-request.gateway.ts
+│   ├── service-request-offer.entity.ts
+│   └── dto/
+├── technician/          # Módulo específico de técnicos
+├── types/               # Tipos y interfaces globales
+├── app.module.ts        # Módulo principal de la aplicación
+└── main.ts             # Punto de entrada de la aplicación
 ```
 
 ## 🔒 Seguridad
@@ -236,25 +301,30 @@ src/
 
 ## 🚀 Funcionalidades Clave
 
-### Flujo de Trabajo de Servicios
+### Sistema Multi-Ofertas
+1. **Cliente** crea una solicitud de servicio con fecha propuesta
+2. **Múltiples Técnicos** pueden hacer ofertas competitivas con precios y comentarios
+3. **Cliente** revisa todas las ofertas ordenadas cronológicamente
+4. **Cliente** selecciona la mejor oferta y se asigna automáticamente el técnico
+5. **Sistema** rechaza automáticamente las ofertas no seleccionadas
 
-1. **Cliente** crea una solicitud de servicio
-2. **Técnicos** pueden ver solicitudes pendientes y hacer ofertas
-3. **Cliente** recibe notificaciones y puede aceptar/rechazar ofertas
-4. **Técnico** programa y ejecuta el servicio
-5. **Cliente** confirma la finalización y califica el servicio
+### Programación Inteligente
+- **Validación de Disponibilidad**: Verificación automática de conflictos de horarios
+- **Propuesta de Fechas**: Clientes proponen fechas específicas para el servicio
+- **Ventana de Disponibilidad**: Sistema de 6 horas para evitar solapamientos
+- **Calendario Integrado**: Visualización de horarios para técnicos y clientes
 
-### Sistema de Notificaciones
+### Sistema de Notificaciones en Tiempo Real
+- **WebSockets**: Conexiones persistentes para actualizaciones instantáneas
+- **Notificaciones Dirigidas**: Mensajes específicos por rol y usuario
+- **Estados de Lectura**: Control de notificaciones leídas/no leídas
+- **Eventos del Sistema**: Notificaciones automáticas en cambios de estado
 
-- Notificaciones automáticas en cada cambio de estado
-- Historial completo de comunicaciones
-- Marcado de leído/no leído
-
-### Sistema de Calificaciones
-
-- Solo se pueden calificar servicios completados
-- Prevención de calificaciones duplicadas
-- Promedio automático de calificaciones por técnico
+### Gestión de Calidad
+- **Sistema de Calificaciones**: Solo servicios completados pueden ser calificados
+- **Prevención de Duplicados**: Control de calificaciones múltiples
+- **Promedio Automático**: Cálculo automático de reputación de técnicos
+- **Historial Completo**: Registro de todas las interacciones del servicio
 
 ## 🔧 Variables de Entorno
 
@@ -369,13 +439,15 @@ CMD ["npm", "run", "start:prod"]
 
 ## 📝 Próximas Funcionalidades
 
-- [ ] Sistema de archivos/fotos para técnicos
-- [ ] Notificaciones push en tiempo real
-- [ ] Sistema de pagos integrado
-- [ ] Chat en tiempo real entre usuarios
-- [ ] Sistema de reportes y analytics
-- [ ] API para aplicación móvil
-- [ ] Sistema de geolocalización
+- [ ] **Sistema de Pagos**: Integración con pasarelas de pago
+- [ ] **Geolocalización**: Búsqueda de técnicos por proximidad
+- [ ] **Chat en Tiempo Real**: Comunicación directa entre usuarios
+- [ ] **Aplicación Móvil**: API optimizada para móviles
+- [ ] **Reportes y Analytics**: Dashboard administrativo con métricas
+- [ ] **Sistema de Garantías**: Gestión de garantías de servicio
+- [ ] **Notificaciones Push**: Notificaciones móviles
+- [ ] **Sistema de Inventario**: Gestión de repuestos y herramientas
+- [ ] **Inteligencia Artificial**: Predicción de fallas y mantenimiento preventivo
 
 ## 🤝 Contribución
 

@@ -3,7 +3,6 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  CurrencyDollarIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
 
@@ -11,8 +10,6 @@ export const getStatusColor = (status: string): string => {
   switch (status) {
     case 'pending':
       return 'bg-yellow-100 text-yellow-800'
-    case 'offered':
-      return 'bg-blue-100 text-blue-800'
     case 'accepted':
       return 'bg-green-100 text-green-800'
     case 'scheduled':
@@ -30,12 +27,10 @@ export const getStatusColor = (status: string): string => {
   }
 }
 
-export const getStatusText = (status: string, isClient: boolean = false): string => {
+export const getStatusText = (status: string): string => {
   switch (status) {
     case 'pending':
       return 'Pendiente'
-    case 'offered':
-      return isClient ? 'Con Oferta' : 'Oferta Enviada'
     case 'accepted':
       return 'Aceptada'
     case 'scheduled':
@@ -57,8 +52,6 @@ export const getStatusIcon = (status: string) => {
   switch (status) {
     case 'pending':
       return <ClockIcon className="h-5 w-5" />
-    case 'offered':
-      return <CurrencyDollarIcon className="h-5 w-5" />
     case 'accepted':
     case 'scheduled':
       return <CalendarIcon className="h-5 w-5" />
