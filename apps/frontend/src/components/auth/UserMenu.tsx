@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   UserIcon, 
@@ -11,47 +12,39 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import UserAvatar from '../common/UserAvatar'
 
-interface UserMenuProps {
-  onNavigate?: (page: string) => void
-}
-
-const UserMenu: React.FC<UserMenuProps> = ({ onNavigate }) => {
+const UserMenu: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
 
   if (!isAuthenticated || !user) return null
 
   const handleLogout = () => {
     logout()
     setIsOpen(false)
-    // Redirect to home
-    if (onNavigate) {
-      onNavigate('home')
-    }
+    navigate('/')
   }
 
-  const handleNavigation = (page: string) => {
+  const handleNavigation = (path: string) => {
     setIsOpen(false)
-    if (onNavigate) {
-      onNavigate(page)
-    }
+    navigate(path)
   }
 
   const menuItems = [
     {
       icon: UserIcon,
       label: 'Mi Perfil',
-      action: () => handleNavigation('profile')
+      action: () => handleNavigation('/profile')
     },
     {
       icon: user.role === 'client' ? ClipboardDocumentListIcon : WrenchScrewdriverIcon,
       label: user.role === 'client' ? 'Mis Solicitudes' : 'Mis Servicios',
-      action: () => handleNavigation('dashboard')
+      action: () => handleNavigation('/dashboard')
     },
     {
       icon: Cog6ToothIcon,
       label: 'Configuración',
-      action: () => handleNavigation('settings')
+      action: () => handleNavigation('/settings')
     },
     {
       icon: ArrowRightOnRectangleIcon,

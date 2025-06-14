@@ -1,22 +1,19 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Bars3Icon, XMarkIcon, UserIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './auth/AuthModal'
 import UserMenu from './auth/UserMenu'
 
-interface HeaderProps {
-  onNavigate?: (page: string) => void
-}
-
-const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   const navigation = [
-    { name: 'Inicio', href: '#hero', action: () => onNavigate?.('home') },
-    { name: 'Acerca de', href: '#about', action: () => onNavigate?.('home') },
-    // { name: 'Contacto', href: '#contact', action: () => onNavigate?.('home') },
+    { name: 'Inicio', href: '#hero', section: 'hero' },
+    { name: 'Acerca de', href: '#about', section: 'about' },
   ]
 
   const handleAuthClick = () => {
@@ -24,17 +21,21 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   }
 
   const handleNavigationClick = (item: typeof navigation[0]) => {
-    if (item.action) {
-      item.action()
-    }
-    // For anchor links, still scroll to section if we're on home page
-    if (item.href.startsWith('#')) {
+    // Navegar a home primero y luego hacer scroll
+    if (window.location.pathname !== '/') {
+      navigate('/')
       setTimeout(() => {
         const element = document.querySelector(item.href)
         if (element) {
           element.scrollIntoView({ behavior: 'smooth' })
         }
       }, 100)
+    } else {
+      // Ya estamos en home, solo hacer scroll
+      const element = document.querySelector(item.href)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
     }
   }
 
@@ -44,10 +45,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
         <nav className="mx-auto max-w-7xl px-6 lg:px-8" aria-label="Top">
           <div className="flex w-full items-center justify-between border-b border-blue-500/10 py-4 lg:border-none">
             <div className="flex items-center">
-              <button 
-                onClick={() => onNavigate?.('home')}
-                className="flex items-center space-x-3"
-              >
+              <Link to="/" className="flex items-center space-x-3">
                 <img 
                   src="/MyHomeTech-Logo-1.svg" 
                   alt="MyHomeTech" 
@@ -56,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                   MyHomeTech
                 </span>
-              </button>
+              </Link>
             </div>
             
             <div className="ml-10 hidden space-x-8 lg:block">
@@ -73,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
             <div className="ml-6 hidden lg:block">
               {isAuthenticated ? (
-                <UserMenu onNavigate={onNavigate} />
+                <UserMenu />
               ) : (
                 <button
                   onClick={handleAuthClick}
@@ -120,7 +118,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 
                 {isAuthenticated ? (
                   <div className="pt-4 border-t border-gray-200">
-                    <UserMenu onNavigate={onNavigate} />
+                    <UserMenu />
                   </div>
                 ) : (
                   <div className="pt-4 border-t border-gray-200">

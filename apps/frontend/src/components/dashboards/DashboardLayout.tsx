@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { 
   ClipboardDocumentListIcon,
   UserCircleIcon,
@@ -15,7 +16,6 @@ interface DashboardLayoutProps {
   children: React.ReactNode | ((props: { activeTab: string; setActiveTab: (tab: string) => void }) => React.ReactNode)
   title: string
   subtitle?: string
-  onNavigate?: (page: string) => void
   rightContent?: React.ReactNode
 }
 
@@ -23,47 +23,50 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children, 
   title, 
   subtitle,
-  onNavigate,
   rightContent
 }) => {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('main')
+  const navigate = useNavigate()
 
+  // Determine menu items based on user role
   const getMenuItems = () => {
-    if (user?.role === 'client') {
+    if (!user) return []
+    
+    if (user.role === 'client') {
       return [
-        { 
-          id: 'main', 
-          label: 'Mis Solicitudes', 
-          icon: ClipboardDocumentListIcon,
-          description: 'Ver todas mis solicitudes'
+        {
+          id: 'main',
+          label: 'Mis Solicitudes',
+          description: 'Ver mis servicios',
+          icon: ClipboardDocumentListIcon
         },
-        { 
-          id: 'profile', 
-          label: 'Mi Perfil', 
-          icon: UserCircleIcon,
-          description: 'Configurar mi perfil'
+        {
+          id: 'profile',
+          label: 'Mi Perfil',
+          description: 'Configurar cuenta',
+          icon: UserCircleIcon
         }
       ]
-    } else if (user?.role === 'technician') {
+    } else if (user.role === 'technician') {
       return [
-        { 
-          id: 'main', 
-          label: 'Trabajos Disponibles', 
-          icon: WrenchScrewdriverIcon,
-          description: 'Ver trabajos disponibles'
+        {
+          id: 'main',
+          label: 'Trabajos Disponibles',
+          description: 'Buscar trabajos',
+          icon: WrenchScrewdriverIcon
         },
-        { 
-          id: 'my-jobs', 
-          label: 'Mis Trabajos', 
-          icon: BriefcaseIcon,
-          description: 'Mis trabajos asignados'
+        {
+          id: 'my-jobs',
+          label: 'Mis Trabajos',
+          description: 'Trabajos asignados',
+          icon: BriefcaseIcon
         },
-        { 
-          id: 'profile', 
-          label: 'Mi Perfil', 
-          icon: UserCircleIcon,
-          description: 'Configurar mi perfil'
+        {
+          id: 'profile',
+          label: 'Mi Perfil',
+          description: 'Configurar cuenta',
+          icon: UserCircleIcon
         }
       ]
     }
@@ -74,7 +77,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   const handleLogout = () => {
     logout()
-    onNavigate?.('home')
+    navigate('/', { replace: true })
   }
 
   return (
@@ -83,8 +86,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <aside className="w-72 bg-white shadow-lg border-r border-gray-200">
         {/* Logo Section */}
         <div className="p-6 border-b border-gray-200">
-          <button 
-            onClick={() => onNavigate?.('home')}
+          <Link 
+            to="/"
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
             <img 
@@ -98,13 +101,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </h1>
               <p className="text-xs text-gray-500">Dashboard</p>
             </div>
-          </button>
+          </Link>
         </div>
 
         {/* User Info */}
         <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
           {user && <UserAvatar user={user} size="lg" showName={true} />}
-        </div>        {/* Navigation */}
+        </div>
+
+        {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
           <ul className="space-y-2">
             {menuItems.map((item) => {
@@ -139,13 +144,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* Bottom Actions */}
         <div className="p-4 border-t border-gray-200 space-y-2">
-          <button
-            onClick={() => onNavigate?.('home')}
+          <Link
+            to="/"
             className="w-full flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-colors group"
           >
             <HomeIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-600" />
             <span className="font-medium">Volver al Inicio</span>
-          </button>
+          </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors group"
@@ -158,7 +163,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <DashboardHeader title={title} subtitle={subtitle} rightContent={rightContent} />        <main className="flex-1 p-6">
+        <DashboardHeader title={title} subtitle={subtitle} rightContent={rightContent} />
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             {typeof children === 'function' 
               ? children({ activeTab, setActiveTab })

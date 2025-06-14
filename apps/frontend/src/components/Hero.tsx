@@ -1,6 +1,7 @@
 import { ChevronRightIcon, PlayIcon, UserIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import ServiceRequestModal from './auth/ServiceRequestModal'
 import AuthModal from './auth/AuthModal'
@@ -9,6 +10,7 @@ const Hero = () => {
   const { isAuthenticated, user } = useAuth()
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   const handleServiceRequest = () => {
     setServiceModalOpen(true)
@@ -19,12 +21,7 @@ const Hero = () => {
   }
 
   const handleGoToDashboard = () => {
-    // Scroll to appropriate dashboard section or navigate
-    if (user?.role === 'client') {
-      window.location.hash = '#client-dashboard'
-    } else if (user?.role === 'technician') {
-      window.location.hash = '#technician-dashboard'
-    }
+    navigate('/dashboard')
   }
 
   const renderActionButtons = () => {

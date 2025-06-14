@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  // Login con manejo de errores mejorado
+  // Login sin redirección - la redirección se manejará en el componente que llama
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true)
@@ -105,7 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false)
     }
   }
-  // Register con manejo de errores mejorado
+
+  // Register sin redirección automática
   const register = async (
     firstName: string, 
     middleName: string | undefined, 
@@ -135,7 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  // Logout con limpieza completa del estado
+  // Logout sin redirección - la redirección se manejará en el componente que llama
   const logout = (): void => {
     authService.logout()
     setUser(null)

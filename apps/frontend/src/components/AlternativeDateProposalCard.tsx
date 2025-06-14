@@ -47,12 +47,7 @@ const AlternativeDateProposalCard: React.FC<AlternativeDateProposalCardProps> = 
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    return new Date(dateString).toLocaleDateString('es-ES')
   }
 
   const formatTime = (dateString: string) => {

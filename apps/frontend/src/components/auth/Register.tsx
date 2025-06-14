@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon, UserIcon, WrenchScrewdriverIcon, IdentificationIcon, CalendarDaysIcon, PhoneIcon, ClockIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -9,7 +10,8 @@ interface RegisterProps {
 }
 
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
-  const { register, isLoading } = useAuth()
+  const { register, login, isLoading } = useAuth()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<{
     firstName: string
     middleName: string
@@ -163,7 +165,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
           birthDate: formData.birthDate,
           phone: formData.phone
         })
-      } else if (formData.role === 'technician') {        const { technicianService } = await import('../../services/technicianService')
+      } else if (formData.role === 'technician') {
+        const { technicianService } = await import('../../services/technicianService')
         await technicianService.createProfile({
           identityId: user.id,
           cedula: formData.cedula,
@@ -172,8 +175,13 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
           specialties: [], // El técnico puede actualizar esto después
           idPhotoFile: formData.idPhotoFile || undefined
         })
-      }      
+      }
+
+      // Hacer login automático después del registro exitoso
+      await login(formData.email, formData.password)
       onClose()
+      // Redirigir al dashboard después del registro exitoso
+      navigate('/dashboard', { replace: true })
     } catch (error: any) {
       console.error('Register error:', error)
       if (error.response?.status === 409) {

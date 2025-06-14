@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -10,6 +11,7 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
   const { login, isLoading } = useAuth()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -33,6 +35,8 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
     try {
       await login(formData.email, formData.password)
       onClose()
+      // Redirigir al dashboard después del login exitoso
+      navigate('/dashboard', { replace: true })
     } catch (error: any) {
       console.error('Login error:', error)
       setError(error.response?.data?.message || 'Error al iniciar sesión')

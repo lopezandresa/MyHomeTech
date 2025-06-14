@@ -28,11 +28,7 @@ import { useDashboardData } from '../../hooks/useDashboardData'
 import { useDashboardActions } from '../../hooks/useDashboardActions'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 
-interface DashboardProps {
-  onNavigate?: (page: string) => void
-}
-
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const Dashboard: React.FC = () => {
   // Hook personalizado para datos del dashboard
   const dashboardData = useDashboardData()
     // Hook personalizado para acciones del dashboard
@@ -372,7 +368,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <DashboardLayout 
         title={dashboardData.isClient ? "Dashboard Cliente" : "Dashboard Técnico"}
         subtitle={dashboardData.isClient ? "Gestiona tus solicitudes de servicio" : "Gestiona tus trabajos y ofertas"}
-        onNavigate={onNavigate}
         rightContent={getRightContent()}
       >
         {({ activeTab }) => renderContent(activeTab)}
