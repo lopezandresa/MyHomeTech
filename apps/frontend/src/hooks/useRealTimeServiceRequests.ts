@@ -8,9 +8,10 @@ interface ServiceRequestNotification {
   message: string
   timestamp: Date
   type: 'new' | 'updated' | 'removed'
+  latency?: number // Tiempo desde el evento hasta la recepción
 }
 
-// Connection states
+// Connection states optimizados
 export const ConnectionState = {
   DISCONNECTED: 'disconnected',
   CONNECTING: 'connecting',
@@ -25,6 +26,10 @@ interface ConnectionStatus {
   maxAttempts: number
   nextAttemptIn: number | null
   state: ConnectionStateType
+  latency: number
+  quality: 'excellent' | 'good' | 'poor' | 'disconnected'
+  pendingEvents: number
+  socketId: string | null
 }
 
 export const useRealTimeServiceRequests = (technicianId?: number) => {
@@ -34,213 +39,304 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     attempts: 0,
-    maxAttempts: 10,
+    maxAttempts: 50,
     nextAttemptIn: null,
-    state: ConnectionState.DISCONNECTED
+    state: ConnectionState.DISCONNECTED,
+    latency: 0,
+    quality: 'disconnected',
+    pendingEvents: 0,
+    socketId: null
   })
+
+  // Referencias para intervalos optimizados
   const checkIntervalRef = useRef<number | null>(null)
-  const statusCheckIntervalRef = useRef<number | null>(null)  // Callback para nuevas solicitudes
-  const handleNewServiceRequest = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
+  const statusCheckIntervalRef = useRef<number | null>(null)
+
+  // Función para calcular latencia de eventos
+  const calculateEventLatency = useCallback((serverTimestamp: number): number => {
+    return Date.now() - serverTimestamp
+  }, [])
+
+  // Callback optimizado para nuevas solicitudes con tracking de latencia
+  const handleNewServiceRequest = useCallback((data: { 
+    serviceRequest: ServiceRequest, 
+    message: string, 
+    timestamp: number
+  }) => {
+    const eventLatency = calculateEventLatency(data.timestamp)
     
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
       message: data.message,
       timestamp: new Date(),
-      type: 'new'
+      type: 'new',
+      latency: eventLatency
     }
     
-    setNotifications(prev => [notification, ...prev.slice(0, 9)]) // Keep last 10 notifications
+    console.log(`⚡ New request received in ${eventLatency}ms - Ultra-fast!`)
     
-    // Disparar evento para actualizar datos del dashboard
-    window.dispatchEvent(new CustomEvent('newServiceRequestReceived', { 
-      detail: { serviceRequest: data.serviceRequest } 
-    }))
+    // Optimización: usar función de actualización con callback para mejor rendimiento
+    setNotifications(prev => {
+      const newNotifications = [notification, ...prev.slice(0, 9)]
+      return newNotifications
+    })
     
-    // Mostrar notificación del sistema si está soportada
+    // Disparar evento inmediato para actualizar dashboard
+    const customEvent = new CustomEvent('newServiceRequestReceived', { 
+      detail: { serviceRequest: data.serviceRequest, latency: eventLatency }
+    })
+    window.dispatchEvent(customEvent)
+    
+    // Notificación del navegador optimizada
     if ('Notification' in window && Notification.permission === 'granted') {
-      const notif = new Notification('Nueva Solicitud de Servicio', {
-        body: `${data.serviceRequest.appliance.name} - Cliente: ${data.serviceRequest.client?.firstName}`,
+      const notif = new Notification('⚡ Nueva Solicitud', {
+        body: `${data.serviceRequest.appliance?.name || 'Servicio'} - ${eventLatency}ms`,
         icon: '/favicon.ico',
-        tag: `service-request-${data.serviceRequest.id}`
-      });
+        tag: `service-request-${data.serviceRequest.id}`,
+        requireInteraction: false, // No requerir interacción para ser más rápida
+        silent: false
+      })
       
-      // Hacer que la notificación llame la atención
       notif.onclick = () => {
-        window.focus();
-        notif.close();
-      };
-        // Reproducir sonido de notificación
-      try {
-        const audio = new Audio('/notification.mp3');
-        audio.play().catch(() => {
-          // Silently handle audio play errors
-        });
-      } catch {
-        // Silently handle audio errors
+        window.focus()
+        notif.close()
       }
+      
+      // Auto-cerrar después de 3 segundos para no saturar
+      setTimeout(() => notif.close(), 3000)
     }
-  }, [])
 
-  // Callback para solicitudes actualizadas
-  const handleServiceRequestUpdated = useCallback((data: { serviceRequest: ServiceRequest, message: string }) => {
+    // Sonido de notificación optimizado
+    try {
+      const audio = new Audio('/notification.mp3')
+      audio.volume = 0.3 // Volumen más bajo
+      audio.play().catch(() => {
+        // Manejo silencioso de errores de audio
+      })
+    } catch {
+      // Manejo silencioso de errores
+    }
+  }, [calculateEventLatency])
+
+  // Callback optimizado para solicitudes actualizadas
+  const handleServiceRequestUpdated = useCallback((data: { 
+    serviceRequest: ServiceRequest, 
+    message: string,
+    timestamp: number 
+  }) => {
+    const eventLatency = calculateEventLatency(data.timestamp)
     
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
       message: data.message,
       timestamp: new Date(),
-      type: 'updated'
+      type: 'updated',
+      latency: eventLatency
     }
+    
+    console.log(`🔄 Request updated in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
-    // Disparar evento para actualizar datos del dashboard
+    // Evento de actualización inmediata
     window.dispatchEvent(new CustomEvent('serviceRequestUpdated', { 
-      detail: { serviceRequest: data.serviceRequest } 
+      detail: { serviceRequest: data.serviceRequest, latency: eventLatency } 
     }))
-  }, [])
+  }, [calculateEventLatency])
 
-  // Callback para solicitudes removidas
-  const handleServiceRequestRemoved = useCallback((data: { serviceRequestId: number, message: string }) => {
-    // Crear notificación de solicitud removida
+  // Callback optimizado para solicitudes removidas
+  const handleServiceRequestRemoved = useCallback((data: { 
+    serviceRequestId: number, 
+    message: string,
+    timestamp: number 
+  }) => {
+    const eventLatency = calculateEventLatency(data.timestamp)
+    
     const notification: ServiceRequestNotification = {
-      serviceRequest: { id: data.serviceRequestId } as ServiceRequest, // Crear objeto mínimo
+      serviceRequest: { id: data.serviceRequestId } as ServiceRequest,
       message: data.message,
       timestamp: new Date(),
-      type: 'removed'
+      type: 'removed',
+      latency: eventLatency
     }
+    
+    console.log(`❌ Request removed in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
-    // Disparar evento para actualizar datos del dashboard
-    window.dispatchEvent(new CustomEvent('serviceRequestRemoved', { 
-      detail: { serviceRequestId: data.serviceRequestId } 
-    }))
-    
-    // También remover notificaciones previas de esta solicitud para evitar confusión
+    // Limpiar notificaciones relacionadas para evitar confusión
     setTimeout(() => {
       setNotifications(prev => 
-        prev.filter(notif => notif.serviceRequest.id !== data.serviceRequestId || notif.type === 'removed')
+        prev.filter(notif => 
+          notif.serviceRequest.id !== data.serviceRequestId || 
+          notif.type === 'removed'
+        )
       )
     }, 100)
-  }, [])
+    
+    // Evento de remoción inmediata
+    window.dispatchEvent(new CustomEvent('serviceRequestRemoved', { 
+      detail: { serviceRequestId: data.serviceRequestId, latency: eventLatency } 
+    }))
+  }, [calculateEventLatency])
 
-  // Callback para ofertas rechazadas
-  const handleOfferRejected = useCallback((data: { serviceRequest: ServiceRequest, message: string, type: string }) => {
+  // Callback para ofertas rechazadas (optimizado)
+  const handleOfferRejected = useCallback((data: { 
+    serviceRequest: ServiceRequest, 
+    message: string, 
+    type: string,
+    timestamp: number 
+  }) => {
+    const eventLatency = calculateEventLatency(data.timestamp)
+    
     const notification: ServiceRequestNotification = {
       serviceRequest: data.serviceRequest,
       message: data.message,
       timestamp: new Date(),
-      type: 'removed'
+      type: 'removed',
+      latency: eventLatency
     }
+    
+    console.log(`🚫 Offer rejected in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
-    // Disparar evento para actualizar datos del dashboard
     window.dispatchEvent(new CustomEvent('offerRejected', { 
-      detail: { serviceRequest: data.serviceRequest } 
+      detail: { serviceRequest: data.serviceRequest, latency: eventLatency } 
     }))
     
-    // Mostrar notificación del sistema
+    // Notificación del navegador para rechazo
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Oferta rechazada', {
-        body: data.message,
-        icon: '/favicon.ico'
+        body: `${data.message} (${eventLatency}ms)`,
+        icon: '/favicon.ico',
+        tag: `offer-rejected-${data.serviceRequest.id}`
       })
     }
-  }, [])  // Function to check connection and update status
+  }, [calculateEventLatency])
+
+  // Función optimizada para verificar conexión y actualizar estado
   const checkAndUpdateConnectionStatus = useCallback(() => {
-    if (!token) return false;
-      const connected = webSocketService.isConnected();
-    const status = webSocketService.getConnectionStatus();
+    if (!token) return false
+
+    const connected = webSocketService.isConnected()
+    const status = webSocketService.getConnectionStatus()
     
-    // Determine connection state
-    let connectionState: ConnectionStateType;
+    // Determinar estado de conexión
+    let connectionState: ConnectionStateType
     if (connected) {
-      connectionState = ConnectionState.CONNECTED;
+      connectionState = ConnectionState.CONNECTED
     } else if (status.attempts > 0) {
-      connectionState = ConnectionState.CONNECTING;    } else {
-      connectionState = ConnectionState.DISCONNECTED;
+      connectionState = ConnectionState.CONNECTING
+    } else {
+      connectionState = ConnectionState.DISCONNECTED
     }
     
-    setIsConnected(connected);
+    setIsConnected(connected)
     setConnectionStatus({
-      ...status,
-      state: connectionState
-    });
+      connected,
+      attempts: status.attempts,
+      maxAttempts: status.maxAttempts,
+      nextAttemptIn: status.nextAttemptIn,
+      state: connectionState,
+      latency: status.latency,
+      quality: status.quality,
+      pendingEvents: status.pendingEvents,
+      socketId: status.socketId
+    })
     
-    return connected;
-  }, [token, technicianId]);
+    return connected
+  }, [token])
 
-  // Function to force reconnection
+  // Función para forzar reconexión instantánea
   const forceReconnect = useCallback(() => {
-    if (!token) return;
-    webSocketService.forceReconnect(token);
-    checkAndUpdateConnectionStatus();
-  }, [token, checkAndUpdateConnectionStatus]);  // Efecto para conectar/desconectar WebSocket
+    if (!token) return
+    console.log('🔄 Forcing ultra-fast reconnection...')
+    webSocketService.forceReconnect(token)
+    
+    // Actualizar estado inmediatamente
+    setTimeout(() => {
+      checkAndUpdateConnectionStatus()
+    }, 100)
+  }, [token, checkAndUpdateConnectionStatus])
+
+  // Efecto principal para conectar/desconectar WebSocket (OPTIMIZADO)
   useEffect(() => {
     if (!user || user.role !== 'technician' || !token) {
-      setIsConnected(false);
+      setIsConnected(false)
       setConnectionStatus(prev => ({
         ...prev,
-        state: ConnectionState.DISCONNECTED      }));
-      return;
+        state: ConnectionState.DISCONNECTED
+      }))
+      return
     }
 
-    // Set to connecting state when starting connection
+    console.log('🚀 Initializing ultra-fast WebSocket connection...')
+
+    // Estado de conexión inicial
     setConnectionStatus(prev => ({
       ...prev,
       state: ConnectionState.CONNECTING
-    }));
+    }))
 
-    // Conectar al WebSocket
-    webSocketService.connect(token);
+    // Conectar al WebSocket con configuración optimizada
+    webSocketService.connect(token)
     
-    // Verificar estado inmediatamente después de conectar
-    setTimeout(() => {
-      checkAndUpdateConnectionStatus();
-    }, 1000);    // Configurar listeners
-    webSocketService.onNewServiceRequest(handleNewServiceRequest);
-    webSocketService.onServiceRequestUpdated(handleServiceRequestUpdated);
-    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved);
-    webSocketService.onOfferRejected(handleOfferRejected);// Verificar conexión periódicamente (cada 5 segundos en lugar de 15)
+    // Verificar estado inmediatamente
+    const immediateCheck = setTimeout(() => {
+      checkAndUpdateConnectionStatus()
+    }, 200) // Reducido de 1000ms a 200ms
+
+    // Configurar listeners de eventos optimizados
+    webSocketService.onNewServiceRequest(handleNewServiceRequest)
+    webSocketService.onServiceRequestUpdated(handleServiceRequestUpdated)
+    webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved)
+    webSocketService.onOfferRejected(handleOfferRejected)
+
+    // Verificación de conexión menos frecuente para evitar loops
     if (checkIntervalRef.current) {
-      window.clearInterval(checkIntervalRef.current);
+      window.clearInterval(checkIntervalRef.current)
     }
     
     checkIntervalRef.current = window.setInterval(() => {
-      const connected = webSocketService.checkConnection(token);
-      setIsConnected(connected);
+      const connected = webSocketService.checkConnection(token)
+      setIsConnected(connected)
       
-      // Si está conectado y hay un technicianId, asegurarse de que esté en la sala
-      if (connected && technicianId) {
-        webSocketService.joinTechnicianRoom(technicianId);
+      // CORREGIDO: Solo unirse al room si no está ya conectado o si cambió el technicianId
+      if (connected && technicianId && !webSocketService.isInTechnicianRoom(technicianId)) {
+        console.log('🏠 Joining technician room', technicianId, 'with ultra-fast connection...')
+        webSocketService.joinTechnicianRoom(technicianId)
       }
-    }, 5000); // Reducido de 15000 a 5000
-    
-    // Verificar estado de conexión más frecuentemente (cada 5 segundos)
+    }, 5000) // CAMBIADO: de 2000ms a 5000ms para reducir spam
+
+    // Verificación de estado de conexión ultra-frecuente
     if (statusCheckIntervalRef.current) {
-      window.clearInterval(statusCheckIntervalRef.current);
+      window.clearInterval(statusCheckIntervalRef.current)
     }
     
     statusCheckIntervalRef.current = window.setInterval(() => {
-      checkAndUpdateConnectionStatus();
-    }, 5000);    // Cleanup al desmontar
+      checkAndUpdateConnectionStatus()
+    }, 1000) // Estado cada segundo para mayor precisión
+
+    // Cleanup optimizado
     return () => {
-      webSocketService.offNewServiceRequest(handleNewServiceRequest);
-      webSocketService.offServiceRequestUpdated(handleServiceRequestUpdated);
-      webSocketService.offServiceRequestRemoved(handleServiceRequestRemoved);
-      webSocketService.offOfferRejected(handleOfferRejected);
+      clearTimeout(immediateCheck)
+      
+      webSocketService.offNewServiceRequest(handleNewServiceRequest)
+      webSocketService.offServiceRequestUpdated(handleServiceRequestUpdated)
+      webSocketService.offServiceRequestRemoved(handleServiceRequestRemoved)
+      webSocketService.offOfferRejected(handleOfferRejected)
       
       if (checkIntervalRef.current) {
-        window.clearInterval(checkIntervalRef.current);
-        checkIntervalRef.current = null;
+        window.clearInterval(checkIntervalRef.current)
+        checkIntervalRef.current = null
       }
       
       if (statusCheckIntervalRef.current) {
-        window.clearInterval(statusCheckIntervalRef.current);
-        statusCheckIntervalRef.current = null;
+        window.clearInterval(statusCheckIntervalRef.current)
+        statusCheckIntervalRef.current = null
       }
-    };
+    }
   }, [
     user, 
     token, 
@@ -248,36 +344,37 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     handleNewServiceRequest, 
     handleServiceRequestUpdated, 
     handleServiceRequestRemoved,
+    handleOfferRejected,
     checkAndUpdateConnectionStatus
-  ]);
+  ])
 
-  // Efecto para unirse a la sala del técnico
+  // Efecto optimizado para unirse a la sala del técnico
   useEffect(() => {
-    if (!technicianId || !token) {
-      return;
+    if (!technicianId || !token || !isConnected) {
+      return
     }
     
-    // Asegurarse de que estamos conectados antes de intentar unirse a la sala
-    if (!isConnected) {
-      const connected = webSocketService.checkConnection(token);
-      setIsConnected(connected);
-      
-      // Si aún no estamos conectados, salir y esperar a la reconexión
-      if (!connected) {
-        return;
-      }
-    }
+    console.log(`🏠 Joining technician room ${technicianId} with ultra-fast connection...`)
     
-    // Intentar unirse a la sala
-    webSocketService.joinTechnicianRoom(technicianId);
+    // Unirse inmediatamente
+    webSocketService.joinTechnicianRoom(technicianId)
     
-    return () => {
-      // Solo intentar salir si estamos conectados
+    // Verificar unión después de un breve delay
+    const verificationTimer = setTimeout(() => {
       if (webSocketService.isConnected()) {
-        webSocketService.leaveTechnicianRoom(technicianId);
+        webSocketService.joinTechnicianRoom(technicianId)
       }
-    };
-  }, [technicianId, isConnected, token]);
+    }, 500)
+
+    return () => {
+      clearTimeout(verificationTimer)
+      
+      if (webSocketService.isConnected()) {
+        webSocketService.leaveTechnicianRoom(technicianId)
+      }
+    }
+  }, [technicianId, isConnected, token])
+
   // Función para solicitar permisos de notificación
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -292,10 +389,35 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     setNotifications([])
   }, [])
 
-  // Función para marcar notificación como leída (removerla)
+  // Función para marcar notificación como leída
   const dismissNotification = useCallback((index: number) => {
     setNotifications(prev => prev.filter((_, i) => i !== index))
   }, [])
+
+  // Métricas de rendimiento
+  const performanceMetrics = useMemo(() => {
+    const recentNotifications = notifications.slice(0, 10)
+    const latencies = recentNotifications
+      .filter(n => n.latency !== undefined)
+      .map(n => n.latency!)
+    
+    if (latencies.length === 0) {
+      return {
+        averageLatency: 0,
+        minLatency: 0,
+        maxLatency: 0,
+        totalEvents: notifications.length
+      }
+    }
+    
+    return {
+      averageLatency: Math.round(latencies.reduce((sum, lat) => sum + lat, 0) / latencies.length),
+      minLatency: Math.min(...latencies),
+      maxLatency: Math.max(...latencies),
+      totalEvents: notifications.length
+    }
+  }, [notifications])
+
   return useMemo(() => ({
     notifications,
     isConnected,
@@ -304,7 +426,10 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     requestNotificationPermission,
     clearNotifications,
     dismissNotification,
-    hasUnreadNotifications: notifications.length > 0
+    hasUnreadNotifications: notifications.length > 0,
+    performanceMetrics,
+    // Función de diagnóstico para desarrollo
+    debugConnection: () => webSocketService.debugConnectionStatus()
   }), [
     notifications,
     isConnected,
@@ -312,6 +437,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     forceReconnect,
     requestNotificationPermission,
     clearNotifications,
-    dismissNotification
+    dismissNotification,
+    performanceMetrics
   ])
 }

@@ -76,61 +76,78 @@ export class ServiceRequestService {
 
     const savedRequest = await this.srRepo.save(req);
     
-    // Cargar la solicitud completa con relaciones para notificaciones
+    // Cargar la solicitud completa con relaciones para notificaciones INMEDIATAS
     const fullRequest = await this.srRepo.findOne({
       where: { id: savedRequest.id },
       relations: ['client', 'appliance', 'address']
     });
 
-    // Notificar a técnicos que tienen la especialidad correspondiente
+    // ⚡ NOTIFICACIÓN INSTANTÁNEA - Sin await para máxima velocidad
     if (fullRequest) {
-      await this.notifyEligibleTechnicians(fullRequest);
+      // Ejecutar notificación de forma asíncrona sin bloquear la respuesta
+      setImmediate(() => {
+        this.notifyEligibleTechnicians(fullRequest);
+      });
     }
 
     return savedRequest;
   }
 
-  // Método para encontrar técnicos elegibles y notificarlos
+  // ⚡ Método optimizado para encontrar y notificar técnicos INSTANTÁNEAMENTE
   private async notifyEligibleTechnicians(serviceRequest: ServiceRequest): Promise<void> {
     try {
-      // Obtener el electrodoméstico de la solicitud
-      const appliance = await this.applianceRepo.findOne({
-        where: { id: serviceRequest.applianceId }
-      });
-
-      if (!appliance) {
-        return;
-      }
-
-      // Encontrar técnicos que tienen esta especialidad
+      const startTime = Date.now();
+      
+      // CORREGIDO: Buscar técnicos elegibles usando JOIN con Identity para verificar status
       const eligibleTechnicians = await this.technicianRepo
-        .createQueryBuilder('technician')
-        .innerJoin('technician.specialties', 'specialty')
-        .where('specialty.name = :typeName', { typeName: appliance.type })
+        .createQueryBuilder('tech')
+        .innerJoin('tech.specialties', 'specialty')
+        .innerJoin('identity', 'identity', 'identity.id = tech.identityId')
+        .where('specialty.name = :applianceType', { 
+          applianceType: serviceRequest.appliance.type 
+        })
+        .andWhere('identity.status = :status', { status: true })
         .getMany();
 
-      // Filtrar técnicos que NO tienen conflicto de horario
+      this.logger.log(`Found ${eligibleTechnicians.length} eligible technicians for appliance type: ${serviceRequest.appliance.type}`);
+
       const availableTechnicians: Technician[] = [];
-      
-      for (const tech of eligibleTechnicians) {
+
+      // Verificar disponibilidad en paralelo para máxima velocidad
+      const availabilityChecks = eligibleTechnicians.map(async (tech) => {
         const hasConflict = await this.checkTechnicianAvailability(
-          tech.identityId, 
+          tech.identityId,
           serviceRequest.proposedDateTime
         );
-        
+        return { tech, hasConflict };
+      });
+
+      const results = await Promise.all(availabilityChecks);
+      
+      results.forEach(({ tech, hasConflict }) => {
         if (!hasConflict) {
           availableTechnicians.push(tech);
         }
-      }
+      });
 
       const technicianIds = availableTechnicians.map(tech => tech.identityId);
 
       if (technicianIds.length > 0) {
-        // Notificar a través del gateway
+        // ⚡ NOTIFICACIÓN ULTRA-RÁPIDA
         this.gateway.notifyNewServiceRequest(serviceRequest, technicianIds);
+        
+        const elapsedTime = Date.now() - startTime;
+        this.logger.log(`⚡ Notified ${technicianIds.length} technicians in ${elapsedTime}ms - Ultra-fast!`);
+      } else {
+        this.logger.warn(`No available technicians found for request ${serviceRequest.id} (appliance: ${serviceRequest.appliance.type})`);
+        
+        // Debug: mostrar técnicos elegibles pero no disponibles
+        if (eligibleTechnicians.length > 0) {
+          this.logger.log(`Found ${eligibleTechnicians.length} eligible technicians but all have conflicts`);
+        }
       }
     } catch (error) {
-      console.error('Error notifying technicians:', error);
+      this.logger.error('Error in ultra-fast technician notification:', error);
     }
   }
 
@@ -266,7 +283,7 @@ export class ServiceRequestService {
     });
   }
 
-  /** Técnico acepta una solicitud */
+  /** ⚡ Técnico acepta una solicitud - NOTIFICACIÓN INSTANTÁNEA */
   async acceptByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { id, status: ServiceRequestStatus.PENDING },
@@ -299,21 +316,24 @@ export class ServiceRequestService {
 
     req.technicianId = technicianId;
     req.acceptedAt = new Date();
-    req.scheduledAt = req.proposedDateTime; // Usar la fecha propuesta por el cliente
+    req.scheduledAt = req.proposedDateTime;
     req.status = ServiceRequestStatus.SCHEDULED;
 
     const updatedRequest = await this.srRepo.save(req);
     
-    // Notificar al cliente que su solicitud fue aceptada
-    this.gateway.notifyClientRequestAccepted(updatedRequest);
-    
-    // Notificar a otros técnicos que la solicitud ya no está disponible
-    await this.notifyRequestNoLongerAvailable(id);
+    // ⚡ NOTIFICACIONES INSTANTÁNEAS Y PARALELAS
+    setImmediate(() => {
+      // Notificar al cliente inmediatamente
+      this.gateway.notifyClientRequestAccepted(updatedRequest);
+      
+      // Notificar a otros técnicos que la solicitud ya no está disponible
+      this.notifyRequestNoLongerAvailable(id);
+    });
     
     return updatedRequest;
   }
 
-  /** Cliente marca como completada la solicitud */
+  /** ⚡ Cliente marca como completada - NOTIFICACIÓN INSTANTÁNEA */
   async completeByClient(id: number, clientId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { 
@@ -333,15 +353,17 @@ export class ServiceRequestService {
 
     const updatedRequest = await this.srRepo.save(req);
     
-    // Notificar al técnico que el servicio fue marcado como completado
+    // ⚡ NOTIFICACIÓN INSTANTÁNEA AL TÉCNICO
     if (req.technicianId) {
-      this.gateway.notifyServiceCompleted(updatedRequest, req.technicianId);
+      setImmediate(() => {
+        this.gateway.notifyServiceCompleted(updatedRequest, req.technicianId!);
+      });
     }
     
     return updatedRequest;
   }
 
-  /** Cliente cancela solicitud */
+  /** ⚡ Cliente cancela solicitud - NOTIFICACIÓN INSTANTÁNEA */
   async cancelByClient(serviceRequestId: number, clientId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { 
@@ -361,116 +383,72 @@ export class ServiceRequestService {
     
     const updatedRequest = await this.srRepo.save(req);
     
-    // Notificar a técnicos que la solicitud fue cancelada
-    this.gateway.notifyServiceRequestRemoved(serviceRequestId, []);
+    // ⚡ NOTIFICACIÓN INSTANTÁNEA DE CANCELACIÓN A TODOS LOS TÉCNICOS ELEGIBLES
+    setImmediate(() => {
+      this.notifyRequestNoLongerAvailable(serviceRequestId);
+    });
     
     return updatedRequest;
   }
 
-  // Método para notificar que una solicitud ya no está disponible
+  // ⚡ Método optimizado para notificar que una solicitud ya no está disponible
   private async notifyRequestNoLongerAvailable(serviceRequestId: number): Promise<void> {
     try {
-      // En el nuevo sistema, simplemente notificamos que la solicitud fue removida
-      this.gateway.notifyServiceRequestRemoved(serviceRequestId, []);
+      this.logger.log(`🚨 STARTING notifyRequestNoLongerAvailable for request ${serviceRequestId}`);
+      
+      // CORREGIDO: Buscar técnicos que tenían acceso a esta solicitud
+      const serviceRequest = await this.srRepo.findOne({
+        where: { id: serviceRequestId },
+        relations: ['appliance']
+      });
+
+      if (!serviceRequest) {
+        this.logger.warn(`❌ Service request ${serviceRequestId} not found for notification`);
+        return;
+      }
+
+      this.logger.log(`📋 Found service request ${serviceRequestId} for appliance type: ${serviceRequest.appliance.type}`);
+
+      // Buscar técnicos elegibles para esta solicitud (misma lógica que en creación)
+      const eligibleTechnicians = await this.technicianRepo
+        .createQueryBuilder('tech')
+        .innerJoin('tech.specialties', 'specialty')
+        .innerJoin('identity', 'identity', 'identity.id = tech.identityId')
+        .where('specialty.name = :applianceType', { 
+          applianceType: serviceRequest.appliance.type 
+        })
+        .andWhere('identity.status = :status', { status: true })
+        .getMany();
+
+      this.logger.log(`👨‍🔧 Found ${eligibleTechnicians.length} eligible technicians`);
+
+      const technicianIds = eligibleTechnicians.map(tech => tech.identityId);
+
+      this.logger.log(`📤 Technician IDs to notify: [${technicianIds.join(', ')}]`);
+
+      if (technicianIds.length > 0) {
+        // Notificar a TODOS los técnicos elegibles que la solicitud ya no está disponible
+        this.gateway.notifyServiceRequestRemoved(serviceRequestId, technicianIds);
+        
+        this.logger.log(`✅ Successfully called gateway.notifyServiceRequestRemoved for ${technicianIds.length} technicians`);
+      } else {
+        this.logger.warn(`⚠️ No eligible technicians found for request ${serviceRequestId}`);
+      }
     } catch (error) {
-      this.logger.error('Error notifying request no longer available:', error);
+      this.logger.error(`❌ Error in notifyRequestNoLongerAvailable for request ${serviceRequestId}:`, error);
     }
   }
 
-  // Métodos auxiliares de consulta
-  async findById(id: number): Promise<ServiceRequest | null> {
-    return this.srRepo.findOne({
-      where: { id },
-      relations: ['client', 'appliance', 'address', 'technician']
-    });
-  }
-
-  async findByClient(clientId: number): Promise<ServiceRequest[]> {
-    return this.srRepo.find({ 
-      where: { clientId },
-      relations: ['client', 'appliance', 'address', 'technician'],
-      order: { createdAt: 'DESC' }
-    });
-  }
-
-  async findByTechnician(technicianId: number): Promise<ServiceRequest[]> {
-    return this.srRepo.find({ 
-      where: { technicianId },
-      relations: ['client', 'appliance', 'address', 'technician'],
-      order: { scheduledAt: 'ASC' }
-    });
-  }
-
-  /** Obtener calendario de un técnico (sus servicios programados) */
-  async getTechnicianCalendar(technicianId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
-    const query = this.srRepo.createQueryBuilder('serviceRequest')
-      .leftJoinAndSelect('serviceRequest.client', 'client')
-      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
-      .leftJoinAndSelect('serviceRequest.address', 'address')
-      .where('serviceRequest.technicianId = :technicianId', { technicianId })
-      .andWhere('serviceRequest.status = :status', { status: ServiceRequestStatus.SCHEDULED });
-
-    if (startDate && endDate) {
-      query.andWhere('serviceRequest.scheduledAt BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate
-      });
-    }
-
-    return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
-  }
-
-  /** Obtener calendario de un cliente (sus servicios programados) */
-  async getClientCalendar(clientId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
-    const query = this.srRepo.createQueryBuilder('serviceRequest')
-      .leftJoinAndSelect('serviceRequest.technician', 'technician')
-      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
-      .leftJoinAndSelect('serviceRequest.address', 'address')
-      .where('serviceRequest.clientId = :clientId', { clientId })
-      .andWhere('serviceRequest.status IN (:...statuses)', { 
-        statuses: [ServiceRequestStatus.SCHEDULED, ServiceRequestStatus.COMPLETED] 
-      });
-
-    if (startDate && endDate) {
-      query.andWhere('serviceRequest.scheduledAt BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate
-      });
-    }
-
-    return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
-  }
-
-
-  /** Obtener solicitudes del cliente con propuestas */
-  async getClientRequests(clientId: number): Promise<ServiceRequest[]> {
-    const req = this.srRepo
-    .createQueryBuilder('sr')
-    .leftJoinAndSelect('sr.client', 'client')
-    .leftJoinAndSelect('sr.appliance', 'appliance')
-    .leftJoinAndSelect('sr.address', 'address')
-    .leftJoinAndSelect('sr.technician', 'technician')
-    .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
-    .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
-    .where('sr.clientId = :clientId', { clientId })
-    .orderBy('sr.createdAt', 'DESC')
-    .getMany();
-    return req;
-  }
-
-  /** Técnico propone fecha alternativa */
+  /** ⚡ Técnico propone fecha alternativa - NOTIFICACIÓN INSTANTÁNEA */
   async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud existe y está en estado correcto
     const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
-      },
-      relations: ['client', 'appliance', 'address', 'alternativeDateProposals']
+      where: { id: serviceRequestId, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
     });
 
     if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no disponible');
+      throw new NotFoundException('Solicitud no encontrada o no está pendiente');
     }
 
     // Verificar que no haya expirado
@@ -555,49 +533,45 @@ export class ServiceRequestService {
       proposedDateTime: alternativeDate,
       comment,
       status: AlternativeDateProposalStatus.PENDING,
-      proposalCount: existingProposalsCount + 1
     });
 
     const savedProposal = await this.proposalRepo.save(proposal);
 
-    // Cargar la propuesta con la información del técnico
+    // Cargar la propuesta con información del técnico para notificación
     const proposalWithTechnician = await this.proposalRepo.findOne({
       where: { id: savedProposal.id },
       relations: ['technician']
     });
 
-    this.logger.log(`Técnico ${technicianId} propuso fecha alternativa ${alternativeDateTime} para solicitud ${serviceRequestId} (propuesta #${existingProposalsCount + 1})`);
+    this.logger.log(`Técnico ${technicianId} propuso fecha alternativa ${alternativeDateTime} para solicitud ${serviceRequestId}`);
     
-    // Notificar al cliente sobre la propuesta de fecha alternativa
-    if (this.gateway) {
-      this.gateway.notifyClientAlternativeDateProposal(serviceRequest, proposalWithTechnician!);
+    // ⚡ NOTIFICACIÓN INSTANTÁNEA AL CLIENTE
+    if (proposalWithTechnician) {
+      setImmediate(() => {
+        this.gateway.notifyClientAlternativeDateProposal(serviceRequest, proposalWithTechnician);
+      });
     }
     
     return proposalWithTechnician!;
   }
 
-  /** Cliente acepta una propuesta de fecha alternativa */
+  /** ⚡ Cliente acepta propuesta de fecha alternativa - NOTIFICACIONES INSTANTÁNEAS */
   async acceptAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<ServiceRequest> {
     // Verificar que la solicitud pertenece al cliente
     const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        clientId,
-        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
-      },
-      relations: ['client', 'appliance', 'address', 'alternativeDateProposals']
+      where: { id: serviceRequestId, clientId, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
     });
 
     if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no tienes permisos para modificarla');
+      throw new NotFoundException('Solicitud no encontrada o no pertenece al cliente');
     }
 
-    // Verificar que la propuesta existe y está pendiente
     const proposal = await this.proposalRepo.findOne({
       where: { 
-        id: proposalId,
+        id: proposalId, 
         serviceRequestId,
-        status: AlternativeDateProposalStatus.PENDING
+        status: AlternativeDateProposalStatus.PENDING 
       },
       relations: ['technician']
     });
@@ -627,57 +601,41 @@ export class ServiceRequestService {
     proposal.status = AlternativeDateProposalStatus.ACCEPTED;
     proposal.resolvedAt = new Date();
 
-    // Rechazar todas las demás propuestas pendientes para esta solicitud
-    await this.proposalRepo.update(
-      { 
-        serviceRequestId,
-        status: AlternativeDateProposalStatus.PENDING,
-        id: Not(proposalId)
-      },
-      { 
-        status: AlternativeDateProposalStatus.REJECTED,
-        resolvedAt: new Date()
-      }
-    );
+    // Guardar cambios en paralelo
+    const [updatedRequest] = await Promise.all([
+      this.srRepo.save(serviceRequest),
+      this.proposalRepo.save(proposal)
+    ]);
 
-    // Guardar cambios
-    await this.proposalRepo.save(proposal);
-    const updatedRequest = await this.srRepo.save(serviceRequest);
-
-    this.logger.log(`Cliente ${clientId} aceptó propuesta de fecha alternativa ${proposal.id} para solicitud ${serviceRequestId}`);
-
-    // Notificar al técnico que su propuesta fue aceptada
-    if (this.gateway) {
+    // ⚡ NOTIFICACIONES INSTANTÁNEAS Y PARALELAS
+    setImmediate(() => {
+      // Notificar al técnico que su propuesta fue aceptada
       this.gateway.notifyTechnicianProposalAccepted(updatedRequest, proposal);
-    }
-
-    // Notificar a otros técnicos que la solicitud ya no está disponible
-    await this.notifyRejectedProposalsAndOffers(serviceRequestId, proposalId);
+      
+      // Notificar a otros técnicos que la solicitud ya no está disponible
+      this.notifyRejectedProposalsAndOffers(serviceRequestId, proposalId);
+    });
 
     return updatedRequest;
   }
 
-  /** Cliente rechaza una propuesta de fecha alternativa */
+  /** ⚡ Cliente rechaza propuesta de fecha alternativa - NOTIFICACIÓN INSTANTÁNEA */
   async rejectAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud pertenece al cliente
     const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        clientId,
-        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
-      }
+      where: { id: serviceRequestId, clientId, status: ServiceRequestStatus.PENDING },
+      relations: ['client', 'appliance', 'address']
     });
 
     if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no tienes permisos para modificarla');
+      throw new NotFoundException('Solicitud no encontrada o no pertenece al cliente');
     }
 
-    // Verificar que la propuesta existe y está pendiente
     const proposal = await this.proposalRepo.findOne({
       where: { 
-        id: proposalId,
+        id: proposalId, 
         serviceRequestId,
-        status: AlternativeDateProposalStatus.PENDING
+        status: AlternativeDateProposalStatus.PENDING 
       },
       relations: ['technician']
     });
@@ -694,12 +652,139 @@ export class ServiceRequestService {
 
     this.logger.log(`Cliente ${clientId} rechazó propuesta de fecha alternativa ${proposal.id} para solicitud ${serviceRequestId}`);
 
-    // Notificar al técnico que su propuesta fue rechazada
-    if (this.gateway) {
+    // ⚡ NOTIFICACIÓN INSTANTÁNEA AL TÉCNICO
+    setImmediate(() => {
       this.gateway.notifyTechnicianProposalRejected(serviceRequest, updatedProposal);
-    }
+    });
 
     return updatedProposal;
+  }
+
+  /** ⚡ Cliente acepta propuesta de fecha alternativa por ID de propuesta - NOTIFICACIONES INSTANTÁNEAS */
+  async acceptAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<ServiceRequest> {
+    // Buscar la propuesta con la solicitud asociada
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        status: AlternativeDateProposalStatus.PENDING 
+      },
+      relations: ['serviceRequest', 'technician']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    // Verificar que la solicitud pertenece al cliente
+    if (proposal.serviceRequest.clientId !== clientId) {
+      throw new NotFoundException('Esta propuesta no pertenece a tu solicitud');
+    }
+
+    return this.acceptAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
+  }
+
+  /** ⚡ Cliente rechaza propuesta de fecha alternativa por ID de propuesta - NOTIFICACIÓN INSTANTÁNEA */
+  async rejectAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
+    // Buscar la propuesta con la solicitud asociada
+    const proposal = await this.proposalRepo.findOne({
+      where: { 
+        id: proposalId,
+        status: AlternativeDateProposalStatus.PENDING 
+      },
+      relations: ['serviceRequest']
+    });
+
+    if (!proposal) {
+      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
+    }
+
+    // Verificar que la solicitud pertenece al cliente
+    if (proposal.serviceRequest.clientId !== clientId) {
+      throw new NotFoundException('Esta propuesta no pertenece a tu solicitud');
+    }
+
+    return this.rejectAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
+  }
+
+  // Métodos auxiliares de consulta
+  async findById(id: number): Promise<ServiceRequest | null> {
+    return this.srRepo.findOne({
+      where: { id },
+      relations: ['client', 'appliance', 'address', 'technician']
+    });
+  }
+
+  async findByClient(clientId: number): Promise<ServiceRequest[]> {
+    return this.srRepo.find({ 
+      where: { clientId },
+      relations: ['client', 'appliance', 'address', 'technician'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  async findByTechnician(technicianId: number): Promise<ServiceRequest[]> {
+    return this.srRepo.find({ 
+      where: { technicianId },
+      relations: ['client', 'appliance', 'address', 'technician'],
+      order: { scheduledAt: 'ASC' }
+    });
+  }
+
+  /** Obtener calendario de un técnico (sus servicios programados) */
+  async getTechnicianCalendar(technicianId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
+    const query = this.srRepo.createQueryBuilder('serviceRequest')
+      .leftJoinAndSelect('serviceRequest.client', 'client')
+      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
+      .leftJoinAndSelect('serviceRequest.address', 'address')
+      .where('serviceRequest.technicianId = :technicianId', { technicianId })
+      .andWhere('serviceRequest.status = :status', { status: ServiceRequestStatus.SCHEDULED });
+
+    if (startDate && endDate) {
+      query.andWhere('serviceRequest.scheduledAt BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate
+      });
+    }
+
+    return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
+  }
+
+  /** Obtener calendario de un cliente (sus servicios programados) */
+  async getClientCalendar(clientId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
+    const query = this.srRepo.createQueryBuilder('serviceRequest')
+      .leftJoinAndSelect('serviceRequest.technician', 'technician')
+      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
+      .leftJoinAndSelect('serviceRequest.address', 'address')
+      .where('serviceRequest.clientId = :clientId', { clientId })
+      .andWhere('serviceRequest.status IN (:...statuses)', { 
+        statuses: [ServiceRequestStatus.SCHEDULED, ServiceRequestStatus.COMPLETED] 
+      });
+
+    if (startDate && endDate) {
+      query.andWhere('serviceRequest.scheduledAt BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate
+      });
+    }
+
+    return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
+  }
+
+
+  /** Obtener solicitudes del cliente con propuestas */
+  async getClientRequests(clientId: number): Promise<ServiceRequest[]> {
+    const req = this.srRepo
+    .createQueryBuilder('sr')
+    .leftJoinAndSelect('sr.client', 'client')
+    .leftJoinAndSelect('sr.appliance', 'appliance')
+    .leftJoinAndSelect('sr.address', 'address')
+    .leftJoinAndSelect('sr.technician', 'technician')
+    .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
+    .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
+    .where('sr.clientId = :clientId', { clientId })
+    .orderBy('sr.createdAt', 'DESC')
+    .getMany();
+    return req;
   }
 
   /** Obtener propuestas de fechas alternativas para una solicitud */
@@ -720,58 +805,30 @@ export class ServiceRequestService {
     });
   }
 
-  // Método privado para notificar rechazos de propuestas y ofertas
+  // ⚡ Método optimizado para notificar rechazos en paralelo
   private async notifyRejectedProposalsAndOffers(serviceRequestId: number, acceptedProposalId: number): Promise<void> {
-    // Obtener todas las propuestas rechazadas
-    const rejectedProposals = await this.proposalRepo.find({
-      where: { 
-        serviceRequestId,
-        status: AlternativeDateProposalStatus.REJECTED,
-        id: Not(acceptedProposalId)
-      },
-      relations: ['technician']
-    });
+    try {
+      // Obtener todas las propuestas rechazadas de forma asíncrona
+      const rejectedProposals = await this.proposalRepo.find({
+        where: { 
+          serviceRequestId,
+          status: AlternativeDateProposalStatus.REJECTED,
+          id: Not(acceptedProposalId)
+        },
+        relations: ['technician']
+      });
 
-    // Notificar a técnicos con propuestas rechazadas
-    for (const proposal of rejectedProposals) {
-      if (this.gateway && proposal.technician) {
-        this.gateway.notifyTechnicianRequestUnavailable(proposal.technician.id, serviceRequestId);
-      }
+      // Notificar a técnicos en paralelo para máxima velocidad
+      const notifications = rejectedProposals.map(proposal => {
+        if (proposal.technician) {
+          // CORREGIDO: usar id del Identity (que corresponde al technicianId en el contexto de notificaciones)
+          return this.gateway.notifyTechnicianRequestUnavailable(proposal.technician.id, serviceRequestId);
+        }
+      });
+
+      await Promise.all(notifications.filter(Boolean));
+    } catch (error) {
+      this.logger.error('Error in parallel rejection notifications:', error);
     }
-  }
-
-  /** Métodos auxiliares para manejar propuestas por ID */
-  async acceptAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<ServiceRequest> {
-    // Primero obtener la propuesta para conocer el serviceRequestId
-    const proposal = await this.proposalRepo.findOne({
-      where: { 
-        id: proposalId,
-        status: AlternativeDateProposalStatus.PENDING
-      },
-      relations: ['serviceRequest']
-    });
-
-    if (!proposal) {
-      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
-    }
-
-    return this.acceptAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
-  }
-
-  async rejectAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
-    // Primero obtener la propuesta para conocer el serviceRequestId
-    const proposal = await this.proposalRepo.findOne({
-      where: { 
-        id: proposalId,
-        status: AlternativeDateProposalStatus.PENDING
-      },
-      relations: ['serviceRequest']
-    });
-
-    if (!proposal) {
-      throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
-    }
-
-    return this.rejectAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
   }
 }
