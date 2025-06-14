@@ -2,51 +2,41 @@ import api from './api'
 import type {
   ServiceRequest,
   CreateServiceRequestRequest,
-  OfferPriceRequest,
+  CreateOfferRequest,
   AcceptRequestRequest,
-  ScheduleRequestRequest
+  ScheduleRequestRequest,
+  AvailabilityCheckResponse,
+  CalendarEvent
 } from '../types/index'
 
 class ServiceRequestService {
-  // Cliente crea solicitud
+  // Cliente crea solicitud con fecha propuesta
   async createRequest(data: CreateServiceRequestRequest): Promise<ServiceRequest> {
     const response = await api.post<ServiceRequest>('/service-requests', data)
     return response.data
   }
 
-  // Técnico ve solicitudes pendientes
+  // Técnico ve solicitudes pendientes (todas)
   async getPendingRequests(): Promise<ServiceRequest[]> {
     const response = await api.get<ServiceRequest[]>('/service-requests/pending')
     return response.data
   }
 
-  // Técnico ve solicitudes pendientes filtradas por sus especialidades
-  async getPendingRequestsForMe(): Promise<ServiceRequest[]> {
-    const response = await api.get<ServiceRequest[]>('/service-requests/pending/for-me')
+  // Técnico ve solicitudes disponibles para él (filtradas por especialidad y disponibilidad)
+  async getAvailableRequestsForMe(): Promise<ServiceRequest[]> {
+    const response = await api.get<ServiceRequest[]>('/service-requests/available-for-me')
     return response.data
   }
 
-  // Técnico hace contraoferta
-  async offerPrice(id: number, data: OfferPriceRequest): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/offer`, data)
+  // Técnico acepta una solicitud directamente
+  async acceptRequest(id: number): Promise<ServiceRequest> {
+    const response = await api.post<ServiceRequest>(`/service-requests/${id}/accept`)
     return response.data
   }
 
-  // Cliente acepta solicitud/precio
-  async acceptRequest(id: number, data: AcceptRequestRequest): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/accept`, data)
-    return response.data
-  }
-
-  // Técnico agenda solicitud
-  async scheduleRequest(id: number, data: ScheduleRequestRequest): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/schedule`, data)
-    return response.data
-  }
-
-  // Técnico acepta y agenda directamente
-  async acceptAndSchedule(id: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/accept-and-schedule`)
+  // Técnico hace una oferta en una solicitud
+  async makeOffer(requestId: number, offerData: CreateOfferRequest): Promise<ServiceRequest> {
+    const response = await api.post<ServiceRequest>(`/service-requests/${requestId}/offer`, offerData)
     return response.data
   }
 
@@ -56,9 +46,9 @@ class ServiceRequestService {
     return response.data
   }
 
-  // Cliente rechaza oferta de técnico
-  async rejectOffer(id: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/reject-offer`)
+  // Cliente cancela solicitud
+  async cancelRequest(id: number): Promise<ServiceRequest> {
+    const response = await api.post<ServiceRequest>(`/service-requests/${id}/cancel`)
     return response.data
   }
 
@@ -80,27 +70,90 @@ class ServiceRequestService {
     return response.data
   }
 
-  // Cliente acepta oferta específica
-  async acceptSpecificOffer(serviceRequestId: number, offerId: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${serviceRequestId}/accept-offer/${offerId}`)
+  // Obtener calendario de técnico
+  async getTechnicianCalendar(technicianId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
+    const params = new URLSearchParams()
+    if (startDate) params.append('startDate', startDate.toISOString())
+    if (endDate) params.append('endDate', endDate.toISOString())
+    
+    const response = await api.get<ServiceRequest[]>(`/service-requests/calendar/technician/${technicianId}?${params}`)
     return response.data
   }
 
-  // Cliente cancela toda la solicitud
-  async cancelRequest(id: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/cancel`)
+  // Obtener calendario de cliente
+  async getClientCalendar(clientId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
+    const params = new URLSearchParams()
+    if (startDate) params.append('startDate', startDate.toISOString())
+    if (endDate) params.append('endDate', endDate.toISOString())
+    
+    const response = await api.get<ServiceRequest[]>(`/service-requests/calendar/client/${clientId}?${params}`)
     return response.data
   }
 
-  // Cliente hace contraoferta
-  async clientCounterOffer(id: number, data: OfferPriceRequest): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/client-counter-offer`, data)
+  // Verificar disponibilidad de técnico
+  async checkTechnicianAvailability(dateTime: Date): Promise<AvailabilityCheckResponse> {
+    const response = await api.get<AvailabilityCheckResponse>(
+      `/service-requests/availability/check?dateTime=${dateTime.toISOString()}`
+    )
     return response.data
   }
 
-  // Cliente actualiza precio inicial de su solicitud
-  async updateClientPrice(id: number, newPrice: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/update-price`, { price: newPrice })
+  // Convertir solicitudes a eventos de calendario
+  convertToCalendarEvents(requests: ServiceRequest[]): CalendarEvent[] {
+    return requests.map(request => ({
+      id: request.id,
+      title: `${request.appliance.name} - ${request.client.firstName} ${request.client.firstLastName}`,
+      start: request.scheduledAt || request.proposedDateTime,
+      end: this.calculateEndTime(request.scheduledAt || request.proposedDateTime),
+      serviceRequest: request
+    }))
+  }
+
+  // Calcular hora de fin (6 horas después)
+  private calculateEndTime(startTime: string): string {
+    const start = new Date(startTime)
+    const end = new Date(start.getTime() + 6 * 60 * 60 * 1000) // 6 horas
+    return end.toISOString()
+  }
+
+  // Validar horario de trabajo (6 AM - 6 PM)
+  validateWorkingHours(dateTime: Date): { valid: boolean; message?: string } {
+    const hours = dateTime.getHours()
+    
+    if (hours < 6) {
+      return { valid: false, message: 'El horario de servicio inicia a las 6:00 AM' }
+    }
+    
+    if (hours >= 18) {
+      return { valid: false, message: 'El horario de servicio termina a las 6:00 PM' }
+    }
+    
+    return { valid: true }
+  }
+
+  // Validar que la fecha sea futura
+  validateFutureDate(dateTime: Date): { valid: boolean; message?: string } {
+    if (dateTime <= new Date()) {
+      return { valid: false, message: 'La fecha debe ser futura' }
+    }
+    
+    return { valid: true }
+  }
+
+  // Proponer fecha alternativa (técnico)
+  async proposeAlternativeDate(requestId: number, alternativeDate: string): Promise<ServiceRequest> {
+    const response = await api.post<ServiceRequest>(`/service-requests/${requestId}/propose-alternative-date`, {
+      alternativeDate
+    })
+    return response.data
+  }
+
+  // Enviar calificación del servicio
+  async submitRating(requestId: number, rating: number, comment: string): Promise<void> {
+    const response = await api.post(`/service-requests/${requestId}/rating`, {
+      rating,
+      comment
+    })
     return response.data
   }
 }

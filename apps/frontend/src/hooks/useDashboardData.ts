@@ -1,84 +1,157 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import serviceRequestService from '../services/serviceRequestService'
 import { useAuth } from '../contexts/AuthContext'
 import { useRealTimeClientNotifications } from './useRealTimeClientNotifications'
-import { useRealTimeServiceRequests, ConnectionState } from './useRealTimeServiceRequests'
-import { serviceRequestService } from '../services/serviceRequestService'
-import type { ServiceRequest } from '../types/index'
+import { useRealTimeServiceRequests } from './useRealTimeServiceRequests'
+import type { ServiceRequest, User } from '../types'
 
-export const useDashboardData = () => {
+interface DashboardData {
+  availableRequests: ServiceRequest[]
+  technicianJobs: ServiceRequest[]
+  clientRequests: ServiceRequest[]
+  myRequests: ServiceRequest[]
+  pendingRequests: ServiceRequest[]
+  loading: boolean
+  isLoading: boolean // Alias para compatibilidad
+  error: string | null
+  user: User | null
+  isClient: boolean
+  isTechnician: boolean
+  requestFilter: string
+  technicianNotifications: any
+  clientNotifications: any
+  refetchData: () => Promise<void>
+  loadData: () => Promise<void>
+  setError: (error: string | null) => void
+  setRequestFilter: (filter: string) => void
+  setPendingRequests: (requests: ServiceRequest[] | ((prev: ServiceRequest[]) => ServiceRequest[])) => void
+  setClientRequests: (requests: ServiceRequest[] | ((prev: ServiceRequest[]) => ServiceRequest[])) => void
+  setMyRequests: (requests: ServiceRequest[] | ((prev: ServiceRequest[]) => ServiceRequest[])) => void
+}
+
+export const useDashboardData = (): DashboardData => {
   const { user } = useAuth()
-  const isClient = user?.role === 'client'
-  const isTechnician = user?.role === 'technician'
-  
-  // Estados compartidos
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Estados específicos para cliente
+  const [availableRequests, setAvailableRequests] = useState<ServiceRequest[]>([])
+  const [technicianJobs, setTechnicianJobs] = useState<ServiceRequest[]>([])
   const [clientRequests, setClientRequests] = useState<ServiceRequest[]>([])
-  const [requestFilter, setRequestFilter] = useState<'in-progress' | 'all'>('in-progress')
-  
-  // Estados específicos para técnico
-  const [pendingRequests, setPendingRequests] = useState<ServiceRequest[]>([])
-  const [myRequests, setMyRequests] = useState<ServiceRequest[]>([])
-  
-  // Hooks de notificaciones
-  const clientNotifications = useRealTimeClientNotifications(isClient ? user?.id : undefined)
-  const technicianNotifications = useRealTimeServiceRequests(isTechnician ? user?.id : undefined)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [requestFilter, setRequestFilter] = useState<string>('all')
+  const [dataFetched, setDataFetched] = useState(false) // Nuevo flag para evitar fetches múltiples
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      
-      if (isClient) {
-        const clientData = await serviceRequestService.getClientRequests(user!.id)
-        setClientRequests(clientData)
-      } else if (isTechnician) {
-        if (technicianNotifications.connectionStatus.state !== ConnectionState.CONNECTED) {
-          setIsLoading(false)
-          return
-        }
-        
-        const [pending, assigned] = await Promise.all([
-          serviceRequestService.getPendingRequestsForMe(),
-          serviceRequestService.getTechnicianRequests(user!.id)
-        ])
-        setPendingRequests(pending)
-        setMyRequests(assigned)
-      }
-    } catch (error) {
-      console.error('Error loading data:', error)
-      setError('Error al cargar los datos')
-    } finally {
-      setIsLoading(false)
+  // Real-time notifications hooks
+  const clientNotifications = useRealTimeClientNotifications(
+    user?.role === 'client' ? user.id : undefined
+  )
+  const technicianNotifications = useRealTimeServiceRequests(
+    user?.role === 'technician' ? user.id : undefined
+  )
+
+  // Memoized computed values
+  const myRequests = useMemo(() => {
+    if (user?.role === 'client') {
+      return clientRequests
+    } else if (user?.role === 'technician') {
+      return technicianJobs
     }
-  }
+    return []
+  }, [user?.role, clientRequests, technicianJobs])
 
-  // Efectos para cargar datos iniciales
-  useEffect(() => {
-    if (user) {
-      loadData()
+  const pendingRequests = useMemo(() => {
+    return availableRequests.filter(req => req.status === 'pending')
+  }, [availableRequests])
+
+  const fetchTechnicianData = useCallback(async () => {
+    if (!user || user.role !== 'technician') return
+    
+    try {
+      // Obtener solicitudes disponibles para el técnico
+      const available = await serviceRequestService.getAvailableRequestsForMe()
+      setAvailableRequests(available)
+
+      // Obtener trabajos asignados al técnico
+      const jobs = await serviceRequestService.getTechnicianRequests(user.id)
+      setTechnicianJobs(jobs)
+    } catch (error) {
+      console.error('Error fetching technician data:', error)
+      setError('Error al cargar los datos del técnico')
     }
   }, [user])
 
-  // Efectos para técnicos
-  useEffect(() => {
-    if (user && isTechnician) {
-      technicianNotifications.requestNotificationPermission()
-      if (technicianNotifications.connectionStatus.state !== ConnectionState.CONNECTED) {
-        technicianNotifications.forceReconnect()
-      }
+  const fetchClientData = useCallback(async () => {
+    if (!user || user.role !== 'client') return
+    
+    try {
+      // Obtener solicitudes del cliente
+      const requests = await serviceRequestService.getClientRequests(user.id)
+      setClientRequests(requests)
+    } catch (error) {
+      console.error('Error fetching client data:', error)
+      setError('Error al cargar los datos del cliente')
     }
-  }, [user?.id, isTechnician])
+  }, [user])
 
-  // Efecto para actualizar lista con notificaciones de técnicos
+  const refetchData = useCallback(async () => {
+    if (!user || dataFetched) return
+    
+    setLoading(true)
+    setError(null)
+    
+    try {
+      if (user.role === 'technician') {
+        await fetchTechnicianData()
+      } else if (user.role === 'client') {
+        await fetchClientData()
+      }
+      setDataFetched(true)
+    } catch (error) {
+      console.error('Error refetching data:', error)
+      setError('Error al recargar los datos')
+    } finally {
+      setLoading(false)
+    }
+  }, [user, dataFetched, fetchTechnicianData, fetchClientData])
+
+  const loadData = useCallback(async () => {
+    setDataFetched(false) // Reset flag para permitir nueva carga
+    await refetchData()
+  }, [refetchData])
+
+  // Initial data fetch - solo una vez cuando el usuario cambia
   useEffect(() => {
-    if (isTechnician && technicianNotifications.notifications.length > 0) {
+    if (user && !dataFetched) {
+      refetchData()
+    }
+  }, [user?.id, user?.role]) // Solo depende del ID y rol del usuario
+
+  // Update clientRequests when real-time notifications arrive
+  useEffect(() => {
+    if (user?.role === 'client' && clientNotifications.notifications.length > 0) {
+      const latestNotification = clientNotifications.notifications[0]
+      
+      setClientRequests(prev => {
+        const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest.id)
+        if (existingIndex >= 0) {
+          // Actualizar solicitud existente
+          const updated = [...prev]
+          updated[existingIndex] = latestNotification.serviceRequest
+          return updated
+        } else if (latestNotification.type !== 'expired') {
+          // Agregar nueva solicitud (excepto las expiradas)
+          return [latestNotification.serviceRequest, ...prev]
+        }
+        return prev
+      })
+    }
+  }, [user?.role, clientNotifications.notifications])
+
+  // Update availableRequests when real-time notifications arrive for technicians
+  useEffect(() => {
+    if (user?.role === 'technician' && technicianNotifications.notifications.length > 0) {
       const latestNotification = technicianNotifications.notifications[0]
       
       if (latestNotification.type === 'new') {
-        setPendingRequests(prev => {
+        setAvailableRequests(prev => {
           const exists = prev.some(req => req.id === latestNotification.serviceRequest.id)
           if (!exists) {
             return [latestNotification.serviceRequest, ...prev]
@@ -86,126 +159,60 @@ export const useDashboardData = () => {
           return prev
         })
       } else if (latestNotification.type === 'removed') {
-        setPendingRequests(prev => 
+        setAvailableRequests(prev => 
           prev.filter(req => req.id !== latestNotification.serviceRequest.id)
         )
-      } else if (latestNotification.type === 'updated') {
-        setPendingRequests(prev => 
-          prev.map(req => 
-            req.id === latestNotification.serviceRequest.id 
-              ? latestNotification.serviceRequest 
-              : req
-          )
-        )
-      }
-      
-      if (latestNotification.type === 'new' || latestNotification.type === 'updated') {
-        setTimeout(() => {
-          serviceRequestService.getTechnicianRequests(user!.id).then(setMyRequests)
-        }, 500)
       }
     }
-  }, [isTechnician, technicianNotifications.notifications, user?.id])
-
-  // Efecto para actualizar lista con notificaciones de clientes
-  useEffect(() => {
-    if (isClient && clientNotifications.notifications.length > 0) {
-      const latestNotification = clientNotifications.notifications[0]
-      
-      if (latestNotification.type === 'offer' || latestNotification.type === 'accepted' || 
-          latestNotification.type === 'scheduled' || latestNotification.type === 'completed') {
-        setClientRequests(prev => {
-          const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest.id)
-          if (existingIndex >= 0) {
-            const updated = [...prev]
-            updated[existingIndex] = latestNotification.serviceRequest
-            return updated
-          } else {
-            return [latestNotification.serviceRequest, ...prev]
-          }
-        })
-        
-        setTimeout(() => {
-          serviceRequestService.getClientRequests(user!.id).then(setClientRequests)
-        }, 1000)
-      }
-      
-      if (latestNotification.type === 'expired') {
-        setClientRequests(prev => 
-          prev.map(req => 
-            req.id === latestNotification.serviceRequest.id 
-              ? { ...req, status: 'expired' }
-              : req
-          )
-        )
-      }
-    }
-  }, [isClient, clientNotifications.notifications, user?.id])
-
-  // Efectos de reconexión
-  useEffect(() => {
-    if (isTechnician && technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED && user?.id) {
-      loadData()
-    }
-  }, [isTechnician, technicianNotifications.connectionStatus.state, user?.id])
-
-  useEffect(() => {
-    if (isClient && clientNotifications.isConnected && user?.id) {
-      loadData()
-    }
-  }, [isClient, clientNotifications.isConnected, user?.id])
-
-  // Actualización automática periódica
-  useEffect(() => {
-    if (!user) return
-
-    const interval = setInterval(() => {
-      if (!isLoading) {
-        loadData()
-      }
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [user?.id, isLoading])
-
-  // Efecto para recarga cuando se crea una nueva solicitud
-  useEffect(() => {
-    if (isClient && clientRequests.length > 0) {
-      const latestRequest = clientRequests[0]
-      const now = new Date()
-      const requestCreated = new Date(latestRequest.createdAt)
-      const timeDiff = now.getTime() - requestCreated.getTime()
-      
-      if (timeDiff < 5000) {
-        setTimeout(() => loadData(), 1000)
-      }
-    }
-  }, [isClient, clientRequests.length])
+  }, [user?.role, technicianNotifications.notifications])
 
   return {
-    // Estado
-    isLoading,
-    error,
-    setError,
+    availableRequests,
+    technicianJobs,
     clientRequests,
-    setClientRequests,
-    requestFilter,
-    setRequestFilter,
-    pendingRequests,
-    setPendingRequests,
     myRequests,
-    setMyRequests,
-    
-    // Datos del usuario
+    pendingRequests,
+    loading,
+    isLoading: loading,
+    error,
     user,
-    isClient,
-    isTechnician,
-    
-    // Notificaciones
-    clientNotifications,
+    isClient: user?.role === 'client' || false,
+    isTechnician: user?.role === 'technician' || false,
+    requestFilter,
     technicianNotifications,
-    
-    // Funciones
-    loadData
+    clientNotifications,
+    refetchData,
+    loadData,
+    setError,
+    setRequestFilter,
+    setPendingRequests: (requests) => {
+      if (typeof requests === 'function') {
+        setAvailableRequests(prev => requests(prev.filter(req => req.status === 'pending')))
+      } else {
+        setAvailableRequests(requests)
+      }
+    },
+    setClientRequests: (requests) => {
+      if (typeof requests === 'function') {
+        setClientRequests(prev => requests(prev))
+      } else {
+        setClientRequests(requests)
+      }
+    },
+    setMyRequests: (requests) => {
+      if (typeof requests === 'function') {
+        if (user?.role === 'client') {
+          setClientRequests(prev => requests(prev))
+        } else if (user?.role === 'technician') {
+          setTechnicianJobs(prev => requests(prev))
+        }
+      } else {
+        if (user?.role === 'client') {
+          setClientRequests(requests)
+        } else if (user?.role === 'technician') {
+          setTechnicianJobs(requests)
+        }
+      }
+    },
   }
 }

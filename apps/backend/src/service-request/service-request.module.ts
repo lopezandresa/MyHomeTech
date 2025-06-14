@@ -12,10 +12,17 @@ import { Technician } from '../technician/technician.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ServiceRequest, ServiceRequestOffer, Identity, Appliance, Address, Technician]),
+    TypeOrmModule.forFeature([
+      ServiceRequest, 
+      ServiceRequestOffer, 
+      Identity, 
+      Appliance, 
+      Address, 
+      Technician
+    ]),
   ],
   providers: [ServiceRequestService, ServiceRequestGateway],
   controllers: [ServiceRequestController],
-  exports: [ServiceRequestGateway],
+  exports: [ServiceRequestGateway, ServiceRequestService],
 })
 export class ServiceRequestModule {}

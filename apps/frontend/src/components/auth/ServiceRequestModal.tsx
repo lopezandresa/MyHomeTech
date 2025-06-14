@@ -23,7 +23,7 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
     applianceId: '',
     description: '',
     clientPrice: '',
-    validMinutes: '60'
+    validHours: '1'
   })
 
   // Validación temprana - si no es cliente autenticado, no renderizar nada
@@ -81,7 +81,9 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
         applianceId: parseInt(formData.applianceId),
         description: formData.description,
         clientPrice: parseFloat(formData.clientPrice),
-        validMinutes: parseInt(formData.validMinutes)
+        validHours: parseInt(formData.validHours),
+        addressId: 1, // TODO: Add address selection to form
+        proposedDateTime: new Date().toISOString()
       }
 
       await serviceRequestService.createRequest(requestData)
@@ -92,7 +94,7 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
         applianceId: '',
         description: '',
         clientPrice: '',
-        validMinutes: '60'
+        validHours: '1'
       })
 
       // Close modal after 2 seconds
@@ -114,7 +116,7 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
       applianceId: '',
       description: '',
       clientPrice: '',
-      validMinutes: '60'
+      validHours: '1'
     })
     setError(null)
     setSuccess(false)
@@ -228,21 +230,21 @@ const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({ isOpen, onClo
             </div>
 
             <div>
-              <label htmlFor="validMinutes" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="validHours" className="block text-sm font-medium text-gray-700 mb-2">
                 Vigencia de la oferta
               </label>
               <select
-                id="validMinutes"
-                name="validMinutes"
-                value={formData.validMinutes}
+                id="validHours"
+                name="validHours"
+                value={formData.validHours}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               >
-                <option value="30">30 minutos</option>
-                <option value="60">1 hora</option>
-                <option value="120">2 horas</option>
-                <option value="240">4 horas</option>
-                <option value="480">8 horas</option>
+                <option value="0.5">30 minutos</option>
+                <option value="1">1 hora</option>
+                <option value="2">2 horas</option>
+                <option value="4">4 horas</option>
+                <option value="8">8 horas</option>
               </select>
             </div>
           </div>

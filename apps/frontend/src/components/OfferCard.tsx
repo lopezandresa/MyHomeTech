@@ -46,7 +46,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({
               <h5 className={`font-medium ${
                 isExpired ? 'text-gray-500' : 'text-gray-900'
               }`}>
-                {offer.technician.firstName} {offer.technician.firstLastName}
+                {offer.technician?.firstName || 'Técnico'} {offer.technician?.firstLastName || ''}
               </h5>
               <div className="flex items-center gap-1">
                 <div className="flex text-yellow-400">
@@ -78,7 +78,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({
             </div>
           </div>
           
-          {offer.comment && (
+          {offer.message && (
             <div className={`mb-3 p-2 rounded border-l-4 ${
               isExpired 
                 ? 'bg-gray-100 border-gray-300' 
@@ -87,7 +87,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({
               <p className={`text-sm ${
                 isExpired ? 'text-gray-600' : 'text-gray-700'
               }`}>
-                {offer.comment}
+                {offer.message}
               </p>
             </div>
           )}

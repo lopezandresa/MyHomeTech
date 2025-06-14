@@ -7,6 +7,7 @@ import {
   WifiIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
+import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import type { ServiceRequest } from '../../types/index'
 
@@ -20,7 +21,6 @@ interface TechnicianJobsProps {
 export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
   myRequests,
   technicianNotifications,
-  setSelectedRequest,
   handleReconnect
 }) => {
   // Alerta de conexión para técnicos
@@ -128,31 +128,27 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Precio acordado:</span>
-                  <p className="text-lg font-semibold text-green-600">
-                    ${(request.technicianPrice || request.clientPrice).toLocaleString()} COP
+                  <span className="text-sm font-medium text-gray-500">Fecha programada:</span>
+                  <p className="font-medium">
+                    {request.scheduledAt ? (
+                      <>
+                        {formatDate(request.scheduledAt)} a las {new Date(request.scheduledAt).toLocaleTimeString('es-ES', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </>
+                    ) : (
+                      'Fecha por programar'
+                    )}
                   </p>
                 </div>
-                {request.scheduledAt && (
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Fecha programada:</span>
-                    <p className="font-medium">
-                      {new Date(request.scheduledAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {request.status === 'accepted' && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSelectedRequest(request)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                  >
-                    Programar Servicio
-                  </button>
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Estado del servicio:</span>
+                  <p className="font-medium text-gray-700">
+                    Confirmado y agendado
+                  </p>
                 </div>
-              )}
+              </div>
             </motion.div>
           ))}
         </div>

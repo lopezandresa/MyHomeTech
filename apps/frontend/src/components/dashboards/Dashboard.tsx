@@ -6,11 +6,12 @@ import {
   WifiIcon,
   ArrowPathIcon,
   XMarkIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  CalendarIcon,
+  ClockIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { useDashboardData } from '../../hooks/useDashboardData'
-import { useDashboardActions } from '../../hooks/useDashboardActions'
-import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import DashboardLayout from './DashboardLayout'
 import ServiceRequestForm from '../ServiceRequestForm'
 import ClientProfile from './ClientProfile'
@@ -20,6 +21,21 @@ import { ClientRequests } from './ClientRequests'
 import { AvailableJobs } from './AvailableJobs'
 import { TechnicianJobs } from './TechnicianJobs'
 import { MultiOfferDebug } from '../MultiOfferDebug'
+import RatingModal from '../RatingModal'
+import { formatDate } from '../../utils/dateUtils'
+
+// Utility function to format date
+const formatDateUtil = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+import { useDashboardData } from '../../hooks/useDashboardData'
+import { useDashboardActions } from '../../hooks/useDashboardActions'
+import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 
 interface DashboardProps {
   onNavigate?: (page: string) => void
@@ -30,16 +46,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const dashboardData = useDashboardData()
   
   // Hook personalizado para acciones del dashboard
-  const dashboardActions = useDashboardActions({
-    isClient: dashboardData.isClient,
-    isTechnician: dashboardData.isTechnician,
-    user: dashboardData.user,
-    setError: dashboardData.setError,
-    setClientRequests: dashboardData.setClientRequests,
-    setPendingRequests: dashboardData.setPendingRequests,
-    setMyRequests: dashboardData.setMyRequests,
-    loadData: dashboardData.loadData
-  })
+  const dashboardActions = useDashboardActions()
 
   // Estados adicionales para UI
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
@@ -74,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               error={dashboardData.error}
               setError={dashboardData.setError}
               clientRequests={dashboardData.clientRequests}
-              requestFilter={dashboardData.requestFilter}
+              requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
               setRequestFilter={dashboardData.setRequestFilter}
               setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
@@ -92,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               error={dashboardData.error}
               setError={dashboardData.setError}
               clientRequests={dashboardData.clientRequests}
-              requestFilter={dashboardData.requestFilter}
+              requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
               setRequestFilter={dashboardData.setRequestFilter}
               setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
@@ -118,6 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               handleAcceptDirectly={dashboardActions.handleAcceptDirectly}
               setSelectedRequest={dashboardActions.setSelectedRequest}
               handleReconnect={handleReconnect}
+              handleProposeAlternativeDate={dashboardActions.handleProposeAlternativeDate}
             />
           )
         case 'my-jobs':
@@ -145,6 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               handleAcceptDirectly={dashboardActions.handleAcceptDirectly}
               setSelectedRequest={dashboardActions.setSelectedRequest}
               handleReconnect={handleReconnect}
+              handleProposeAlternativeDate={dashboardActions.handleProposeAlternativeDate}
             />
           )
       }
@@ -409,102 +418,173 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Modal de contraoferta para técnicos */}
-      {dashboardData.isTechnician && dashboardActions.selectedRequest && dashboardActions.selectedRequest.status === 'pending' && (
+      {/* Modal para proponer fecha alternativa (técnicos) */}
+      {dashboardData.isTechnician && dashboardActions.selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Hacer Contraoferta</h3>
-            <p className="text-gray-600 mb-4">
-              El cliente ofrece ${dashboardActions.selectedRequest.clientPrice.toLocaleString()} COP
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tu contraoferta (COP)
-              </label>
-              <input
-                type="number"
-                value={dashboardActions.offerPrice}
-                onChange={(e) => dashboardActions.setOfferPrice(e.target.value)}
-                min={dashboardActions.selectedRequest.clientPrice}
-                step="1000"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Ingresa tu precio"
-              />
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Proponer Fecha Alternativa</h2>
+              <button 
                 onClick={() => {
                   dashboardActions.setSelectedRequest(null)
-                  dashboardActions.setOfferPrice('')
+                  dashboardActions.setAlternativeDate('')
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="text-gray-400 hover:text-gray-600"
               >
-                Cancelar
+                <XCircleIcon className="h-6 w-6" />
               </button>
-              <button
-                onClick={() => dashboardActions.handleMakeOffer(dashboardActions.selectedRequest!.id)}
-                disabled={!dashboardActions.offerPrice || !dashboardActions.canMakeOffer}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  !dashboardActions.offerPrice || !dashboardActions.canMakeOffer 
-                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {!dashboardActions.canMakeOffer 
-                  ? `Espera ${dashboardActions.timeLeft}s` 
-                  : 'Enviar Oferta'
-                }
-              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Fecha propuesta por el cliente */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <CalendarIcon className="h-5 w-5 text-blue-600 mr-2" />
+                  <h4 className="font-medium text-blue-800">Fecha solicitada por el cliente:</h4>
+                </div>
+                <div className="flex items-center">
+                  <ClockIcon className="h-4 w-4 text-blue-600 mr-2" />
+                  <p className="text-lg font-semibold text-blue-800">
+                    {formatDate(dashboardActions.selectedRequest.proposedDateTime)} a las {new Date(dashboardActions.selectedRequest.proposedDateTime).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Información sobre conflicto */}
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-start">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-orange-500 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="font-medium text-orange-800 mb-1">No disponible en esa fecha</h4>
+                    <p className="text-sm text-orange-700">
+                      Ya tienes un servicio programado para esa fecha o no tienes disponibilidad. 
+                      Propón una fecha alternativa que funcione mejor para tu agenda.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selección de fecha y hora alternativa */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">Propón una nueva fecha y hora</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Fecha */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha alternativa
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <CalendarIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="date"
+                        value={dashboardActions.alternativeDate.split('T')[0] || ''}
+                        onChange={(e) => {
+                          const timeValue = dashboardActions.alternativeDate.split('T')[1] || '08:00'
+                          dashboardActions.setAlternativeDate(`${e.target.value}T${timeValue}`)
+                        }}
+                        min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        className="w-full pl-10 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Hora */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Hora alternativa
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <ClockIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <select
+                        value={dashboardActions.alternativeDate.split('T')[1] || '08:00'}
+                        onChange={(e) => {
+                          const dateValue = dashboardActions.alternativeDate.split('T')[0] || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                          dashboardActions.setAlternativeDate(`${dateValue}T${e.target.value}`)
+                        }}
+                        className="w-full pl-10 appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        {(() => {
+                          const options = []
+                          for (let hour = 6; hour < 18; hour++) {
+                            const timeString = `${hour.toString().padStart(2, '0')}:00`
+                            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+                            const ampm = hour >= 12 ? 'PM' : 'AM'
+                            options.push(
+                              <option key={timeString} value={timeString}>
+                                {displayHour}:00 {ampm}
+                              </option>
+                            )
+                          }
+                          return options
+                        })()}
+                      </select>
+                      <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Horario de servicio:</strong> 6:00 AM - 6:00 PM. Selecciona una fecha y hora en la que tengas disponibilidad.
+                  </p>
+                </div>
+              </div>
+
+              {/* Información adicional */}
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  <strong>¿Qué sucede después?</strong> El cliente verá tu propuesta de fecha alternativa y podrá aceptarla o cancelar la solicitud. Si la acepta, el servicio quedará programado automáticamente.
+                </p>
+              </div>
+
+              {/* Botones */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => dashboardActions.handleProposeAlternativeDate(dashboardActions.selectedRequest!.id, dashboardActions.alternativeDate)}
+                  disabled={!dashboardActions.alternativeDate}
+                  className="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Proponer Fecha Alternativa
+                </button>
+                
+                <button
+                  onClick={() => {
+                    dashboardActions.setSelectedRequest(null)
+                    dashboardActions.setAlternativeDate('')
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
       )}
 
-      {/* Modal para programar servicios (técnicos) */}
-      {dashboardData.isTechnician && dashboardActions.selectedRequest && dashboardActions.selectedRequest.status === 'accepted' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Programar Servicio</h3>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha y hora del servicio
-              </label>
-              <input
-                type="datetime-local"
-                value={dashboardActions.scheduleDate}
-                onChange={(e) => dashboardActions.setScheduleDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => {
-                  dashboardActions.setSelectedRequest(null)
-                  dashboardActions.setScheduleDate('')
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => dashboardActions.handleSchedule(dashboardActions.selectedRequest!.id)}
-                disabled={!dashboardActions.scheduleDate}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-              >
-                Programar
-              </button>
-            </div>
-          </motion.div>
-        </div>
+      {/* Modal de Rating para clientes */}
+      {dashboardData.isClient && dashboardActions.showRatingModal && dashboardActions.selectedRequestForRating && (
+        <RatingModal
+          isOpen={dashboardActions.showRatingModal}
+          serviceRequest={dashboardActions.selectedRequestForRating}
+          onClose={() => {
+            dashboardActions.setShowRatingModal(false)
+            dashboardActions.setSelectedRequestForRating(null)
+          }}
+          onSubmit={dashboardActions.handleSubmitRating}
+        />
       )}
 
       {/* Debug Panel - Only in development */}

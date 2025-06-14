@@ -1,9 +1,10 @@
 import {
   IsInt,
   IsString,
+  IsDateString,
+  IsOptional,
   IsNumber,
   IsPositive,
-  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -16,23 +17,32 @@ export class CreateServiceRequestDto {
   @IsInt()
   addressId: number;
 
-  @ApiProperty({ description: 'Descripción del fallo' })
+  @ApiProperty({ description: 'Descripción del problema' })
   @IsString()
   description: string;
 
-  @ApiProperty({ description: 'Precio ofrecido por el cliente' })
+  @ApiProperty({ 
+    description: 'Fecha y hora propuesta para el servicio (debe estar entre 6 AM y 6 PM)',
+    example: '2024-12-20T10:00:00.000Z'
+  })
+  @IsDateString()
+  proposedDateTime: string;
+
+  @ApiProperty({ 
+    description: 'Precio que el cliente está dispuesto a pagar',
+    example: 50000
+  })
   @IsNumber()
   @IsPositive()
   clientPrice: number;
 
   @ApiProperty({
-    description: 'Minutos de vigencia antes de expirar (por defecto 5 minutos)',
-    example: 5,
-    default: 5,
+    description: 'Horas de validez antes de expirar (por defecto 24 horas)',
+    example: 24,
+    default: 24,
     required: false
   })
   @IsOptional()
   @IsInt()
-  @IsPositive()
-  validMinutes?: number = 5;
+  validHours?: number = 24;
 }

@@ -11,6 +11,8 @@ export interface User {
   profilePhotoPublicId?: string
   // Campo calculado para compatibilidad
   get fullName(): string
+  // Agregar propiedad name para compatibilidad
+  name?: string
 }
 
 export interface LoginRequest {
@@ -118,38 +120,38 @@ export interface CreateTechnicianProfileRequest {
 export interface ServiceRequest {
   id: number
   clientId: number
-  applianceId: number
-  addressId: number
-  description: string
-  clientPrice: number
-  technicianPrice?: number // Mantenido por compatibilidad
-  status: 'pending' | 'offered' | 'accepted' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'expired'
-  createdAt: string
-  expiresAt?: string
   technicianId?: number
-  acceptedAt?: string
+  applianceId: number
+  description: string
+  problemType: 'repair' | 'maintenance' | 'installation'
+  urgency: 'low' | 'medium' | 'high'
+  status: 'pending' | 'scheduled' | 'completed' | 'cancelled'
+  proposedDateTime: string
   scheduledAt?: string
   completedAt?: string
   cancelledAt?: string
-  expiredAt?: string
+  estimatedDuration: number
+  // Nuevas propiedades para el sistema de ofertas
+  clientPrice?: number
+  technicianPrice?: number
+  offers?: ServiceRequestOffer[]
+  selectedOfferId?: number
+  // Relaciones
   client: User
+  technician?: User
   appliance: Appliance
   address: Address
-  technician?: User
-  offers?: ServiceRequestOffer[] // Nuevas ofertas múltiples
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CreateServiceRequestRequest {
   applianceId: number
   addressId: number
   description: string
-  clientPrice: number
-  validMinutes?: number // Opcional, por defecto 5 minutos
-}
-
-export interface OfferPriceRequest {
-  technicianPrice: number
-  comment?: string
+  clientPrice: number // Precio que el cliente está dispuesto a pagar
+  proposedDateTime: string // Nueva: fecha y hora propuesta
+  validHours?: number // Tiempo de validez en horas, por defecto 24 horas
 }
 
 export interface AcceptRequestRequest {
@@ -194,15 +196,60 @@ export interface CreateAddressRequest {
 
 export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
 
-// Ofertas de técnicos
+// Nueva interface para verificar disponibilidad
+export interface AvailabilityCheckResponse {
+  available: boolean
+  reason?: string
+}
+
+// Nueva interface para eventos de calendario
+export interface CalendarEvent {
+  id: number
+  title: string
+  start: string
+  end: string
+  serviceRequest: ServiceRequest
+}
+
+// Interfaz para crear ofertas
+export interface CreateOfferRequest {
+  price: number
+  message?: string
+}
+
+// Interfaz para ofertas de solicitudes de servicio
 export interface ServiceRequestOffer {
   id: number
   serviceRequestId: number
   technicianId: number
   price: number
+  message?: string
   status: 'pending' | 'accepted' | 'rejected'
-  comment?: string
   createdAt: string
-  resolvedAt?: string
-  technician: User // Identity/User object, not full TechnicianProfile
+  updatedAt: string
+  technician?: User
+}
+
+// Interfaz para calificaciones
+export interface Rating {
+  id: number
+  raterId: number
+  ratedId: number
+  score: number
+  comment?: string
+  serviceRequestId: number
+}
+
+export interface CreateRatingRequest {
+  raterId: number
+  ratedId: number
+  score: number
+  comment?: string
+  serviceRequestId: number
+}
+
+// Nueva interface para cambio de contraseña
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
 }

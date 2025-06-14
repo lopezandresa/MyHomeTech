@@ -13,14 +13,14 @@ import { Address } from '../address/address.entity';
 import { ServiceRequestOffer } from './service-request-offer.entity';
 
 export enum ServiceRequestStatus {
-  PENDING      = 'pending',
-  OFFERED      = 'offered',
-  ACCEPTED     = 'accepted',
-  SCHEDULED    = 'scheduled',
-  IN_PROGRESS  = 'in_progress',
-  COMPLETED    = 'completed',
-  CANCELLED    = 'cancelled',
-  EXPIRED      = 'expired',
+  PENDING      = 'pending',    // Cliente creó solicitud con fecha propuesta
+  OFFERED      = 'offered',    // Técnicos han hecho ofertas
+  ACCEPTED     = 'accepted',   // Técnico aceptó la fecha
+  SCHEDULED    = 'scheduled',  // Confirmado y agendado
+  IN_PROGRESS  = 'in_progress', // Técnico comenzó el trabajo
+  COMPLETED    = 'completed',  // Servicio completado
+  CANCELLED    = 'cancelled',  // Cancelado por cliente
+  EXPIRED      = 'expired',    // Expiró sin ser aceptado
 }
 
 @Entity()
@@ -28,7 +28,7 @@ export class ServiceRequest {
   @PrimaryGeneratedColumn()
   id: number;
 
-  /** Quién solicita (cliente) */
+  /** Cliente que solicita el servicio */
   @ManyToOne(() => Identity, { eager: true })
   @JoinColumn({ name: 'clientId' })
   client: Identity;
@@ -46,12 +46,16 @@ export class ServiceRequest {
   @Column('text')
   description: string;
 
-  /** Precio ofrecido originalmente por el cliente */
-  @Column('decimal', { precision: 10, scale: 2 })
+  /** Fecha y hora propuesta por el cliente para el servicio */
+  @Column({ type: 'timestamp' })
+  proposedDateTime: Date;
+
+  /** Precio ofrecido por el cliente */
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   clientPrice: number;
 
-  /** Contraoferta del técnico */
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  /** Precio final acordado (del técnico seleccionado) */
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   technicianPrice?: number;
 
   /** Estado de la petición */
@@ -62,11 +66,15 @@ export class ServiceRequest {
   })
   status: ServiceRequestStatus;
 
+  /** Ofertas de técnicos */
+  @OneToMany(() => ServiceRequestOffer, offer => offer.serviceRequest)
+  offers: ServiceRequestOffer[];
+
   /** Fecha de creación automática */
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  /** Caduca si no es aceptada en X minutos */
+  /** Caduca si no es aceptada en 24 horas */
   @Column({ type: 'timestamp', nullable: true })
   expiresAt?: Date;
 
@@ -98,10 +106,5 @@ export class ServiceRequest {
   cancelledAt?: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  expiredAt?: Date;  /** Ofertas recibidas de técnicos */
-  @OneToMany(() => ServiceRequestOffer, offer => offer.serviceRequest, { 
-    cascade: true,
-    eager: false // Cargar solo cuando se necesite
-  })
-  offers?: ServiceRequestOffer[];
+  expiredAt?: Date;
 }

@@ -8,6 +8,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
+import { formatDate } from '../../utils/dateUtils'
 import { OfferCard } from '../OfferCard'
 import type { ServiceRequest } from '../../types/index'
 
@@ -38,6 +39,8 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   handleCancelRequest,
   handleUpdateClientPrice
 }) => {
+  // Usar directamente los datos pasados como props, sin fetches adicionales
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -148,7 +151,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         {request.appliance?.name || 'Electrodoméstico no disponible'}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        Creada: {new Date(request.createdAt).toLocaleDateString()}
+                        Creada: {formatDate(request.createdAt)}
                       </p>
                     </div>
                   </div>
@@ -162,7 +165,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                 </div>
 
                 <div className="mt-4">
-                  {request.status === 'offered' && request.offers && request.offers.length > 0 && (
+                  {request.offers && request.offers.length > 0 && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-gray-800 flex items-center gap-2">
@@ -182,10 +185,10 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Tu oferta inicial</p>
-                            <p className="text-lg font-bold text-gray-800">${request.clientPrice.toLocaleString()} COP</p>
+                            <p className="text-lg font-bold text-gray-800">${request.clientPrice?.toLocaleString() || 'N/A'} COP</p>
                           </div>
                           <button
-                            onClick={() => handleUpdateClientPrice(request.id, request.clientPrice)}
+                            onClick={() => handleUpdateClientPrice(request.id, request.clientPrice || 0)}
                             className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm flex items-center gap-1"
                           >
                             <CurrencyDollarIcon className="h-4 w-4" />
@@ -226,7 +229,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         onClick={() => handleCompleteService(request.id)}
                         className="mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                       >
-                        Marcar como completado
+                        Marcar como completada
                       </button>
                     </div>
                   )}

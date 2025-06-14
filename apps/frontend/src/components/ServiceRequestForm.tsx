@@ -4,10 +4,12 @@ import {
   ChevronDownIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  CurrencyDollarIcon
+  CalendarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline'
 import { applianceService } from '../services/applianceService'
 import { serviceRequestService } from '../services/serviceRequestService'
+import { formatDate, toInputDateFormat } from '../utils/dateUtils'
 import AddressSelector from './common/AddressSelector'
 import type { Appliance } from '../types/index'
 
@@ -32,7 +34,8 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
   
   // Datos del formulario
   const [description, setDescription] = useState('')
-  const [clientPrice, setClientPrice] = useState('')
+  const [proposedDate, setProposedDate] = useState('')
+  const [proposedTime, setProposedTime] = useState('')
   
   // Estados de la UI
   const [isLoading, setIsLoading] = useState(false)
@@ -43,6 +46,11 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
   // Cargar tipos al montar el componente
   useEffect(() => {
     loadTypes()
+    // Establecer fecha mínima como mañana
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    setProposedDate(toInputDateFormat(tomorrow))
+    setProposedTime('08:00') // Hora por defecto: 8 AM
   }, [])
 
   // Cargar marcas cuando se selecciona un tipo
@@ -114,6 +122,31 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
     }
   }
 
+  const validateDateTime = () => {
+    if (!proposedDate || !proposedTime) {
+      setError('Debes seleccionar fecha y hora para el servicio')
+      return false
+    }
+
+    const proposedDateTime = new Date(`${proposedDate}T${proposedTime}`)
+    
+    // Validar que sea fecha futura
+    const validation = serviceRequestService.validateFutureDate(proposedDateTime)
+    if (!validation.valid) {
+      setError(validation.message!)
+      return false
+    }
+
+    // Validar horario de trabajo (6 AM - 6 PM)
+    const workingHoursValidation = serviceRequestService.validateWorkingHours(proposedDateTime)
+    if (!workingHoursValidation.valid) {
+      setError(workingHoursValidation.message!)
+      return false
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -132,8 +165,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       return
     }
 
-    if (!clientPrice || parseFloat(clientPrice) <= 0) {
-      setError('Debes ingresar un precio válido')
+    if (!validateDateTime()) {
       return
     }
 
@@ -141,12 +173,15 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       setIsSubmitting(true)
       setError(null)
 
+      const proposedDateTime = new Date(`${proposedDate}T${proposedTime}`)
+
       await serviceRequestService.createRequest({
         applianceId: selectedAppliance.id,
         addressId: selectedAddressId,
         description: description.trim(),
-        clientPrice: parseFloat(clientPrice),
-        // validMinutes se omite para usar el valor por defecto de 5 minutos
+        proposedDateTime: proposedDateTime.toISOString(),
+        validHours: 24, // 24 horas de validez por defecto
+        clientPrice: 0 // Precio base por defecto
       })
 
       setSuccess(true)
@@ -172,9 +207,27 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
     setSelectedAppliance(null)
     setSelectedAddressId(undefined)
     setDescription('')
-    setClientPrice('')
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    setProposedDate(toInputDateFormat(tomorrow))
+    setProposedTime('08:00')
     setError(null)
     setSuccess(false)
+  }
+
+  // Generar opciones de hora (6 AM - 6 PM)
+  const generateTimeOptions = () => {
+    const options = []
+    for (let hour = 6; hour < 18; hour++) {
+      const timeString = `${hour.toString().padStart(2, '0')}:00`
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      options.push({
+        value: timeString,
+        label: `${displayHour}:00 ${ampm}`
+      })
+    }
+    return options
   }
 
   if (success) {
@@ -189,7 +242,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
           ¡Solicitud Creada!
         </h3>
         <p className="text-gray-600 mb-6">
-          Tu solicitud de servicio ha sido publicada. Los técnicos pueden hacer ofertas durante los próximos 5 minutos.
+          Tu solicitud de servicio ha sido publicada con la fecha propuesta: {formatDate(new Date(`${proposedDate}T${proposedTime}`))}. Los técnicos disponibles pueden aceptarla durante las próximas 24 horas.
         </p>
         <button
           onClick={resetForm}
@@ -207,7 +260,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Nueva Solicitud de Servicio</h2>
           <p className="text-gray-600">
-            Describe tu problema y selecciona el electrodoméstico específico
+            Describe tu problema, selecciona el electrodoméstico y propón una fecha para el servicio
           </p>
         </div>
 
@@ -346,37 +399,66 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
           />
         </div>
 
-        {/* Precio ofrecido */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Precio que estás dispuesto a pagar
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <CurrencyDollarIcon className="h-5 w-5 text-gray-400" />
+        {/* Fecha y hora propuesta */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-gray-900">Fecha y hora propuesta</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha del servicio
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <CalendarIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  value={proposedDate}
+                  onChange={(e) => setProposedDate(e.target.value)}
+                  min={toInputDateFormat(new Date(Date.now() + 24 * 60 * 60 * 1000))} // Mañana como mínimo
+                  className="w-full pl-10 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
-            <input
-              type="number"
-              value={clientPrice}
-              onChange={(e) => setClientPrice(e.target.value)}
-              min="1000"
-              step="1000"
-              className="w-full pl-10 pr-16 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="50000"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <span className="text-gray-500">COP</span>
+
+            {/* Hora */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Hora del servicio
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <ClockIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  value={proposedTime}
+                  onChange={(e) => setProposedTime(e.target.value)}
+                  className="w-full pl-10 appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {generateTimeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-            Mínimo $1,000 COP
-          </p>
+
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Horario de servicio:</strong> 6:00 AM - 6:00 PM. Los técnicos disponibles para la fecha seleccionada podrán aceptar tu solicitud.
+            </p>
+          </div>
         </div>
 
         {/* Información sobre el tiempo */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Tiempo de vigencia:</strong> Tu solicitud estará disponible para ofertas durante 5 minutos después de ser publicada.
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            <strong>Tiempo de vigencia:</strong> Tu solicitud estará disponible durante 24 horas. Los técnicos que tengan disponibilidad para la fecha propuesta podrán aceptarla.
           </p>
         </div>
 
@@ -384,7 +466,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
         <div className="flex space-x-4">
           <button
             type="submit"
-            disabled={!selectedAppliance || !selectedAddressId || !description.trim() || !clientPrice || isSubmitting}
+            disabled={!selectedAppliance || !selectedAddressId || !description.trim() || !proposedDate || !proposedTime || isSubmitting}
             className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? 'Creando solicitud...' : 'Crear Solicitud'}

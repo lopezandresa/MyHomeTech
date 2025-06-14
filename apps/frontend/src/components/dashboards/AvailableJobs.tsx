@@ -4,10 +4,12 @@ import {
   WrenchScrewdriverIcon,
   XMarkIcon,
   ArrowPathIcon,
-  WifiIcon
+  WifiIcon,
+  CalendarDaysIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
-import CountdownTimer from '../CountdownTimer'
+import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import type { ServiceRequest } from '../../types/index'
 
@@ -21,6 +23,7 @@ interface AvailableJobsProps {
   setShowRecentJobAlert: (show: boolean) => void
   technicianNotifications: any
   handleAcceptDirectly: (requestId: number) => Promise<void>
+  handleProposeAlternativeDate: (requestId: number, alternativeDate: string) => Promise<void>
   setSelectedRequest: (request: ServiceRequest) => void
   handleReconnect: () => void
 }
@@ -30,7 +33,6 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
   error,
   setError,
   pendingRequests,
-  setPendingRequests,
   showRecentJobAlert,
   setShowRecentJobAlert,
   technicianNotifications,
@@ -195,7 +197,7 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                       Cliente: {request.client?.firstName || 'N/A'} {request.client?.firstLastName || ''}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Publicada el {new Date(request.createdAt).toLocaleDateString()}
+                      Publicada el {formatDate(request.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -203,18 +205,6 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
                     {getStatusText(request.status)}
                   </span>
-                  {/* Countdown Timer */}
-                  {request.expiresAt && (
-                    <CountdownTimer
-                      expiresAt={request.expiresAt}
-                      size="sm"
-                      onExpire={() => {
-                        setPendingRequests(prev => 
-                          prev.filter(req => req.id !== request.id)
-                        )
-                      }}
-                    />
-                  )}
                 </div>
               </div>
 
@@ -242,25 +232,37 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                 </div>
               )}
 
-              <div className="mb-4">
-                <span className="text-sm font-medium text-gray-500">Precio ofrecido por el cliente:</span>
-                <p className="text-xl font-bold text-green-600">
-                  ${request.clientPrice.toLocaleString()} COP
-                </p>
+              {/* Fecha y hora propuesta por el cliente */}
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <CalendarDaysIcon className="h-5 w-5 text-blue-600 mr-2" />
+                  <h4 className="font-medium text-blue-800">Fecha y hora solicitada:</h4>
+                </div>
+                <div className="flex items-center">
+                  <ClockIcon className="h-4 w-4 text-blue-600 mr-2" />
+                  <p className="text-lg font-semibold text-blue-800">
+                    {formatDate(request.proposedDateTime)} a las {new Date(request.proposedDateTime).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleAcceptDirectly(request.id)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
                 >
-                  Aceptar ${request.clientPrice.toLocaleString()}
+                  <CalendarDaysIcon className="h-4 w-4" />
+                  Aceptar fecha propuesta
                 </button>
                 <button
                   onClick={() => setSelectedRequest(request)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center gap-2"
                 >
-                  Hacer Contraoferta
+                  <ClockIcon className="h-4 w-4" />
+                  Proponer fecha alternativa
                 </button>
               </div>
             </motion.div>

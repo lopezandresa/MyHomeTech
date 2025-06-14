@@ -178,6 +178,81 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     this.logger.log(`Notified client ${serviceRequest.clientId} about new offer for request ${serviceRequest.id}`);
   }
 
+  // NUEVO: Notificar al técnico cuando el cliente marca el servicio como completado
+  notifyServiceCompleted(serviceRequest: ServiceRequest, technicianId: number) {
+    this.server.to(`technician-${technicianId}`).emit('service-completed', {
+      serviceRequest,
+      message: 'El cliente ha marcado el servicio como completado',
+      type: 'completed'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} about completed service ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar al técnico cuando hay una actualización de calendario
+  notifyCalendarUpdate(technicianId: number, message: string) {
+    this.server.to(`technician-${technicianId}`).emit('calendar-update', {
+      message,
+      type: 'calendar_update'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} about calendar update`);
+  }
+
+  // NUEVO: Notificar al cliente cuando hay una actualización de calendario
+  notifyClientCalendarUpdate(clientId: number, message: string) {
+    this.server.to(`client-${clientId}`).emit('calendar-update', {
+      message,
+      type: 'calendar_update'
+    });
+    
+    this.logger.log(`Notified client ${clientId} about calendar update`);
+  }
+
+  // NUEVO: Notificar al técnico cuando su oferta es aceptada
+  notifyTechnicianOfferAccepted(serviceRequest: ServiceRequest, technicianId: number) {
+    this.server.to(`technician-${technicianId}`).emit('offer-accepted', {
+      serviceRequest,
+      message: 'Tu oferta ha sido aceptada por el cliente',
+      type: 'accepted'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} about accepted offer for request ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar al técnico cuando su oferta es rechazada
+  notifyTechnicianOfferRejected(serviceRequest: ServiceRequest, technicianId: number) {
+    this.server.to(`technician-${technicianId}`).emit('offer-rejected', {
+      serviceRequest,
+      message: 'Tu oferta ha sido rechazada por el cliente',
+      type: 'rejected'
+    });
+    
+    this.logger.log(`Notified technician ${technicianId} about rejected offer for request ${serviceRequest.id}`);
+  }
+
+  // NUEVO: Notificar sobre actualización de precio del cliente
+  notifyPriceUpdate(serviceRequest: ServiceRequest, technicianIds: number[] = []) {
+    // Si no se especifican técnicos, notificar a todos los técnicos conectados
+    if (technicianIds.length === 0) {
+      this.server.emit('service-request-price-updated', {
+        serviceRequest,
+        message: 'El cliente ha actualizado el precio de su solicitud',
+        type: 'price_update'
+      });
+    } else {
+      technicianIds.forEach(technicianId => {
+        this.server.to(`technician-${technicianId}`).emit('service-request-price-updated', {
+          serviceRequest,
+          message: 'El cliente ha actualizado el precio de su solicitud',
+          type: 'price_update'
+        });
+      });
+    }
+    
+    this.logger.log(`Notified about price update for request ${serviceRequest.id}`);
+  }
+
   // Notificar al cliente cuando un técnico acepta directamente su solicitud
   notifyClientRequestAccepted(serviceRequest: ServiceRequest) {
     this.server.to(`client-${serviceRequest.clientId}`).emit('service-request-accepted', {
@@ -187,27 +262,5 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     });
     
     this.logger.log(`Notified client ${serviceRequest.clientId} about accepted request ${serviceRequest.id}`);
-  }
-
-  // Notificar al cliente sobre actualizaciones en el estado de su solicitud
-  notifyClientRequestUpdate(serviceRequest: ServiceRequest, message: string, type: string) {
-    this.server.to(`client-${serviceRequest.clientId}`).emit('service-request-update', {
-      serviceRequest,
-      message,
-      type
-    });
-    
-    this.logger.log(`Notified client ${serviceRequest.clientId} about request update ${serviceRequest.id}: ${type}`);
-  }
-
-  // Notificar al técnico cuando el cliente rechaza su oferta
-  notifyOfferRejected(serviceRequest: ServiceRequest, technicianId: number) {
-    this.server.to(`technician-${technicianId}`).emit('offer-rejected', {
-      serviceRequest,
-      message: 'El cliente ha rechazado tu oferta',
-      type: 'rejected'
-    });
-    
-    this.logger.log(`Notified technician ${technicianId} about rejected offer for request ${serviceRequest.id}`);
   }
 }
