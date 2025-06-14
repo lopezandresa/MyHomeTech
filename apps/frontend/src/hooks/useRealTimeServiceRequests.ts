@@ -73,8 +73,6 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       latency: eventLatency
     }
     
-    console.log(`⚡ New request received in ${eventLatency}ms - Ultra-fast!`)
-    
     // Optimización: usar función de actualización con callback para mejor rendimiento
     setNotifications(prev => {
       const newNotifications = [notification, ...prev.slice(0, 9)]
@@ -90,10 +88,10 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     // Notificación del navegador optimizada
     if ('Notification' in window && Notification.permission === 'granted') {
       const notif = new Notification('⚡ Nueva Solicitud', {
-        body: `${data.serviceRequest.appliance?.name || 'Servicio'} - ${eventLatency}ms`,
+        body: `${data.serviceRequest.appliance?.name || 'Servicio'}`,
         icon: '/favicon.ico',
         tag: `service-request-${data.serviceRequest.id}`,
-        requireInteraction: false, // No requerir interacción para ser más rápida
+        requireInteraction: false,
         silent: false
       })
       
@@ -102,20 +100,15 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
         notif.close()
       }
       
-      // Auto-cerrar después de 3 segundos para no saturar
       setTimeout(() => notif.close(), 3000)
     }
 
     // Sonido de notificación optimizado
     try {
       const audio = new Audio('/notification.mp3')
-      audio.volume = 0.3 // Volumen más bajo
-      audio.play().catch(() => {
-        // Manejo silencioso de errores de audio
-      })
-    } catch {
-      // Manejo silencioso de errores
-    }
+      audio.volume = 0.3
+      audio.play().catch(() => {})
+    } catch {}
   }, [calculateEventLatency])
 
   // Callback optimizado para solicitudes actualizadas
@@ -133,8 +126,6 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       type: 'updated',
       latency: eventLatency
     }
-    
-    console.log(`🔄 Request updated in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
@@ -159,8 +150,6 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       type: 'removed',
       latency: eventLatency
     }
-    
-    console.log(`❌ Request removed in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     

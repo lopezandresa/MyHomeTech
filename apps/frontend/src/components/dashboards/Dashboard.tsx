@@ -332,13 +332,16 @@ const Dashboard: React.FC = () => {
                                   </span>
                                 </div>
                                 <h4 className="font-medium text-gray-900 text-sm">
-                                  {notification.serviceRequest.appliance.name}
+                                  {notification.serviceRequest?.appliance?.name || 'Solicitud de servicio'}
                                 </h4>
                                 <p className="text-sm text-gray-600 mb-1">
-                                  ${notification.serviceRequest.clientPrice.toLocaleString()} COP
+                                  {notification.serviceRequest?.clientPrice 
+                                    ? `$${notification.serviceRequest.clientPrice.toLocaleString()} COP`
+                                    : 'Precio no disponible'
+                                  }
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {notification.timestamp.toLocaleTimeString()}
+                                  {notification.timestamp?.toLocaleTimeString?.() || 'Fecha no disponible'}
                                 </p>
                               </div>
                               <button

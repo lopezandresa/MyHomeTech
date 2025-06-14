@@ -44,8 +44,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
   private flushTimer: NodeJS.Timeout | null = null;
 
   handleConnection(client: Socket) {
-    this.logger.log(`🔗 Client connected: ${client.id}`);
-    
     // Configurar socket para latencia mínima
     client.compress(false); // Desabilitar compresión para velocidad
     
@@ -54,21 +52,15 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       timestamp: Date.now(),
       socketId: client.id 
     });
-
-    // Debug: Mostrar estadísticas de conexión
-    this.logger.log(`📊 Total active connections: Technicians=${this.technicianConnections.size}, Clients=${this.clientConnections.size}, Rooms=${this.activeRooms.size}`);
   }
 
   handleDisconnect(client: Socket) {
-    this.logger.log(`🚪 Client disconnected: ${client.id}`);
-    
     // Limpiar conexiones de técnicos
     for (const [technicianId, socketIds] of this.technicianConnections.entries()) {
       socketIds.delete(client.id);
       if (socketIds.size === 0) {
         this.technicianConnections.delete(technicianId);
         this.activeRooms.delete(`technician-${technicianId}`);
-        this.logger.log(`🧹 Cleaned up technician room: technician-${technicianId}`);
       }
     }
 
@@ -78,12 +70,8 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       if (socketIds.size === 0) {
         this.clientConnections.delete(clientId);
         this.activeRooms.delete(`client-${clientId}`);
-        this.logger.log(`🧹 Cleaned up client room: client-${clientId}`);
       }
     }
-
-    // Debug: Mostrar estadísticas actualizadas
-    this.logger.log(`📊 Remaining connections: Technicians=${this.technicianConnections.size}, Clients=${this.clientConnections.size}, Rooms=${this.activeRooms.size}`);
   }
 
   @SubscribeMessage('join-technician-room')
@@ -108,8 +96,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       timestamp: Date.now(),
       technicianId 
     });
-    
-    this.logger.log(`Technician ${technicianId} joined room with socket ${client.id}`);
   }
 
   @SubscribeMessage('leave-technician-room')
@@ -134,8 +120,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       room: roomName, 
       timestamp: Date.now() 
     });
-    
-    this.logger.log(`Technician ${technicianId} left room with socket ${client.id}`);
   }
 
   @SubscribeMessage('join-client-room')
@@ -159,8 +143,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       timestamp: Date.now(),
       clientId 
     });
-    
-    this.logger.log(`Client ${clientId} joined room with socket ${client.id}`);
   }
 
   @SubscribeMessage('leave-client-room')
@@ -185,8 +167,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       room: roomName, 
       timestamp: Date.now() 
     });
-    
-    this.logger.log(`Client ${clientId} left room with socket ${client.id}`);
   }
 
   // Método optimizado para notificaciones instantáneas
@@ -210,7 +190,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       .filter(room => this.activeRooms.has(room));
     
     if (activeRooms.length === 0) {
-      this.logger.warn(`No active rooms found for technicians: ${technicianIds.join(', ')}`);
       return;
     }
 
@@ -225,8 +204,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     activeRooms.forEach(room => {
       this.emitToRoom(room, 'new-service-request', payload, 'high');
     });
-    
-    this.logger.log(`Notified ${activeRooms.length} active technician rooms about new service request ${serviceRequest.id}`);
   }
 
   // Método para notificar actualización de solicitud a técnicos (OPTIMIZADO)
@@ -244,22 +221,15 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     activeRooms.forEach(room => {
       this.emitToRoom(room, 'service-request-updated', payload, 'high');
     });
-
-    this.logger.log(`Notified ${activeRooms.length} technicians about updated service request ${serviceRequest.id}`);
   }
 
   // Método para notificar cuando una solicitud expira o es aceptada (OPTIMIZADO)
   notifyServiceRequestRemoved(serviceRequestId: number, technicianIds: number[]) {
-    this.logger.log(`🚨 REMOVING SERVICE REQUEST ${serviceRequestId} - Notifying ${technicianIds.length} technicians: [${technicianIds.join(', ')}]`);
-    
     const activeRooms = technicianIds
       .map(id => `technician-${id}`)
       .filter(room => this.activeRooms.has(room));
 
-    this.logger.log(`📡 Active rooms found: ${activeRooms.length}/${technicianIds.length} - Rooms: [${activeRooms.join(', ')}]`);
-
     if (activeRooms.length === 0) {
-      this.logger.warn(`⚠️ NO ACTIVE ROOMS for service request removal ${serviceRequestId} - technicians: [${technicianIds.join(', ')}]`);
       return;
     }
 
@@ -270,11 +240,8 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     };
 
     activeRooms.forEach(room => {
-      this.logger.log(`📤 Sending 'service-request-removed' to room: ${room}`);
       this.emitToRoom(room, 'service-request-removed', payload, 'high');
     });
-
-    this.logger.log(`✅ Successfully notified ${activeRooms.length} technicians about removed service request ${serviceRequestId}`);
   }
 
   // NUEVOS MÉTODOS PARA CLIENTES (OPTIMIZADOS)
@@ -289,8 +256,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'Tu solicitud de servicio ha expirado',
       type: 'expired'
     }, 'high');
-    
-    this.logger.log(`Notified client ${serviceRequest.clientId} about expired request ${serviceRequest.id}`);
   }
 
   // Notificar al cliente cuando recibe una oferta de un técnico
@@ -303,8 +268,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'Has recibido una nueva oferta para tu solicitud',
       type: 'offer'
     }, 'high');
-    
-    this.logger.log(`Notified client ${serviceRequest.clientId} about new offer for request ${serviceRequest.id}`);
   }
 
   // NUEVO: Notificar al técnico cuando el cliente marca el servicio como completado
@@ -317,8 +280,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'El cliente ha marcado el servicio como completado',
       type: 'completed'
     }, 'high');
-    
-    this.logger.log(`Notified technician ${technicianId} about completed service ${serviceRequest.id}`);
   }
 
   // Notificar al cliente cuando un técnico acepta directamente su solicitud
@@ -331,8 +292,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'Un técnico ha aceptado tu solicitud de servicio',
       type: 'accepted'
     }, 'high');
-    
-    this.logger.log(`Notified client ${serviceRequest.clientId} about accepted request ${serviceRequest.id}`);
   }
 
   // NUEVO: Notificar al cliente cuando un técnico propone una fecha alternativa
@@ -346,8 +305,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: `${proposal.technician.firstName} ${proposal.technician.firstLastName} ha propuesto una fecha alternativa`,
       type: 'alternative_date_proposal'
     }, 'high');
-    
-    this.logger.log(`Notified client ${serviceRequest.clientId} about alternative date proposal ${proposal.id} from technician ${proposal.technicianId}`);
   }
 
   // NUEVO: Notificar al técnico cuando su propuesta de fecha alternativa es aceptada
@@ -361,8 +318,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'El cliente ha aceptado tu propuesta de fecha alternativa',
       type: 'proposal_accepted'
     }, 'high');
-    
-    this.logger.log(`Notified technician ${proposal.technicianId} about accepted proposal ${proposal.id} for request ${serviceRequest.id}`);
   }
 
   // NUEVO: Notificar al técnico cuando su propuesta de fecha alternativa es rechazada
@@ -376,8 +331,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'El cliente ha rechazado tu propuesta de fecha alternativa',
       type: 'proposal_rejected'
     }, 'high');
-    
-    this.logger.log(`Notified technician ${proposal.technicianId} about rejected proposal ${proposal.id} for request ${serviceRequest.id}`);
   }
 
   // NUEVO: Notificar al técnico que una solicitud ya no está disponible
@@ -390,8 +343,6 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
       message: 'Esta solicitud ya no está disponible',
       type: 'request_unavailable'
     }, 'high');
-    
-    this.logger.log(`Notified technician ${technicianId} that request ${serviceRequestId} is no longer available`);
   }
 
   // Método de utilidad para obtener estadísticas de conexiones

@@ -222,32 +222,6 @@ export const useRealTimeClientNotifications = (
       })
     }
 
-    const handleServiceRequestExpired = (data: { 
-      serviceRequest: ServiceRequest, 
-      message: string,
-      timestamp: number 
-    }) => {
-      addNotification({
-        serviceRequest: data.serviceRequest,
-        message: data.message,
-        type: 'expired',
-        timestamp: data.timestamp
-      })
-    }
-
-    const handleServiceRequestOffer = (data: { 
-      serviceRequest: ServiceRequest, 
-      message: string,
-      timestamp: number 
-    }) => {
-      addNotification({
-        serviceRequest: data.serviceRequest,
-        message: data.message,
-        type: 'offer',
-        timestamp: data.timestamp
-      })
-    }
-
     const handleAlternativeDateProposal = (data: { 
       serviceRequest: ServiceRequest, 
       proposal: any,

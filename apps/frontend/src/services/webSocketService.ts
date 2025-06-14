@@ -21,10 +21,7 @@ class WebSocketService {
   private pendingEvents: Array<{ event: string, data: any, timestamp: number }> = []
   
   connect(token: string): void {
-    console.log('🚀 Establishing ultra-fast WebSocket connection...')
-    
     if (this.socket?.connected) {
-      console.log('✅ Already connected to WebSocket server')
       return
     }
 
@@ -43,27 +40,22 @@ class WebSocketService {
       this.currentClientId = this.restoreClientRoom()
     }
 
-    console.log('🌐 Creating optimized socket connection to:', import.meta.env.VITE_API_URL || 'http://localhost:3000')
-
     this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
       auth: { token },
-      transports: ['websocket'], // Solo WebSocket para máxima velocidad
+      transports: ['websocket'],
       upgrade: true,
       rememberUpgrade: true,
-      // Configuraciones para latencia mínima
-      timeout: 5000,           // Reducido de 20s a 5s
+      timeout: 5000,
       reconnection: true,
       reconnectionAttempts: this.maxConnectionAttempts,
       reconnectionDelay: this.reconnectInterval,
       reconnectionDelayMax: this.maxReconnectInterval,
-      randomizationFactor: 0.1, // Reducir aleatorización
-      // Configuraciones adicionales de rendimiento
+      randomizationFactor: 0.1,
       forceNew: false,
       multiplex: false,
       autoConnect: true,
     })
 
-    // Configurar listeners optimizados
     this.setupOptimizedListeners()
   }
 
@@ -71,95 +63,61 @@ class WebSocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
-      console.log('⚡ Connected with ultra-low latency!')
-      console.log('🔗 Socket ID:', this.socket?.id)
-      
-      // Reset parámetros de reconexión
       this.reconnectInterval = 500
       this.connectionAttempts = 0
       this.connectionQuality = 'excellent'
       
-      // Enviar ping inmediato para medir latencia
       this.startLatencyMonitoring()
-      
-      // Procesar eventos pendientes
       this.processPendingEvents()
       
-      // Re-unirse a salas inmediatamente
       if (this.currentTechnicianId) {
-        console.log('🔄 Instantly rejoining technician room:', this.currentTechnicianId)
         this.joinTechnicianRoom(this.currentTechnicianId)
       }
       
       if (this.currentClientId) {
-        console.log('🔄 Instantly rejoining client room:', this.currentClientId)
         this.joinClientRoom(this.currentClientId)
       }
     })
 
     this.socket.on('disconnect', (reason) => {
-      console.log('❌ Disconnected:', reason)
       this.connectionQuality = 'disconnected'
       this.stopLatencyMonitoring()
       
-      // Reconexión inmediata para desconexiones involuntarias
       if (reason === 'io server disconnect') {
-        // Servidor cerró la conexión, reconectar después de un breve delay
         setTimeout(() => this.attemptReconnection(), 100)
       } else {
-        // Otras razones, reconectar inmediatamente
         this.attemptReconnection()
       }
     })
 
-    this.socket.on('connect_error', (error) => {
-      console.error('❌ Connection error:', error)
+    this.socket.on('connect_error', () => {
       this.connectionQuality = 'poor'
       this.attemptReconnection()
     })
 
-    // Listeners para confirmaciones de salas
-    this.socket.on('room-joined', (data) => {
-      console.log('✅ Room joined confirmed:', data)
-    })
+    this.socket.on('room-joined', () => {})
+    this.socket.on('room-left', () => {})
+    this.socket.on('connection-confirmed', () => {})
 
-    this.socket.on('room-left', (data) => {
-      console.log('👋 Room left confirmed:', data)
-    })
-
-    // Listener para confirmación de conexión
-    this.socket.on('connection-confirmed', (data) => {
-      console.log('✅ Connection confirmed by server:', data)
-    })
-
-    // Sistema de ping/pong para monitoreo de latencia
-    this.socket.on('pong', (_data) => {
+    this.socket.on('pong', () => {
       if (this.lastPingTime > 0) {
         this.currentLatency = Date.now() - this.lastPingTime
         this.updateConnectionQuality()
-        console.log(`📊 Latency: ${this.currentLatency}ms`)
       }
     })
 
-    // Reconexión mejorada
     this.socket.on('reconnect', (attemptNumber) => {
-      console.log(`✅ Reconnected after ${attemptNumber} attempts`)
       this.reconnectInterval = 500
       this.connectionAttempts = 0
       this.connectionQuality = 'good'
     })
 
-    this.socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log(`🔄 Reconnection attempt ${attemptNumber}...`)
-    })
-
-    this.socket.on('reconnect_error', (error) => {
-      console.error('❌ Reconnection error:', error)
+    this.socket.on('reconnect_attempt', () => {})
+    this.socket.on('reconnect_error', () => {
       this.attemptReconnection()
     })
 
     this.socket.on('reconnect_failed', () => {
-      console.error('❌ Reconnection failed, implementing custom recovery...')
       this.attemptReconnection()
     })
   }
@@ -172,15 +130,11 @@ class WebSocketService {
     this.connectionAttempts++
     
     if (this.connectionAttempts > this.maxConnectionAttempts) {
-      console.log('⚠️ Max attempts reached, continuing with longer intervals...')
       // No detener completamente, sino usar intervalos más largos
       this.reconnectInterval = Math.min(this.reconnectInterval * 1.2, 10000)
     }
-
-    console.log(`🔄 Scheduling ultra-fast reconnection in ${this.reconnectInterval}ms...`)
     
     this.reconnectTimer = window.setTimeout(() => {
-      console.log('🔄 Attempting ultra-fast reconnection...')
       this.reconnectTimer = null
       
       // Incremento más suave del intervalo
@@ -225,8 +179,6 @@ class WebSocketService {
 
   private processPendingEvents(): void {
     if (this.pendingEvents.length === 0) return
-    
-    console.log(`📤 Processing ${this.pendingEvents.length} pending events...`)
     
     this.pendingEvents.forEach(({ event, data }) => {
       this.socket?.emit(event, data)
@@ -275,7 +227,6 @@ class WebSocketService {
     this.persistTechnicianRoom(technicianId)
     
     if (!this.socket?.connected) {
-      console.warn('WebSocket not connected, queuing technician room join')
       this.queueEvent('join-technician-room', { technicianId })
       return
     }
@@ -286,7 +237,6 @@ class WebSocketService {
     }
     
     this.socket.emit('join-technician-room', { technicianId })
-    console.log(`🏠 Joined technician room: ${technicianId}`)
   }
 
   leaveTechnicianRoom(technicianId: number): void {
@@ -296,7 +246,6 @@ class WebSocketService {
     }
 
     this.socket.emit('leave-technician-room', { technicianId })
-    console.log(`🚪 Left technician room: ${technicianId}`)
     
     if (this.currentTechnicianId === technicianId) {
       this.currentTechnicianId = null
@@ -309,7 +258,6 @@ class WebSocketService {
     this.persistClientRoom(clientId)
     
     if (!this.socket?.connected) {
-      console.warn('WebSocket not connected, queuing client room join')
       this.queueEvent('join-client-room', { clientId })
       return
     }
@@ -319,7 +267,6 @@ class WebSocketService {
     }
     
     this.socket.emit('join-client-room', { clientId })
-    console.log(`🏠 Joined client room: ${clientId}`)
   }
 
   leaveClientRoom(clientId: number): void {
@@ -329,7 +276,6 @@ class WebSocketService {
     }
 
     this.socket.emit('leave-client-room', { clientId })
-    console.log(`🚪 Left client room: ${clientId}`)
     
     if (this.currentClientId === clientId) {
       this.currentClientId = null
@@ -401,9 +347,7 @@ class WebSocketService {
 
   onServiceRequestRemoved(callback: (data: { serviceRequestId: number, message: string, timestamp: number }) => void): void {
     if (!this.socket) return
-    console.log('🎧 SETTING UP service-request-removed listener')
     this.socket.on('service-request-removed', (data) => {
-      console.log('🚨 RECEIVED service-request-removed event:', data)
       callback(data)
     })
   }

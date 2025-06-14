@@ -109,8 +109,6 @@ export class ServiceRequestService {
         .andWhere('identity.status = :status', { status: true })
         .getMany();
 
-      this.logger.log(`Found ${eligibleTechnicians.length} eligible technicians for appliance type: ${serviceRequest.appliance.type}`);
-
       const availableTechnicians: Technician[] = [];
 
       // Verificar disponibilidad en paralelo para máxima velocidad
@@ -137,13 +135,9 @@ export class ServiceRequestService {
         this.gateway.notifyNewServiceRequest(serviceRequest, technicianIds);
         
         const elapsedTime = Date.now() - startTime;
-        this.logger.log(`⚡ Notified ${technicianIds.length} technicians in ${elapsedTime}ms - Ultra-fast!`);
-      } else {
-        this.logger.warn(`No available technicians found for request ${serviceRequest.id} (appliance: ${serviceRequest.appliance.type})`);
-        
+      } else {        
         // Debug: mostrar técnicos elegibles pero no disponibles
         if (eligibleTechnicians.length > 0) {
-          this.logger.log(`Found ${eligibleTechnicians.length} eligible technicians but all have conflicts`);
         }
       }
     } catch (error) {
