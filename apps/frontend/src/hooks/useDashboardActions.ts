@@ -203,23 +203,25 @@ export const useDashboardActions = (): DashboardActionsState => {
     }
   }
 
-  // Función para manejar completar servicio (ahora abre modal de rating)
+  // Función para manejar completar servicio (abre modal de rating)
   const handleCompleteService = useCallback(async (requestId: number) => {
     try {
       setError(null)
       
-      // Encontrar la solicitud para el modal de rating
-      const request = clientRequests.find(req => req.id === requestId)
+      // Obtener la solicitud directamente del servicio para asegurar datos actualizados
+      const request = await serviceRequestService.getRequestById(requestId)
       if (request) {
         setSelectedRequestForRating(request)
         setShowRatingModal(true)
+      } else {
+        showError('Error', 'No se pudo encontrar la solicitud')
       }
       
     } catch (error) {
       console.error('Error opening rating modal:', error)
-      setError('Error al abrir el modal de calificación')
+      showError('Error', 'No se pudo cargar la información de la solicitud')
     }
-  }, [clientRequests])
+  }, [showError])
 
   // Función para aceptar oferta específica (mantenida para compatibilidad)
   const handleAcceptSpecificOffer = async (requestId: number, offerId: number) => {

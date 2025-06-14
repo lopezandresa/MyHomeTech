@@ -36,7 +36,7 @@ export const useDashboardData = (): DashboardData => {
   const [clientRequests, setClientRequests] = useState<ServiceRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [requestFilter, setRequestFilter] = useState<string>('all')
+  const [requestFilter, setRequestFilter] = useState<string>('in-progress')
   const [dataFetched, setDataFetched] = useState(false) // Nuevo flag para evitar fetches múltiples
 
   // Real-time notifications hooks

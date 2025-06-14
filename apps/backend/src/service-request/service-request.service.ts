@@ -613,7 +613,6 @@ export class ServiceRequestService {
     .where('sr.clientId = :clientId', { clientId })
     .orderBy('sr.createdAt', 'DESC')
     .getMany();
-    console.log('Solicitudes del cliente con ofertas:', req);
     return req;
   }
 

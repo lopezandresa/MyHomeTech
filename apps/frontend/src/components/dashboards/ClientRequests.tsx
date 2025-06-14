@@ -23,8 +23,8 @@ interface ClientRequestsProps {
   isLoading: boolean
   error: string | null
   clientRequests: ServiceRequest[]
-  requestFilter: 'in-progress' | 'all'
-  setRequestFilter: (filter: 'in-progress' | 'all') => void
+  requestFilter: 'in-progress' | 'scheduled' | 'all'
+  setRequestFilter: (filter: 'in-progress' | 'scheduled' | 'all') => void
   setShowNewRequestModal: (show: boolean) => void
   handleCompleteService: (requestId: number) => Promise<void>
   handleCancelRequest: (requestId: number) => Promise<void>
@@ -119,7 +119,9 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
 
   const filteredRequests = clientRequests.filter(request => {
     if (requestFilter === 'in-progress') {
-      return ['pending', 'accepted', 'scheduled', 'in_progress'].includes(request.status)
+      return request.status === 'pending'
+    } else if (requestFilter === 'scheduled') {
+      return request.status === 'scheduled'
     }
     return true
   })
@@ -158,7 +160,17 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              En Curso ({clientRequests.filter(r => ['pending', 'accepted', 'scheduled', 'in_progress'].includes(r.status)).length})
+              En Curso ({clientRequests.filter(r => r.status === 'pending').length})
+            </button>
+            <button
+              onClick={() => setRequestFilter('scheduled')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                requestFilter === 'scheduled'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Programadas ({clientRequests.filter(r => r.status === 'scheduled').length})
             </button>
             <button
               onClick={() => setRequestFilter('all')}
