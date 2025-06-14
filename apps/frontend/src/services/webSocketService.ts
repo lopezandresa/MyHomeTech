@@ -292,7 +292,7 @@ class WebSocketService {
         localStorage.removeItem('websocket_technician_id')
       }
     } catch (e) {
-      console.error('Failed to persist technician ID:', e)
+      //console.error('Failed to persist technician ID:', e)
     }
   }
 
@@ -304,7 +304,7 @@ class WebSocketService {
         localStorage.removeItem('websocket_client_id')
       }
     } catch (e) {
-      console.error('Failed to persist client ID:', e)
+      //console.error('Failed to persist client ID:', e)
     }
   }
 
@@ -316,7 +316,7 @@ class WebSocketService {
         return !isNaN(technicianId) ? technicianId : null
       }
     } catch (e) {
-      console.error('Failed to restore technician ID:', e)
+      //console.error('Failed to restore technician ID:', e)
     }
     return null
   }
@@ -329,7 +329,7 @@ class WebSocketService {
         return !isNaN(clientId) ? clientId : null
       }
     } catch (e) {
-      console.error('Failed to restore client ID:', e)
+      //console.error('Failed to restore client ID:', e)
     }
     return null
   }
@@ -477,7 +477,7 @@ class WebSocketService {
   }
 
   forceReconnect(token: string): void {
-    console.log('🔄 Forcing immediate reconnection...')
+    //console.log('🔄 Forcing immediate reconnection...')
     this.connectionAttempts = 0
     this.reconnectInterval = 500
     
@@ -507,7 +507,7 @@ class WebSocketService {
   }
 
   debugConnectionStatus(): void {
-    console.table(this.getDetailedStatus())
+    //console.table(this.getDetailedStatus())
   }
 }
 

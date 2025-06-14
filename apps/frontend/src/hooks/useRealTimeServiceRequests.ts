@@ -186,7 +186,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       latency: eventLatency
     }
     
-    console.log(`🚫 Offer rejected in ${eventLatency}ms`)
+    //console.log(`🚫 Offer rejected in ${eventLatency}ms`)
     
     setNotifications(prev => [notification, ...prev.slice(0, 9)])
     
@@ -240,7 +240,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
   // Función para forzar reconexión instantánea
   const forceReconnect = useCallback(() => {
     if (!token) return
-    console.log('🔄 Forcing ultra-fast reconnection...')
+    //console.log('🔄 Forcing ultra-fast reconnection...')
     webSocketService.forceReconnect(token)
     
     // Actualizar estado inmediatamente
@@ -260,7 +260,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       return
     }
 
-    console.log('🚀 Initializing ultra-fast WebSocket connection...')
+    //console.log('🚀 Initializing ultra-fast WebSocket connection...')
 
     // Estado de conexión inicial
     setConnectionStatus(prev => ({
@@ -293,7 +293,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       
       // CORREGIDO: Solo unirse al room si no está ya conectado o si cambió el technicianId
       if (connected && technicianId && !webSocketService.isInTechnicianRoom(technicianId)) {
-        console.log('🏠 Joining technician room', technicianId, 'with ultra-fast connection...')
+        //console.log('🏠 Joining technician room', technicianId, 'with ultra-fast connection...')
         webSocketService.joinTechnicianRoom(technicianId)
       }
     }, 5000) // CAMBIADO: de 2000ms a 5000ms para reducir spam
@@ -343,7 +343,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       return
     }
     
-    console.log(`🏠 Joining technician room ${technicianId} with ultra-fast connection...`)
+    //console.log(`🏠 Joining technician room ${technicianId} with ultra-fast connection...`)
     
     // Unirse inmediatamente
     webSocketService.joinTechnicianRoom(technicianId)

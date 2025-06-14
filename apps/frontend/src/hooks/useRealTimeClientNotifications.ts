@@ -117,7 +117,7 @@ export const useRealTimeClientNotifications = (
       latency: eventLatency
     }
 
-    console.log(`⚡ Client notification received in ${eventLatency || 0}ms:`, notification.type)
+    //console.log(`⚡ Client notification received in ${eventLatency || 0}ms:`, notification.type)
 
     setNotifications(prev => [notification, ...prev.slice(0, 19)]) // Mantener últimas 20
     showBrowserNotification(notification)
@@ -164,7 +164,7 @@ export const useRealTimeClientNotifications = (
   // Función para forzar reconexión
   const forceReconnect = useCallback(() => {
     if (clientId && token) {
-      console.log('🔄 Forcing client reconnection...')
+      //console.log('🔄 Forcing client reconnection...')
       webSocketService.forceReconnect(token)
       setTimeout(() => {
         webSocketService.joinClientRoom(clientId)
@@ -183,7 +183,7 @@ export const useRealTimeClientNotifications = (
       return
     }
 
-    console.log(`🚀 Setting up ultra-fast client WebSocket for client ${clientId}...`)
+    //console.log(`🚀 Setting up ultra-fast client WebSocket for client ${clientId}...`)
 
     // Conectar al WebSocket si no está conectado
     if (!webSocketService.isConnected()) {
