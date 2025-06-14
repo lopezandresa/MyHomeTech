@@ -56,12 +56,6 @@ class ServiceRequestService {
     return response.data
   }
 
-  // Técnico rechaza solicitud
-  async rejectRequest(id: number): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${id}/reject`)
-    return response.data
-  }
-
   // Cliente rechaza oferta de técnico
   async rejectOffer(id: number): Promise<ServiceRequest> {
     const response = await api.post<ServiceRequest>(`/service-requests/${id}/reject-offer`)

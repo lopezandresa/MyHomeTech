@@ -470,24 +470,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         prev.map(req => 
           req.id === requestId 
             ? { ...req, status: 'scheduled', scheduledAt: scheduleDate }
-            : req        )
+            : req
+        )
       )
     } catch (error) {
       console.error('Error scheduling:', error)
       setError('Error al programar el servicio')
     }
   }
-  const handleReject = async (requestId: number) => {
-    try {
-      await serviceRequestService.rejectRequest(requestId)
-        // Remover la solicitud de la lista de pendientes
-      setPendingRequests(prev => prev.filter(req => req.id !== requestId))
-    } catch (error) {
-      console.error('Error rejecting request:', error)
-      setError('Error al rechazar la solicitud')
-    }
-  }
-
   const handleReconnect = () => {
     if (isTechnician) {
       technicianNotifications.forceReconnect()
@@ -929,12 +919,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
                     Hacer Contraoferta
-                  </button>
-                  <button
-                    onClick={() => handleReject(request.id)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Rechazar
                   </button>
                 </div>
               </motion.div>
@@ -1431,7 +1415,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             technicianId={isTechnician ? user?.id : undefined}
           />
         </div>
-      )}    </>
+      )}
+    </>
   )
 }
 

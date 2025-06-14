@@ -339,28 +339,6 @@ export class ServiceRequestService {
     return this.srRepo.save(req);
   }
 
-  /** Técnico rechaza la solicitud */
-  async rejectByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
-    const req = await this.srRepo.findOne({
-      where: { id, status: ServiceRequestStatus.PENDING },
-      relations: ['client', 'appliance', 'address']
-    });
-    if (!req) {
-      throw new NotFoundException('Solicitud no disponible para rechazar');
-    }
-
-    req.technicianId = technicianId;
-    req.status = ServiceRequestStatus.CANCELLED;
-    req.cancelledAt = new Date();
-
-    const updatedRequest = await this.srRepo.save(req);
-    
-    // Notificar a otros técnicos que la solicitud ya no está disponible
-    await this.notifyRequestNoLongerAvailable(id);
-    
-    return updatedRequest;
-  }
-
   /** Cliente rechaza oferta de técnico */
   async rejectOfferByClient(id: number, clientId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({

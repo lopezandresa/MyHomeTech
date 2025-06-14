@@ -163,19 +163,6 @@ export class ServiceRequestController {
     return this.svc.completeByClient(id, req.user.id);
   }
 
-  // 8) Técnico rechaza solicitud
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('technician')
-  @Post(':id/reject')
-  @ApiParam({ name: 'id', type: Number })
-  @ApiOperation({ summary: 'Técnico rechaza la solicitud' })
-  async reject(
-    @Request() req,
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<ServiceRequest> {
-    return this.svc.rejectByTechnician(id, req.user.id);
-  }
-
   // Cliente rechaza oferta del técnico
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('client')
