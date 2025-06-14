@@ -678,9 +678,7 @@ export class ServiceRequestService {
     // Validar que la fecha alternativa no sea en el pasado
     if (alternativeDate <= new Date()) {
       throw new BadRequestException('La fecha alternativa debe ser en el futuro');
-    }
-
-    // Verificar disponibilidad del técnico para la fecha alternativa
+    }    // Verificar disponibilidad del técnico para la fecha alternativa
     const hasConflict = await this.checkTechnicianAvailability(technicianId, alternativeDate);
 
     if (hasConflict) {
@@ -699,6 +697,44 @@ export class ServiceRequestService {
     // Verificar límite de 3 propuestas por técnico
     if (existingProposalsCount >= 3) {
       throw new BadRequestException('Has alcanzado el límite máximo de 3 propuestas de fecha alternativa para esta solicitud');
+    }
+
+    // Obtener propuestas existentes del técnico para verificar horarios únicos
+    const existingProposals = await this.proposalRepo.find({
+      where: {
+        serviceRequestId,
+        technicianId,
+        status: In([AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED])
+      }
+    });
+
+    // Verificar que la nueva fecha no sea igual a ninguna propuesta existente
+    const proposedTime = alternativeDate.getTime();
+    for (const existingProposal of existingProposals) {
+      const existingTime = existingProposal.proposedDateTime.getTime();
+      
+      // Verificar si es exactamente la misma fecha y hora
+      if (proposedTime === existingTime) {
+        throw new BadRequestException('Ya has propuesto esta fecha y hora para esta solicitud');
+      }
+      
+      // Verificar si es en el mismo día y muy cerca en horario (menos de 60 minutos de diferencia)
+      const timeDifference = Math.abs(proposedTime - existingTime);
+      const minutesDifference = timeDifference / (1000 * 60);
+      
+      if (minutesDifference < 60) {
+        const existingDateStr = existingProposal.proposedDateTime.toLocaleString('es-CO', {
+          timeZone: 'America/Bogota',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        throw new BadRequestException(
+          `Ya tienes una propuesta muy cercana en horario (${existingDateStr}). Las propuestas deben tener al menos 1 hora de diferencia.`
+        );
+      }
     }
 
     // Crear la nueva propuesta de fecha alternativa

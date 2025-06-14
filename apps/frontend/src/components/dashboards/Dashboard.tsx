@@ -443,9 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     })}
                   </p>
                 </div>
-              </div>
-
-              {/* Información sobre conflicto */}
+              </div>              {/* Información sobre conflicto */}
               <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                 <div className="flex items-start">
                   <ExclamationTriangleIcon className="h-5 w-5 text-orange-500 mt-0.5 mr-3" />
@@ -455,6 +453,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       Ya tienes un servicio programado para esa fecha o no tienes disponibilidad. 
                       Propón una fecha alternativa que funcione mejor para tu agenda.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información sobre requisitos de propuestas */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <ClockIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-1">Requisitos para propuestas</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Máximo 3 propuestas por solicitud</li>
+                      <li>• Cada propuesta debe ser en horario diferente (mín. 1 hora de diferencia)</li>
+                      <li>• Solo horarios de trabajo: 6:00 AM - 6:00 PM</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -525,11 +538,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
-                </div>
-
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                </div>                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>Horario de servicio:</strong> 6:00 AM - 6:00 PM. Selecciona una fecha y hora en la que tengas disponibilidad.
+                    <strong>Horario de servicio:</strong> 6:00 AM - 6:00 PM. 
+                  </p>
+                  <p className="text-sm text-blue-700 mt-2">
+                    💡 <strong>Tip:</strong> Cada propuesta debe tener al menos 30 minutos de diferencia con tus otras propuestas para darle opciones reales al cliente.
                   </p>
                 </div>
               </div>

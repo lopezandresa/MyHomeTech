@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import serviceRequestService from '../services/serviceRequestService'
 import ratingService from '../services/ratingService'
 import { useToast } from '../components/common/ToastProvider'
@@ -62,6 +62,21 @@ export const useDashboardActions = (): DashboardActionsState => {
   // Hook para toasts
   const { showSuccess, showError } = useToast()
 
+  // Efecto para establecer fecha alternativa por defecto cuando se abre el modal
+  useEffect(() => {
+    if (selectedRequest && !alternativeDate) {
+      // Establecer fecha de mañana a las 8:00 AM por defecto
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(8, 0, 0, 0)
+      const tomorrowString = tomorrow.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:MM
+      setAlternativeDate(tomorrowString)
+    } else if (!selectedRequest) {
+      // Limpiar fecha cuando se cierra el modal
+      setAlternativeDate('')
+    }
+  }, [selectedRequest, alternativeDate])
+
   // Función para refrescar datos después de cambios
   const refreshData = useCallback(async () => {
     try {
@@ -120,13 +135,46 @@ export const useDashboardActions = (): DashboardActionsState => {
       setError('Error al cancelar la solicitud')
     }
   }
-
   const handleProposeAlternativeDate = async (requestId: number, alternativeDate: string, comment?: string) => {
     try {
       setError(null)
       if (!alternativeDate) {
         showError('Fecha Requerida', 'Por favor selecciona una fecha y hora')
         return
+      }      // Validación local: verificar que no sea muy similar a propuestas existentes
+      const request = availableRequests.find((req: ServiceRequest) => req.id === requestId)
+      if (request?.alternativeDateProposals) {
+        const proposedTime = new Date(alternativeDate).getTime()
+        
+        for (const existingProposal of request.alternativeDateProposals) {
+          const existingTime = new Date(existingProposal.proposedDateTime).getTime()
+          
+          // Verificar si es exactamente la misma fecha y hora
+          if (proposedTime === existingTime) {
+            showError('Fecha Duplicada', 'Ya has propuesto esta fecha y hora exacta')
+            return
+          }
+          
+          // Verificar si es muy cercana (menos de 30 minutos)
+          const timeDifference = Math.abs(proposedTime - existingTime)
+          const minutesDifference = timeDifference / (1000 * 60)
+          
+          if (minutesDifference < 30) {
+            const existingDateStr = new Date(existingProposal.proposedDateTime).toLocaleString('es-CO', {
+              timeZone: 'America/Bogota',
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+            showError(
+              'Horarios Muy Cercanos', 
+              `Ya tienes una propuesta muy cercana (${existingDateStr}). Las propuestas deben tener al menos 30 minutos de diferencia.`
+            )
+            return
+          }
+        }
       }
 
       await serviceRequestService.proposeAlternativeDate(requestId, alternativeDate, comment)
