@@ -210,7 +210,6 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
               
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <WrenchScrewdriverIcon className="h-6 w-6 text-blue-600" />
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
                       <h3 className="text-lg font-semibold text-gray-900">

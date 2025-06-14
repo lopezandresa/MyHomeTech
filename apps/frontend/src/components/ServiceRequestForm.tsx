@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { applianceService } from '../services/applianceService'
 import { serviceRequestService } from '../services/serviceRequestService'
+import { serviceRequestTypeService, type ServiceRequestType } from '../services/serviceRequestTypeService'
 import { toInputDateFormat } from '../utils/dateUtils'
 import AddressSelector from './common/AddressSelector'
 import { useToast } from './common/ToastProvider'
@@ -22,6 +23,11 @@ interface ServiceRequestFormProps {
 const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCancel }) => {
   // Hook para toasts
   const { showSuccess, showError } = useToast()
+
+  // Estados adicionales para tipos de solicitud
+  const [serviceRequestTypes, setServiceRequestTypes] = useState<ServiceRequestType[]>([])
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('')
+  const [loadingServiceTypes, setLoadingServiceTypes] = useState(false)
 
   // Datos de la cascada
   const [types, setTypes] = useState<string[]>([])
@@ -44,6 +50,30 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Cargar tipos de solicitud al montar el componente
+  useEffect(() => {
+    loadServiceRequestTypes()
+  }, [])
+
+  // Función para cargar tipos de solicitud desde el backend
+  const loadServiceRequestTypes = async () => {
+    try {
+      setLoadingServiceTypes(true)
+      const types = await serviceRequestTypeService.getAll()
+      setServiceRequestTypes(types)
+      
+      // Seleccionar el primer tipo por defecto (generalmente "Reparación")
+      if (types.length > 0) {
+        setSelectedServiceType(types[0].name)
+      }
+    } catch (error) {
+      console.error('Error loading service request types:', error)
+      showError('Error', 'No se pudieron cargar los tipos de solicitud')
+    } finally {
+      setLoadingServiceTypes(false)
+    }
+  }
 
   // Cargar tipos al montar el componente
   useEffect(() => {
@@ -152,6 +182,11 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!selectedServiceType) {
+      setError('Debes seleccionar un tipo de servicio')
+      return
+    }
+
     if (!selectedAppliance) {
       setError('Debes seleccionar un electrodoméstico')
       return
@@ -181,6 +216,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
         applianceId: selectedAppliance.id,
         addressId: selectedAddressId,
         description: description.trim(),
+        serviceType: selectedServiceType as any, // Incluir el tipo de servicio seleccionado
         proposedDateTime: proposedDateTime.toISOString(),
         validHours: 24, // 24 horas de validez por defecto
         clientPrice: 0 // Precio base por defecto
@@ -240,6 +276,51 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
             <p className="text-red-800">{error}</p>
           </motion.div>
         )}
+
+        {/* Tipo de Servicio - PRIMER CAMPO */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-gray-900">Tipo de servicio</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ¿Qué tipo de servicio necesitas?
+            </label>
+            {loadingServiceTypes ? (
+              <div className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-50">
+                <p className="text-gray-500">Cargando tipos de servicio...</p>
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={selectedServiceType}
+                  onChange={(e) => setSelectedServiceType(e.target.value)}
+                  className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Selecciona el tipo de servicio...</option>
+                  {serviceRequestTypes.map((type) => (
+                    <option key={type.id} value={type.name}>
+                      {type.icon} {type.displayName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+            )}
+            
+            {/* Descripción del tipo seleccionado */}
+            {selectedServiceType && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <p className="text-sm text-blue-800">
+                  {serviceRequestTypes.find(type => type.name === selectedServiceType)?.description}
+                </p>
+              </motion.div>
+            )}
+          </div>
+        </div>
 
         {/* Selección de Electrodoméstico */}
         <div className="space-y-4">
