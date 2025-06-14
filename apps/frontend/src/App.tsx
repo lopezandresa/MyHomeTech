@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ToastProvider } from './components/common/ToastProvider'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -111,7 +112,9 @@ const AppContent = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ClipboardDocumentListIcon,
@@ -9,6 +9,8 @@ import {
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
 import DashboardPanel from '../common/DashboardPanel'
+import ConfirmModal from '../common/ConfirmModal'
+import { useToast } from '../common/ToastProvider'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
@@ -32,6 +34,47 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   handleCompleteService,
   handleCancelRequest
 }) => {
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const { showSuccess, showError } = useToast()
+
+  // Función para iniciar el proceso de cancelación
+  const handleCancelClick = (requestId: number) => {
+    setRequestToCancel(requestId)
+    setShowConfirmModal(true)
+  }
+
+  // Función para confirmar la cancelación
+  const handleConfirmCancel = async () => {
+    if (!requestToCancel) return
+
+    try {
+      setIsCancelling(true)
+      await handleCancelRequest(requestToCancel)
+      showSuccess(
+        'Solicitud Cancelada',
+        'La solicitud ha sido cancelada exitosamente'
+      )
+    } catch (error) {
+      showError(
+        'Error al Cancelar',
+        'No se pudo cancelar la solicitud. Inténtalo de nuevo.'
+      )
+    } finally {
+      setIsCancelling(false)
+      setRequestToCancel(null)
+      setShowConfirmModal(false)
+    }
+  }
+
+  // Función para cerrar el modal
+  const handleCloseModal = () => {
+    if (!isCancelling) {
+      setShowConfirmModal(false)
+      setRequestToCancel(null)
+    }
+  }
   // Usar directamente los datos pasados como props, sin fetches adicionales
   
   if (isLoading) {
@@ -157,9 +200,8 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                   )}
                 </div><div className="mt-4">
                   {request.status === 'pending' && (
-                    <div className="flex items-center justify-between p-3 rounded-lg">
-                      <button
-                        onClick={() => handleCancelRequest(request.id)}
+                    <div className="flex items-center justify-between p-3 rounded-lg">                      <button
+                        onClick={() => handleCancelClick(request.id)}
                         className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm flex items-center gap-1"
                       >
                         <XMarkIcon className="h-4 w-4" />
@@ -184,12 +226,24 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         Marcar como completada
                       </button>
                     </div>
-                  )}                </div>
-              </div>
+                  )}                </div>              </div>
             </motion.div>
           ))}
         </div>
       )}
+
+      {/* Modal de confirmación para cancelar solicitud */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmCancel}
+        title="Cancelar Solicitud"
+        message="¿Estás seguro de que deseas cancelar esta solicitud? Esta acción no se puede deshacer."
+        confirmText="Sí, Cancelar"
+        cancelText="No, Mantener"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+        isLoading={isCancelling}
+      />
     </DashboardPanel>
   )
 }

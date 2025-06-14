@@ -20,7 +20,6 @@ import { ClientNotifications } from '../ClientNotifications'
 import { ClientRequests } from './ClientRequests'
 import { AvailableJobs } from './AvailableJobs'
 import { TechnicianJobs } from './TechnicianJobs'
-import { MultiOfferDebug } from '../MultiOfferDebug'
 import RatingModal from '../RatingModal'
 import { formatDate } from '../../utils/dateUtils'
 
@@ -36,8 +35,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // Hook personalizado para datos del dashboard
   const dashboardData = useDashboardData()
-  
-  // Hook personalizado para acciones del dashboard
+    // Hook personalizado para acciones del dashboard
   const dashboardActions = useDashboardActions()
 
   // Estados adicionales para UI
@@ -65,21 +63,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // Renderizado según pestaña activa
   const renderContent = (activeTab: string) => {
     if (dashboardData.isClient) {
-      switch (activeTab) {
-        case 'main':
+      switch (activeTab) {        case 'main':
           return (
             <ClientRequests
               isLoading={dashboardData.isLoading}
               error={dashboardData.error}
-              setError={dashboardData.setError}
               clientRequests={dashboardData.clientRequests}
               requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
-              setRequestFilter={dashboardData.setRequestFilter}
-              setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
+              setRequestFilter={dashboardData.setRequestFilter}              setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
-              handleAcceptSpecificOffer={dashboardActions.handleAcceptSpecificOffer}
               handleCancelRequest={dashboardActions.handleCancelRequest}
-              handleUpdateClientPrice={dashboardActions.handleUpdateClientPrice}
             />
           )
         case 'profile':
@@ -89,15 +82,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <ClientRequests
               isLoading={dashboardData.isLoading}
               error={dashboardData.error}
-              setError={dashboardData.setError}
               clientRequests={dashboardData.clientRequests}
               requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
               setRequestFilter={dashboardData.setRequestFilter}
               setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
               handleCompleteService={dashboardActions.handleCompleteService}
-              handleAcceptSpecificOffer={dashboardActions.handleAcceptSpecificOffer}
               handleCancelRequest={dashboardActions.handleCancelRequest}
-              handleUpdateClientPrice={dashboardActions.handleUpdateClientPrice}
             />
           )
       }
@@ -401,13 +391,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
-            
-            <ServiceRequestForm 
+              <ServiceRequestForm 
               onSuccess={() => {
                 dashboardActions.setShowNewRequestModal(false)
                 dashboardData.loadData()
               }}
-              onError={(error) => dashboardData.setError(error)}
               onCancel={() => dashboardActions.setShowNewRequestModal(false)}
             />
           </motion.div>

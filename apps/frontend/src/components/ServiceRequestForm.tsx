@@ -9,17 +9,20 @@ import {
 } from '@heroicons/react/24/outline'
 import { applianceService } from '../services/applianceService'
 import { serviceRequestService } from '../services/serviceRequestService'
-import { formatDate, toInputDateFormat } from '../utils/dateUtils'
+import { toInputDateFormat } from '../utils/dateUtils'
 import AddressSelector from './common/AddressSelector'
+import { useToast } from './common/ToastProvider'
 import type { Appliance } from '../types/index'
 
 interface ServiceRequestFormProps {
   onSuccess?: (newRequest?: any) => void
-  onError?: (error: string) => void
   onCancel?: () => void
 }
 
-const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onError, onCancel }) => {
+const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCancel }) => {
+  // Hook para toasts
+  const { showSuccess, showError } = useToast()
+
   // Datos de la cascada
   const [types, setTypes] = useState<string[]>([])
   const [brands, setBrands] = useState<string[]>([])
@@ -41,7 +44,6 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   // Cargar tipos al montar el componente
   useEffect(() => {
@@ -174,7 +176,7 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       setError(null)
 
       const proposedDateTime = new Date(`${proposedDate}T${proposedTime}`)
-
+      
       await serviceRequestService.createRequest({
         applianceId: selectedAppliance.id,
         addressId: selectedAddressId,
@@ -184,37 +186,26 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
         clientPrice: 0 // Precio base por defecto
       })
 
-      setSuccess(true)
+      // Mostrar toast de éxito
+      showSuccess(
+        '¡Solicitud Creada!',
+        'Tu solicitud ha sido enviada exitosamente. Los técnicos disponibles podrán aceptarla.'
+      )
       
-      // Llamar callback de éxito después de un momento
-      setTimeout(() => {
-        onSuccess?.()
-      }, 2000)
+      // Llamar callback de éxito inmediatamente
+      onSuccess?.()
     } catch (error) {
       console.error('Error creating request:', error)
       const errorMessage = 'Error al crear la solicitud. Inténtalo de nuevo.'
       setError(errorMessage)
-      onError?.(errorMessage)
+      showError(
+        'Error al Crear Solicitud',
+        errorMessage
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  const resetForm = () => {
-    setSelectedType('')
-    setSelectedBrand('')
-    setSelectedModel('')
-    setSelectedAppliance(null)
-    setSelectedAddressId(undefined)
-    setDescription('')
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    setProposedDate(toInputDateFormat(tomorrow))
-    setProposedTime('08:00')
-    setError(null)
-    setSuccess(false)
-  }
-
   // Generar opciones de hora (6 AM - 6 PM)
   const generateTimeOptions = () => {
     const options = []
@@ -225,33 +216,8 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onEr
       options.push({
         value: timeString,
         label: `${displayHour}:00 ${ampm}`
-      })
-    }
+      })    }
     return options
-  }
-
-  if (success) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md mx-auto text-center py-12"
-      >
-        <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          ¡Solicitud Creada!
-        </h3>
-        <p className="text-gray-600 mb-6">
-          Tu solicitud de servicio ha sido publicada con la fecha propuesta: {formatDate(new Date(`${proposedDate}T${proposedTime}`))}. Los técnicos disponibles pueden aceptarla durante las próximas 24 horas.
-        </p>
-        <button
-          onClick={resetForm}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Crear Otra Solicitud
-        </button>
-      </motion.div>
-    )
   }
 
   return (
