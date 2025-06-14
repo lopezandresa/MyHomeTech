@@ -25,14 +25,6 @@ import RatingModal from '../RatingModal'
 import { formatDate } from '../../utils/dateUtils'
 
 // Utility function to format date
-const formatDateUtil = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
 import { useDashboardData } from '../../hooks/useDashboardData'
 import { useDashboardActions } from '../../hooks/useDashboardActions'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'

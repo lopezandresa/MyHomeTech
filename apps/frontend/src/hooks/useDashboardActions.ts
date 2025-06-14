@@ -142,7 +142,6 @@ export const useDashboardActions = (): DashboardActionsState => {
       }
 
       // Llamar al servicio para proponer fecha alternativa
-      const updatedRequest = await serviceRequestService.proposeAlternativeDate(requestId, alternativeDate)
       
       // Actualizar en solicitudes disponibles
       setAvailableRequests(prev => 

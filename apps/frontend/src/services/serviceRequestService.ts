@@ -3,8 +3,6 @@ import type {
   ServiceRequest,
   CreateServiceRequestRequest,
   CreateOfferRequest,
-  AcceptRequestRequest,
-  ScheduleRequestRequest,
   AvailabilityCheckResponse,
   CalendarEvent
 } from '../types/index'
