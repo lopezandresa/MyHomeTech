@@ -33,11 +33,24 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   setShowNewRequestModal,
   handleCompleteService,
   handleCancelRequest
-}) => {
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
+}) => {  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
-  const { showSuccess, showError } = useToast()
+  const { showSuccess, showError, showInfo, showWarning } = useToast()
+
+  // Función temporal para probar los toasts
+  const testToasts = () => {
+    showSuccess('¡Éxito!', 'Este es un mensaje de éxito para probar el toast')
+    setTimeout(() => {
+      showError('Error', 'Este es un mensaje de error para probar')
+    }, 1000)
+    setTimeout(() => {
+      showInfo('Información', 'Este es un mensaje informativo')
+    }, 2000)
+    setTimeout(() => {
+      showWarning('Advertencia', 'Este es un mensaje de advertencia')
+    }, 3000)
+  }
 
   // Función para iniciar el proceso de cancelación
   const handleCancelClick = (requestId: number) => {
@@ -88,14 +101,29 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   }
 
   const filteredRequests = clientRequests.filter(request => {
-    if (requestFilter === 'in-progress') {
-      return ['pending', 'accepted', 'scheduled', 'in_progress'].includes(request.status)
+    if (requestFilter === 'in-progress') {      return ['pending', 'accepted', 'scheduled', 'in_progress'].includes(request.status)
     }
     return true
   })
-  return (    <DashboardPanel
+
+  return (
+    <DashboardPanel
       title="Mis Solicitudes"
-      subtitle={`${clientRequests.length} solicitudes`}    >
+      subtitle={`${clientRequests.length} solicitudes`}
+    >
+      {/* Botón temporal para probar toasts */}
+      {/* <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <button
+          onClick={testToasts}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+          🧪 Probar Toasts (Temporal)
+        </button>
+        <p className="text-xs text-blue-600 mt-1">
+          Haz clic para ver todos los tipos de toast con la barra de progreso
+        </p>
+      </div> */}
+
       {/* Error display */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">

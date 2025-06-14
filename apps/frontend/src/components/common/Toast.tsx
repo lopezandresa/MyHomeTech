@@ -28,18 +28,30 @@ const Toast: React.FC<ToastProps> = ({
   onClose
 }) => {
   const [isVisible, setIsVisible] = useState(true)
-
+  const [progress, setProgress] = useState(100)
   useEffect(() => {
     if (duration > 0) {
-      const timer = setTimeout(() => {
+      // Timer para cerrar el toast
+      const closeTimer = setTimeout(() => {
         setIsVisible(false)
         setTimeout(() => onClose(id), 300) // Wait for exit animation
       }, duration)
 
-      return () => clearTimeout(timer)
+      // Timer para la barra de progreso
+      const progressTimer = setInterval(() => {
+        setProgress((prev) => {
+          const decrement = 100 / (duration / 50) // Update every 50ms
+          const newProgress = prev - decrement
+          return newProgress <= 0 ? 0 : newProgress
+        })
+      }, 50)
+
+      return () => {
+        clearTimeout(closeTimer)
+        clearInterval(progressTimer)
+      }
     }
   }, [duration, id, onClose])
-
   const getToastConfig = () => {
     switch (type) {
       case 'success':
@@ -49,7 +61,8 @@ const Toast: React.FC<ToastProps> = ({
           borderColor: 'border-green-200',
           iconColor: 'text-green-600',
           titleColor: 'text-green-800',
-          messageColor: 'text-green-700'
+          messageColor: 'text-green-700',
+          progressColor: 'bg-green-500'
         }
       case 'error':
         return {
@@ -58,7 +71,8 @@ const Toast: React.FC<ToastProps> = ({
           borderColor: 'border-red-200',
           iconColor: 'text-red-600',
           titleColor: 'text-red-800',
-          messageColor: 'text-red-700'
+          messageColor: 'text-red-700',
+          progressColor: 'bg-red-500'
         }
       case 'warning':
         return {
@@ -67,7 +81,8 @@ const Toast: React.FC<ToastProps> = ({
           borderColor: 'border-yellow-200',
           iconColor: 'text-yellow-600',
           titleColor: 'text-yellow-800',
-          messageColor: 'text-yellow-700'
+          messageColor: 'text-yellow-700',
+          progressColor: 'bg-yellow-500'
         }
       case 'info':
       default:
@@ -77,7 +92,8 @@ const Toast: React.FC<ToastProps> = ({
           borderColor: 'border-blue-200',
           iconColor: 'text-blue-600',
           titleColor: 'text-blue-800',
-          messageColor: 'text-blue-700'
+          messageColor: 'text-blue-700',
+          progressColor: 'bg-blue-500'
         }
     }
   }
@@ -96,9 +112,19 @@ const Toast: React.FC<ToastProps> = ({
         <motion.div
           initial={{ opacity: 0, x: 300, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 300, scale: 0.9 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}          className={`max-w-md w-full ${config.bgColor} border ${config.borderColor} rounded-lg shadow-lg pointer-events-auto`}
+          exit={{ opacity: 0, x: 300, scale: 0.9 }}          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className={`max-w-md w-full ${config.bgColor} border ${config.borderColor} rounded-lg shadow-lg pointer-events-auto overflow-hidden`}
         >
+          {/* Barra de progreso */}
+          <div className="h-1 bg-gray-200">
+            <motion.div
+              className={`h-full ${config.progressColor}`}
+              initial={{ width: '100%' }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.05, ease: 'linear' }}
+            />
+          </div>
+          
           <div className="p-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">

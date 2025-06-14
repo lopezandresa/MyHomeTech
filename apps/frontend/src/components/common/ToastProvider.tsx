@@ -39,7 +39,6 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }, [])
-
   const showToast = useCallback((
     type: ToastType,
     title: string,
