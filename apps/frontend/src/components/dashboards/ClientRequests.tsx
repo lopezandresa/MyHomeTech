@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
-import DashboardSection from '../common/DashboardSection'
+import DashboardPanel from '../common/DashboardPanel'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
@@ -50,12 +50,18 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
     }
     return true
   })
-  return (
-    <DashboardSection
+  return (    <DashboardPanel
       title="Mis Solicitudes"
-      icon={ClipboardDocumentListIcon}
-      error={error}
-      actions={
+      subtitle={`${clientRequests.length} solicitudes`}    >
+      {/* Error display */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Action buttons and filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <button
           onClick={() => setShowNewRequestModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
@@ -63,12 +69,11 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
           <PlusIcon className="h-4 w-4" />
           <span>Nueva Solicitud</span>
         </button>
-      }
-    >
-      {/* Filter buttons */}
-      <div className="flex items-center space-x-4 mb-6">
-        <FunnelIcon className="h-5 w-5 text-gray-500" />
-        <div className="flex space-x-2">
+
+        {/* Filter buttons */}
+        <div className="flex items-center space-x-4">
+          <FunnelIcon className="h-5 w-5 text-gray-500" />
+          <div className="flex space-x-2">
           <button
             onClick={() => setRequestFilter('in-progress')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -86,9 +91,9 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                 ? 'bg-blue-100 text-blue-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
-          >
-            Todas ({clientRequests.length})
+          >            Todas ({clientRequests.length})
           </button>
+          </div>
         </div>
       </div>
 
@@ -185,6 +190,6 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
           ))}
         </div>
       )}
-    </DashboardSection>
+    </DashboardPanel>
   )
 }

@@ -12,7 +12,7 @@ import {
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
-import DashboardSection from '../common/DashboardSection'
+import DashboardPanel from '../common/DashboardPanel'
 import type { ServiceRequest } from '../../types/index'
 
 interface AvailableJobsProps {
@@ -141,12 +141,10 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
         </div>
       </div>
     )
-  }
-  return (
-    <DashboardSection
+  }  return (
+    <DashboardPanel
       title="Trabajos Disponibles"
       subtitle={`${pendingRequests.length} solicitudes`}
-      icon={WrenchScrewdriverIcon}
     >
       <AnimatePresence>
         {renderConnectionAlert()}
@@ -359,7 +357,6 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
             </motion.div>
           ))}
         </div>
-      )}
-    </DashboardSection>
+      )}    </DashboardPanel>
   )
 }
