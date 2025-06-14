@@ -7,12 +7,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, Between, In, Not } from 'typeorm';
-import { ServiceRequest, ServiceRequestStatus } from './service-request.entity';
-import { ServiceRequestOffer, OfferStatus } from './service-request-offer.entity';
+import { ServiceRequest, ServiceRequestStatus, ServiceType } from './service-request.entity';
 import { AlternativeDateProposal, AlternativeDateProposalStatus } from './alternative-date-proposal.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
-import { ScheduleRequestDto } from './dto/schedule-request.dto';
-import { OfferPriceDto } from './dto/offer-price.dto';
 import { Address } from '../address/address.entity';
 import { Technician } from '../technician/technician.entity';
 import { Appliance } from '../appliance/appliance.entity';
@@ -24,8 +21,7 @@ export class ServiceRequestService {
 
   constructor(
     @InjectRepository(ServiceRequest)
-    private readonly srRepo: Repository<ServiceRequest>,    @InjectRepository(ServiceRequestOffer)
-    private readonly offerRepo: Repository<ServiceRequestOffer>,
+    private readonly srRepo: Repository<ServiceRequest>,    
     @InjectRepository(AlternativeDateProposal)
     private readonly proposalRepo: Repository<AlternativeDateProposal>,
     @InjectRepository(Address)
@@ -72,9 +68,9 @@ export class ServiceRequestService {
       applianceId: dto.applianceId,
       addressId: dto.addressId,
       description: dto.description,
+      serviceType: dto.serviceType || ServiceType.REPAIR,
       proposedDateTime: proposedDate,
       expiresAt,
-      clientPrice: dto.clientPrice, // Precio ofrecido por el cliente
       status: ServiceRequestStatus.PENDING,
     });
 
@@ -245,8 +241,6 @@ export class ServiceRequestService {
       .leftJoinAndSelect('sr.client', 'client')
       .leftJoinAndSelect('sr.appliance', 'appliance')
       .leftJoinAndSelect('sr.address', 'address')
-      .leftJoinAndSelect('sr.offers', 'offers')
-      .leftJoinAndSelect('offers.technician', 'offerTechnician')
       .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
       .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
       .where('sr.status = :status', { status: ServiceRequestStatus.PENDING })
@@ -447,167 +441,15 @@ export class ServiceRequestService {
     return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
   }
 
-  /** Técnico hace una oferta en una solicitud */
-  async offerPrice(serviceRequestId: number, technicianId: number, dto: OfferPriceDto): Promise<ServiceRequestOffer> {
-    // Verificar que la solicitud existe y está en estado correcto
-    const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
-      },
-      relations: ['client', 'appliance', 'address']
-    });
 
-    if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no disponible para ofertas');
-    }
-
-    // Verificar que no haya expirado
-    if (serviceRequest.expiresAt && serviceRequest.expiresAt < new Date()) {
-      throw new BadRequestException('Esta solicitud ha expirado');
-    }
-
-    // Verificar disponibilidad del técnico
-    const hasConflict = await this.checkTechnicianAvailability(
-      technicianId, 
-      serviceRequest.proposedDateTime
-    );
-
-    if (hasConflict) {
-      throw new ConflictException('Ya tienes un servicio agendado para ese día');
-    }
-
-    // Verificar que el técnico no haya hecho una oferta previa pendiente
-    const existingOffer = await this.offerRepo.findOne({
-      where: {
-        serviceRequestId,
-        technicianId,
-        status: OfferStatus.PENDING
-      }
-    });
-
-    if (existingOffer) {
-      throw new ConflictException('Ya tienes una oferta pendiente en esta solicitud');
-    }
-
-    // Crear la nueva oferta
-    const offer = this.offerRepo.create({
-      serviceRequestId,
-      technicianId,
-      price: dto.technicianPrice,
-      comment: dto.comment,
-      status: OfferStatus.PENDING
-    });
-
-    const savedOffer = await this.offerRepo.save(offer);
-
-    // Actualizar el estado de la solicitud a 'offered' si es la primera oferta
-    if (serviceRequest.status === ServiceRequestStatus.PENDING) {
-      serviceRequest.status = ServiceRequestStatus.OFFERED;
-      await this.srRepo.save(serviceRequest);
-    }
-
-    // Cargar la oferta completa con relaciones
-    const fullOffer = await this.offerRepo.findOne({
-      where: { id: savedOffer.id },
-      relations: ['technician', 'serviceRequest']
-    });
-
-    // Notificar al cliente sobre la nueva oferta
-    if (fullOffer) {
-      this.gateway.notifyClientNewOffer(serviceRequest);
-    }
-
-    return fullOffer!;
-  }
-
-  /** Cliente acepta una oferta específica */
-  async acceptOffer(serviceRequestId: number, offerId: number, clientId: number): Promise<ServiceRequest> {
-    // Verificar que la solicitud pertenece al cliente
-    const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        clientId,
-        status: ServiceRequestStatus.OFFERED
-      },
-      relations: ['client', 'appliance', 'address']
-    });
-
-    if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no está disponible');
-    }
-
-    // Verificar que la oferta existe y está pendiente
-    const offer = await this.offerRepo.findOne({
-      where: {
-        id: offerId,
-        serviceRequestId,
-        status: OfferStatus.PENDING
-      },
-      relations: ['technician']
-    });
-
-    if (!offer) {
-      throw new NotFoundException('Oferta no encontrada o no está disponible');
-    }
-
-    // Verificar disponibilidad del técnico una vez más
-    const hasConflict = await this.checkTechnicianAvailability(
-      offer.technicianId!,
-      serviceRequest.proposedDateTime
-    );
-
-    if (hasConflict) {
-      throw new ConflictException('El técnico ya no está disponible para esa fecha');
-    }
-
-    // Actualizar la solicitud
-    serviceRequest.technicianId = offer.technicianId;
-    serviceRequest.technicianPrice = offer.price;
-    serviceRequest.acceptedAt = new Date();
-    serviceRequest.scheduledAt = serviceRequest.proposedDateTime;
-    serviceRequest.status = ServiceRequestStatus.SCHEDULED;
-
-    // Marcar la oferta como aceptada
-    offer.status = OfferStatus.ACCEPTED;
-    offer.resolvedAt = new Date();
-
-    // Rechazar todas las demás ofertas pendientes
-    await this.offerRepo.update(
-      {
-        serviceRequestId,
-        status: OfferStatus.PENDING,
-        id: Not(offerId)
-      },
-      {
-        status: OfferStatus.REJECTED,
-        resolvedAt: new Date()
-      }
-    );
-
-    // Guardar cambios
-    await this.offerRepo.save(offer);
-    const updatedRequest = await this.srRepo.save(serviceRequest);
-
-    // Notificar al técnico que su oferta fue aceptada
-    this.gateway.notifyTechnicianOfferAccepted(updatedRequest, offer.technicianId!);
-
-    // Notificar a otros técnicos que sus ofertas fueron rechazadas
-    await this.notifyRejectedOffers(serviceRequestId, offerId);
-
-    return updatedRequest;
-  }
-
-  /** Obtener solicitudes del cliente con ofertas */
-  async getClientRequestsWithOffers(clientId: number): Promise<ServiceRequest[]> {
+  /** Obtener solicitudes del cliente con propuestas */
+  async getClientRequests(clientId: number): Promise<ServiceRequest[]> {
     const req = this.srRepo
     .createQueryBuilder('sr')
     .leftJoinAndSelect('sr.client', 'client')
     .leftJoinAndSelect('sr.appliance', 'appliance')
     .leftJoinAndSelect('sr.address', 'address')
     .leftJoinAndSelect('sr.technician', 'technician')
-    .leftJoinAndSelect('sr.offers', 'offers')
-    .leftJoinAndSelect('offers.technician', 'offerTechnician')
     .leftJoinAndSelect('sr.alternativeDateProposals', 'proposals')
     .leftJoinAndSelect('proposals.technician', 'proposalTechnician')
     .where('sr.clientId = :clientId', { clientId })
@@ -616,47 +458,7 @@ export class ServiceRequestService {
     return req;
   }
 
-  /** Cliente actualiza el precio de su solicitud */
-  async updateClientPrice(serviceRequestId: number, clientId: number, newPrice: number): Promise<ServiceRequest> {
-    const serviceRequest = await this.srRepo.findOne({
-      where: { 
-        id: serviceRequestId,
-        clientId,
-        status: In([ServiceRequestStatus.PENDING, ServiceRequestStatus.OFFERED])
-      }
-    });
-
-    if (!serviceRequest) {
-      throw new NotFoundException('Solicitud no encontrada o no se puede actualizar');
-    }
-
-    serviceRequest.clientPrice = newPrice;
-    const updatedRequest = await this.srRepo.save(serviceRequest);
-
-    // Notificar a técnicos sobre el cambio de precio
-    this.gateway.notifyPriceUpdate(updatedRequest);
-
-    return updatedRequest;
-  }
-
-  // Método privado para notificar ofertas rechazadas
-  private async notifyRejectedOffers(serviceRequestId: number, acceptedOfferId: number): Promise<void> {
-    try {
-      const rejectedOffers = await this.offerRepo.find({
-        where: {
-          serviceRequestId,
-          status: OfferStatus.REJECTED,
-          id: Not(acceptedOfferId)
-        },
-        relations: ['technician', 'serviceRequest']
-      });
-
-      for (const rejectedOffer of rejectedOffers) {
-        this.gateway.notifyTechnicianOfferRejected(rejectedOffer.serviceRequest, rejectedOffer.technicianId!);
-      }    } catch (error) {
-      this.logger.error('Error notifying rejected offers:', error);
-    }
-  }  /** Técnico propone fecha alternativa */
+  /** Técnico propone fecha alternativa */
   async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud existe y está en estado correcto
     const serviceRequest = await this.srRepo.findOne({
@@ -838,18 +640,6 @@ export class ServiceRequestService {
       }
     );
 
-    // Rechazar todas las ofertas pendientes para esta solicitud
-    await this.offerRepo.update(
-      { 
-        serviceRequestId,
-        status: OfferStatus.PENDING
-      },
-      { 
-        status: OfferStatus.REJECTED,
-        resolvedAt: new Date()
-      }
-    );
-
     // Guardar cambios
     await this.proposalRepo.save(proposal);
     const updatedRequest = await this.srRepo.save(serviceRequest);
@@ -942,26 +732,10 @@ export class ServiceRequestService {
       relations: ['technician']
     });
 
-    // Obtener todas las ofertas rechazadas
-    const rejectedOffers = await this.offerRepo.find({
-      where: { 
-        serviceRequestId,
-        status: OfferStatus.REJECTED
-      },
-      relations: ['technician']
-    });
-
     // Notificar a técnicos con propuestas rechazadas
     for (const proposal of rejectedProposals) {
       if (this.gateway && proposal.technician) {
         this.gateway.notifyTechnicianRequestUnavailable(proposal.technician.id, serviceRequestId);
-      }
-    }
-
-    // Notificar a técnicos con ofertas rechazadas
-    for (const offer of rejectedOffers) {
-      if (this.gateway && offer.technician) {
-        this.gateway.notifyTechnicianRequestUnavailable(offer.technician.id, serviceRequestId);
       }
     }
   }

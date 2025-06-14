@@ -24,6 +24,12 @@ export enum ServiceRequestStatus {
   EXPIRED      = 'expired',    // Expiró sin ser aceptado
 }
 
+export enum ServiceType {
+  MAINTENANCE  = 'maintenance',   // Mantenimiento preventivo
+  INSTALLATION = 'installation', // Instalación de equipos
+  REPAIR       = 'repair',       // Reparación/arreglo
+}
+
 @Entity()
 export class ServiceRequest {
   @PrimaryGeneratedColumn()
@@ -47,17 +53,17 @@ export class ServiceRequest {
   @Column('text')
   description: string;
 
+  /** Tipo de servicio solicitado */
+  @Column({
+    type: 'enum',
+    enum: ServiceType,
+    default: ServiceType.REPAIR,
+  })
+  serviceType: ServiceType;
+
   /** Fecha y hora propuesta por el cliente para el servicio */
   @Column({ type: 'timestamp' })
   proposedDateTime: Date;
-
-  /** Precio ofrecido por el cliente */
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  clientPrice: number;
-
-  /** Precio final acordado (del técnico seleccionado) */
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  technicianPrice?: number;
 
   /** Estado de la petición */
   @Column({
@@ -66,9 +72,6 @@ export class ServiceRequest {
     default: ServiceRequestStatus.PENDING,
   })
   status: ServiceRequestStatus;
-  /** Ofertas de técnicos */
-  @OneToMany(() => ServiceRequestOffer, offer => offer.serviceRequest)
-  offers: ServiceRequestOffer[];
 
   /** Propuestas de fechas alternativas */
   @OneToMany(() => AlternativeDateProposal, proposal => proposal.serviceRequest)

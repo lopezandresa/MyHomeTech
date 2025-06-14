@@ -3,7 +3,8 @@ import { X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { serviceRequestService } from '../services/serviceRequestService'
 import { addressService } from '../services/addressService'
-import type { CreateServiceRequestRequest, Address } from '../types'
+import { getServiceTypeOptions } from '../utils/serviceTypeUtils'
+import type { CreateServiceRequestRequest, Address, ServiceType } from '../types'
 
 interface ServiceRequestModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     addressId: '',
     proposedDateTime: '',
     description: '',
+    serviceType: 'repair' as ServiceType,
     priority: 'medium' as const,
     validHours: 24
   })
@@ -66,6 +68,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         addressId: parseInt(formData.addressId),
         proposedDateTime: formData.proposedDateTime,
         description: formData.description,
+        serviceType: formData.serviceType as ServiceType,
         clientPrice: 0, // Precio base por defecto
         validHours: formData.validHours
       }
@@ -78,6 +81,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         addressId: '',
         proposedDateTime: '',
         description: '',
+        serviceType: 'repair',
         priority: 'medium',
         validHours: 24
       })
@@ -173,6 +177,30 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               required
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Service Type Selection */}
+          <div>
+            <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Servicio
+            </label>
+            <select
+              id="serviceType"
+              name="serviceType"
+              value={formData.serviceType}
+              onChange={handleInputChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {getServiceTypeOptions().map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.icon} {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {getServiceTypeOptions().find(opt => opt.value === formData.serviceType)?.description}
+            </p>
           </div>
 
           {/* Description */}

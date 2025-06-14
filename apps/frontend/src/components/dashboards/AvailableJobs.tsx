@@ -11,6 +11,7 @@ import {
   UserCircleIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
+import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
 import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import DashboardPanel from '../common/DashboardPanel'
@@ -211,9 +212,15 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                 <div className="flex items-center space-x-3">
                   <WrenchScrewdriverIcon className="h-6 w-6 text-blue-600" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {request.appliance?.name || 'Electrodoméstico no disponible'}
-                    </h3>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {request.appliance?.name || 'Electrodoméstico no disponible'}
+                      </h3>
+                      {/* Indicador de tipo de servicio */}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getServiceTypeColor(request.serviceType)}`}>
+                        {getServiceTypeIcon(request.serviceType)} {getServiceTypeText(request.serviceType)}
+                      </span>
+                    </div>
                     {/* Información del cliente con foto de perfil */}
                     <div className="flex items-center space-x-3 mt-2">
                       <div className="relative">

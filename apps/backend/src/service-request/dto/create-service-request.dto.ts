@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsNumber,
   IsPositive,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ServiceType } from '../service-request.entity';
 
 export class CreateServiceRequestDto {
   @ApiProperty({ description: 'ID del electrodoméstico' })
@@ -20,6 +22,16 @@ export class CreateServiceRequestDto {
   @ApiProperty({ description: 'Descripción del problema' })
   @IsString()
   description: string;
+
+  @ApiProperty({ 
+    description: 'Tipo de servicio requerido',
+    enum: ServiceType,
+    example: ServiceType.REPAIR,
+    default: ServiceType.REPAIR
+  })
+  @IsEnum(ServiceType)
+  @IsOptional()
+  serviceType?: ServiceType = ServiceType.REPAIR;
 
   @ApiProperty({ 
     description: 'Fecha y hora propuesta para el servicio (debe estar entre 6 AM y 6 PM)',

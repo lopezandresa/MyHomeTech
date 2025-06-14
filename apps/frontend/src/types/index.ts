@@ -117,25 +117,26 @@ export interface CreateTechnicianProfileRequest {
 }
 
 // Solicitud de servicio
+export const ServiceType = {
+  MAINTENANCE: 'maintenance',   // Mantenimiento preventivo
+  INSTALLATION: 'installation', // Instalación de equipos
+  REPAIR: 'repair',             // Reparación/arreglo
+} as const
+
+export type ServiceType = typeof ServiceType[keyof typeof ServiceType]
+
 export interface ServiceRequest {
   id: number
   clientId: number
   technicianId?: number
   applianceId: number
   description: string
-  problemType: 'repair' | 'maintenance' | 'installation'
-  urgency: 'low' | 'medium' | 'high'
+  serviceType: ServiceType // Cambiado de problemType a serviceType
   status: 'pending' | 'scheduled' | 'completed' | 'cancelled'
   proposedDateTime: string
   scheduledAt?: string
   completedAt?: string
   cancelledAt?: string
-  estimatedDuration: number
-  // Nuevas propiedades para el sistema de ofertas
-  clientPrice?: number
-  technicianPrice?: number
-  offers?: ServiceRequestOffer[]
-  selectedOfferId?: number
   // Nueva propiedad para propuestas de fechas alternativas
   alternativeDateProposals?: AlternativeDateProposal[]
   // Relaciones
@@ -151,6 +152,7 @@ export interface CreateServiceRequestRequest {
   applianceId: number
   addressId: number
   description: string
+  serviceType?: ServiceType // Nuevo campo opcional, por defecto REPAIR
   clientPrice: number // Precio que el cliente está dispuesto a pagar
   proposedDateTime: string // Nueva: fecha y hora propuesta
   validHours?: number // Tiempo de validez en horas, por defecto 24 horas

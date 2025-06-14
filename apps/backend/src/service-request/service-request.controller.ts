@@ -13,9 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ServiceRequestService } from './service-request.service';
 import { ServiceRequest } from './service-request.entity';
-import { ServiceRequestOffer } from './service-request-offer.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
-import { OfferPriceDto } from './dto/offer-price.dto';
 import { ProposeAlternativeDateDto } from './dto/propose-alternative-date.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt.guard';
 import { Roles } from '../common/roles.decorator';
@@ -32,7 +30,7 @@ export class ServiceRequestController {
   // 1) Cliente crea solicitud con fecha propuesta
   @UseGuards(JwtAuthGuard)
   @Post()
-  @ApiOperation({ summary: 'Cliente crea una nueva solicitud con fecha propuesta y precio' })
+  @ApiOperation({ summary: 'Cliente crea una nueva solicitud con fecha propuesta' })
   create(
     @Request() req,
     @Body() dto: CreateServiceRequestDto,
@@ -57,7 +55,7 @@ export class ServiceRequestController {
     return this.svc.findPendingForTechnician(req.user.id);
   }
 
-  // 3) Técnico acepta una solicitud directamente (sin negociación de precio)
+  // 3) Técnico acepta una solicitud directamente (sin negociación de fechas)
   @UseGuards(JwtAuthGuard)
   @Roles('technician')
   @Post(':id/accept')
@@ -70,70 +68,13 @@ export class ServiceRequestController {
     return this.svc.acceptByTechnician(id, req.user.id);
   }
 
-  // NUEVO: Técnico hace una oferta con precio personalizado
-  @UseGuards(JwtAuthGuard)
-  @Roles('technician')
-  @Post(':id/offer')
-  @ApiParam({ name: 'id', type: Number, description: 'ID de la solicitud' })
-  @ApiOperation({ summary: 'Técnico hace una oferta con precio personalizado' })
-  @ApiBody({ type: OfferPriceDto })
-  async offerPrice(
-    @Request() req,
-    @Param('id', ParseIntPipe) serviceRequestId: number,
-    @Body() dto: OfferPriceDto,
-  ): Promise<ServiceRequestOffer> {
-    return this.svc.offerPrice(serviceRequestId, req.user.id, dto);
-  }
-
-  // NUEVO: Cliente acepta una oferta específica
+  // NUEVO: Cliente obtiene sus solicitudes con todas las propuestas
   @UseGuards(JwtAuthGuard)
   @Roles('client')
-  @Post(':id/accept-offer/:offerId')
-  @ApiParam({ name: 'id', type: Number, description: 'ID de la solicitud' })
-  @ApiParam({ name: 'offerId', type: Number, description: 'ID de la oferta a aceptar' })
-  @ApiOperation({ summary: 'Cliente acepta una oferta específica de un técnico' })
-  async acceptOffer(
-    @Request() req,
-    @Param('id', ParseIntPipe) serviceRequestId: number,
-    @Param('offerId', ParseIntPipe) offerId: number,
-  ): Promise<ServiceRequest> {
-    return this.svc.acceptOffer(serviceRequestId, offerId, req.user.id);
-  }
-
-  // NUEVO: Cliente obtiene sus solicitudes con todas las ofertas
-  @UseGuards(JwtAuthGuard)
-  @Roles('client')
-  @Get('my-requests-with-offers')
-  @ApiOperation({ summary: 'Cliente obtiene sus solicitudes con todas las ofertas recibidas' })
+  @Get('my-requests')
+  @ApiOperation({ summary: 'Cliente obtiene sus solicitudes con todas las propuestas recibidas' })
   getMyRequestsWithOffers(@Request() req): Promise<ServiceRequest[]> {
-    return this.svc.getClientRequestsWithOffers(req.user.id);
-  }
-
-  // NUEVO: Cliente actualiza el precio de su solicitud
-  @UseGuards(JwtAuthGuard)
-  @Roles('client')
-  @Put(':id/update-price')
-  @ApiParam({ name: 'id', type: Number, description: 'ID de la solicitud' })
-  @ApiOperation({ summary: 'Cliente actualiza el precio de su solicitud' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        newPrice: {
-          type: 'number',
-          description: 'Nuevo precio ofrecido por el cliente',
-          example: 60000
-        }
-      },
-      required: ['newPrice']
-    }
-  })
-  async updatePrice(
-    @Request() req,
-    @Param('id', ParseIntPipe) serviceRequestId: number,
-    @Body('newPrice') newPrice: number,
-  ): Promise<ServiceRequest> {
-    return this.svc.updateClientPrice(serviceRequestId, req.user.id, newPrice);
+    return this.svc.getClientRequests(req.user.id);
   }
 
   // 4) Cliente marca servicio como completado

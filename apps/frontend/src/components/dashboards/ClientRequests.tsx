@@ -12,6 +12,7 @@ import {
   BellIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
+import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
 import { formatDate } from '../../utils/dateUtils'
 import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
@@ -223,9 +224,15 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                         {getStatusIcon(request.status)}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold">
-                          {request.appliance?.name || 'Electrodoméstico no disponible'}
-                        </h3>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="text-lg font-semibold">
+                            {request.appliance?.name || 'Electrodoméstico no disponible'}
+                          </h3>
+                          {/* Indicador de tipo de servicio */}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getServiceTypeColor(request.serviceType)}`}>
+                            {getServiceTypeIcon(request.serviceType)} {getServiceTypeText(request.serviceType)}
+                          </span>
+                        </div>
                         <p className="text-sm text-gray-600">
                           Creada: {formatDate(request.createdAt)}
                         </p>

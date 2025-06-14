@@ -33,12 +33,6 @@ class ServiceRequestService {
     return response.data
   }
 
-  // Técnico hace una oferta en una solicitud
-  async makeOffer(requestId: number, offerData: CreateOfferRequest): Promise<ServiceRequest> {
-    const response = await api.post<ServiceRequest>(`/service-requests/${requestId}/offer`, offerData)
-    return response.data
-  }
-
   // Cliente completa servicio
   async completeRequest(id: number): Promise<ServiceRequest> {
     const response = await api.post<ServiceRequest>(`/service-requests/${id}/complete`)
@@ -65,7 +59,7 @@ class ServiceRequestService {
 
   // Cliente obtiene sus solicitudes con ofertas y propuestas
   async getMyRequestsWithOffers(): Promise<ServiceRequest[]> {
-    const response = await api.get<ServiceRequest[]>('/service-requests/my-requests-with-offers')
+    const response = await api.get<ServiceRequest[]>('/service-requests/my-requests')
     return response.data
   }
 
