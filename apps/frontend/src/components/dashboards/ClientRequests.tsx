@@ -252,37 +252,64 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                     )}
                   </div>
 
-                  {/* Mensaje informativo sobre propuestas pendientes */}
-                  {pendingProposals.length > 0 && (
+                  {/* Mensaje informativo sobre propuestas pendientes O botón para ver todas las propuestas */}
+                  {request.alternativeDateProposals && request.alternativeDateProposals.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                      className={`mt-4 p-4 border rounded-lg ${
+                        pendingProposals.length > 0 
+                          ? 'bg-amber-50 border-amber-200' 
+                          : 'bg-blue-50 border-blue-200'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-2">
-                            <BellIcon className="h-5 w-5 text-amber-600" />
-                            <ClockIcon className="h-5 w-5 text-amber-600" />
+                            {pendingProposals.length > 0 ? (
+                              <>
+                                <BellIcon className="h-5 w-5 text-amber-600" />
+                                <ClockIcon className="h-5 w-5 text-amber-600" />
+                              </>
+                            ) : (
+                              <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
+                            )}
                           </div>
                           <div>
-                            <p className="text-amber-800 font-medium">
-                              Tienes {pendingProposals.length} propuesta{pendingProposals.length > 1 ? 's' : ''} pendiente{pendingProposals.length > 1 ? 's' : ''}
-                            </p>
-                            <p className="text-amber-700 text-sm">
-                              {pendingProposals.length === 1 
-                                ? 'Un técnico ha propuesto una fecha alternativa para tu solicitud'
-                                : `${pendingProposals.length} técnicos han propuesto fechas alternativas para tu solicitud`
-                              }
-                            </p>
+                            {pendingProposals.length > 0 ? (
+                              <>
+                                <p className="text-amber-800 font-medium">
+                                  Tienes {pendingProposals.length} propuesta{pendingProposals.length > 1 ? 's' : ''} pendiente{pendingProposals.length > 1 ? 's' : ''}
+                                </p>
+                                <p className="text-amber-700 text-sm">
+                                  {pendingProposals.length === 1 
+                                    ? 'Un técnico ha propuesto una fecha alternativa para tu solicitud'
+                                    : `${pendingProposals.length} técnicos han propuesto fechas alternativas para tu solicitud`
+                                  }
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-blue-800 font-medium">
+                                  Propuestas de fechas alternativas
+                                </p>
+                                <p className="text-blue-700 text-sm">
+                                  {request.alternativeDateProposals.length} propuesta{request.alternativeDateProposals.length > 1 ? 's' : ''} recibida{request.alternativeDateProposals.length > 1 ? 's' : ''}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                         <button
                           onClick={() => toggleProposalsExpansion(request.id)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                          className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium ${
+                            pendingProposals.length > 0
+                              ? 'bg-amber-600 hover:bg-amber-700'
+                              : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
                         >
                           <CalendarDaysIcon className="h-4 w-4" />
-                          <span>Ver propuestas</span>
+                          <span>{isExpanded ? 'Ocultar propuestas' : 'Ver propuestas'}</span>
                           {isExpanded ? (
                             <ChevronUpIcon className="h-4 w-4" />
                           ) : (
@@ -298,18 +325,16 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                     <motion.div
                       initial={false}
                       animate={{ 
-                        height: isExpanded || pendingProposals.length === 0 ? 'auto' : 0,
-                        opacity: isExpanded || pendingProposals.length === 0 ? 1 : 0
+                        height: isExpanded ? 'auto' : 0,
+                        opacity: isExpanded ? 1 : 0
                       }}
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
                       <div className="mt-4 space-y-3">
-                        {pendingProposals.length === 0 && (
-                          <h4 className="font-medium text-gray-900 mb-3">
-                            Propuestas de fechas alternativas ({request.alternativeDateProposals.length})
-                          </h4>
-                        )}
+                        <h4 className="font-medium text-gray-900 mb-3">
+                          Propuestas de fechas alternativas ({request.alternativeDateProposals.length})
+                        </h4>
                         {request.alternativeDateProposals
                           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                           .map((proposal) => (
