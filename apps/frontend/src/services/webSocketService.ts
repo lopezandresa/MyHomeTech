@@ -106,7 +106,7 @@ class WebSocketService {
       }
     })
 
-    this.socket.on('reconnect', (attemptNumber) => {
+    this.socket.on('reconnect', () => {
       this.reconnectInterval = 500
       this.connectionAttempts = 0
       this.connectionQuality = 'good'
