@@ -5,9 +5,9 @@ import {
   ClockIcon, 
   CheckIcon, 
   XMarkIcon,
-  UserIcon,
   ChatBubbleLeftIcon 
 } from '@heroicons/react/24/outline'
+import TechnicianInfo from './TechnicianInfo'
 import type { AlternativeDateProposal } from '../types'
 
 interface AlternativeDateProposalCardProps {
@@ -96,17 +96,13 @@ const AlternativeDateProposalCard: React.FC<AlternativeDateProposalCardProps> = 
     >
       {/* Header con técnico y estado */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <UserIcon className="h-5 w-5 text-gray-500" />
-            <span className="font-medium text-gray-900">
-              {proposal.technician.firstName} {proposal.technician.firstLastName}
-            </span>
-          </div>
-          <span className="text-gray-400">•</span>
-          <span className="text-sm text-gray-500">
-            Propuesta #{proposal.proposalCount}
-          </span>
+        <div className="flex-1">
+          <TechnicianInfo 
+            technician={proposal.technician}
+            compact={true}
+            showRatingsButton={true}
+            proposalCount={proposal.proposalCount}
+          />
         </div>
         
         <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(proposal.status)}`}>

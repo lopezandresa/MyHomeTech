@@ -16,6 +16,7 @@ import { formatDate } from '../../utils/dateUtils'
 import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
 import AlternativeDateProposalCard from '../AlternativeDateProposalCard'
+import TechnicianInfo from '../TechnicianInfo'
 import { useToast } from '../common/ToastProvider'
 import type { ServiceRequest } from '../../types/index'
 
@@ -246,8 +247,12 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                     </div>
                     {request.technician && (
                       <div>
-                        <p className="font-medium text-gray-500">Técnico:</p>
-                        <p className="text-gray-900">{request.technician.firstName} {request.technician.firstLastName}</p>
+                        <p className="font-medium text-gray-500 mb-2">Técnico asignado:</p>
+                        <TechnicianInfo 
+                          technician={request.technician} 
+                          compact={true}
+                          showRatingsButton={true}
+                        />
                       </div>
                     )}
                   </div>

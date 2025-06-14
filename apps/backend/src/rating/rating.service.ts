@@ -34,6 +34,11 @@ export class RatingService {
   }
 
   findByUser(id: number) {
-    return this.ratingRepo.find({ where: { ratedId: id } });
+    return this.ratingRepo
+      .createQueryBuilder('rating')
+      .leftJoinAndSelect('rating.rater', 'rater')
+      .where('rating.ratedId = :id', { id })
+      .orderBy('rating.createdAt', 'DESC')
+      .getMany();
   }
 }

@@ -15,6 +15,13 @@ export interface Rating {
   score: number
   comment?: string
   serviceRequestId: number
+  createdAt: string
+  rater?: {
+    id: number
+    firstName: string
+    firstLastName: string
+    profilePhotoUrl?: string
+  }
 }
 
 class RatingService {
