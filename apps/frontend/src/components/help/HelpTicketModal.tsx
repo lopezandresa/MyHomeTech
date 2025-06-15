@@ -9,7 +9,6 @@ import {
   ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
 import { helpTicketService } from '../../services/helpTicketService';
 import type { HelpTicket, HelpTicketStatus } from '../../types';
 
@@ -19,7 +18,6 @@ interface HelpTicketListProps {
 }
 
 const HelpTicketList: React.FC<HelpTicketListProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<HelpTicket[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

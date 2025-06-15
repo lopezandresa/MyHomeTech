@@ -13,13 +13,11 @@ import HelpTicketModal from './HelpTicketModal';
 import type { HelpTicketType } from '../../types';
 
 interface QuickHelpButtonProps {
-  preselectedServiceId?: number;
   preselectedType?: HelpTicketType;
   className?: string;
 }
 
 const QuickHelpButton: React.FC<QuickHelpButtonProps> = ({
-  preselectedServiceId,
   preselectedType,
   className = ''
 }) => {

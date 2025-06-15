@@ -153,14 +153,12 @@ const HelpTicketDetailModal: React.FC<HelpTicketDetailModalProps> = ({
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Prioridad:</span>
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${helpTicketUtils.getPriorityBadgeColor(ticket.priority)}`}>
-                        {helpTicketUtils.getPriorityText(ticket.priority)}
-                      </span>
-                    </div>
-                    <div>
                       <span className="text-gray-600">Creado:</span>
                       <span className="ml-2 text-gray-900">{helpTicketUtils.formatDate(ticket.createdAt)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Actualizado:</span>
+                      <span className="ml-2 text-gray-900">{helpTicketUtils.formatDate(ticket.updatedAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -223,13 +221,11 @@ const HelpTicketDetailModal: React.FC<HelpTicketDetailModalProps> = ({
                         <span className="text-gray-600">Estado del servicio:</span>
                         <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
                           ticket.serviceRequest.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                          ticket.serviceRequest.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
                           ticket.serviceRequest.status === 'completed' ? 'bg-green-100 text-green-800' :
                           ticket.serviceRequest.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {ticket.serviceRequest.status === 'scheduled' ? 'Agendado' :
-                           ticket.serviceRequest.status === 'assigned' ? 'Asignado' :
                            ticket.serviceRequest.status === 'completed' ? 'Completado' :
                            ticket.serviceRequest.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
                         </span>

@@ -6,8 +6,7 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
   ClockIcon,
-  UserIcon,
-  ExclamationTriangleIcon
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { helpTicketService, helpTicketUtils } from '../../services/helpTicketService';
 import type { HelpTicket, HelpTicketStatus, HelpTicketType } from '../../types';
@@ -104,13 +103,6 @@ const HelpTicketList: React.FC<HelpTicketListProps> = ({ isAdmin = false }) => {
   const handleTicketUpdated = () => {
     setShowDetailModal(false);
     loadTickets();
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    if (priority === 'urgent' || priority === 'high') {
-      return <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />;
-    }
-    return null;
   };
 
   if (isLoading) {
@@ -251,7 +243,6 @@ const HelpTicketList: React.FC<HelpTicketListProps> = ({ isAdmin = false }) => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       #{ticket.id} - {ticket.subject}
                     </h3>
-                    {getPriorityIcon(ticket.priority)}
                   </div>
 
                   <p className="text-gray-600 mb-3 line-clamp-2">
@@ -285,9 +276,6 @@ const HelpTicketList: React.FC<HelpTicketListProps> = ({ isAdmin = false }) => {
                   </span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${helpTicketUtils.getTypeBadgeColor(ticket.type)}`}>
                     {helpTicketUtils.getTypeText(ticket.type)}
-                  </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${helpTicketUtils.getPriorityBadgeColor(ticket.priority)}`}>
-                    {helpTicketUtils.getPriorityText(ticket.priority)}
                   </span>
                 </div>
               </div>
