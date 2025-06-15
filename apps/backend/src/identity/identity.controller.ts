@@ -13,11 +13,34 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 
 export type IdentityResponse = Omit<Identity, 'password'>;
 
+/**
+ * Controlador para la gestión de identidades de usuario
+ * 
+ * @description Maneja todos los endpoints relacionados con usuarios:
+ * registro, perfil, cambio de contraseña, gestión de fotos, etc.
+ * 
+ * @class IdentityController
+ */
 @ApiTags('identity')
 @Controller('identity')
 export class IdentityController {
+  /**
+   * Constructor del controlador de identidad
+   * 
+   * @param {IdentityService} svc - Servicio de identidad
+   */
   constructor(private readonly svc: IdentityService) {}
 
+  /**
+   * Registra un nuevo usuario en el sistema
+   * 
+   * @param {CreateIdentityDto} dto - Datos del usuario a registrar
+   * @returns {Promise<IdentityResponse>} Usuario registrado sin contraseña
+   * 
+   * @example
+   * POST /api/identity/register
+   * Body: { email: "user@example.com", password: "pass123", role: "client" }
+   */
   @Post('register')
   @ApiOperation({ summary: 'Registra un nuevo usuario' })
   async register(
@@ -26,6 +49,16 @@ export class IdentityController {
     return this.svc.register(dto);
   }
 
+  /**
+   * Obtiene los datos del usuario autenticado
+   * 
+   * @param {Request} req - Request con usuario autenticado
+   * @returns {IdentityResponse} Datos del usuario sin contraseña
+   * 
+   * @example
+   * GET /api/identity/me
+   * Headers: { Authorization: "Bearer <token>" }
+   */
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
   @Get('me')
@@ -34,6 +67,17 @@ export class IdentityController {
     return req.user;
   }
 
+  /**
+   * Actualiza los datos del usuario autenticado
+   * 
+   * @param {Request} req - Request con usuario autenticado
+   * @param {UpdateIdentityDto} dto - Datos a actualizar
+   * @returns {Promise<IdentityResponse>} Usuario actualizado
+   * 
+   * @example
+   * POST /api/identity/me/update
+   * Body: { fullName: "Nuevo Nombre" }
+   */
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
   @Post('me/update')
@@ -42,6 +86,15 @@ export class IdentityController {
     return this.svc.updateUser(req.user.id, dto);
   }
 
+  /**
+   * Lista todos los usuarios del sistema (solo admin)
+   * 
+   * @returns {Promise<IdentityResponse[]>} Lista de usuarios
+   * 
+   * @example
+   * GET /api/identity
+   * Headers: { Authorization: "Bearer <admin_token>" }
+   */
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')
   @Roles('admin')
@@ -51,6 +104,16 @@ export class IdentityController {
     return this.svc.findAll();
   }
 
+  /**
+   * Obtiene un usuario específico por ID (solo admin)
+   * 
+   * @param {number} id - ID del usuario
+   * @returns {Promise<IdentityResponse | null>} Usuario encontrado
+   * 
+   * @example
+   * GET /api/identity/123
+   * Headers: { Authorization: "Bearer <admin_token>" }
+   */
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')
   @Roles('admin')
@@ -60,6 +123,16 @@ export class IdentityController {
     return this.svc.findById(id);
   }
 
+  /**
+   * Alterna el estado activo/inactivo de un usuario (solo admin)
+   * 
+   * @param {number} id - ID del usuario
+   * @returns {Promise<IdentityResponse>} Usuario con estado actualizado
+   * 
+   * @example
+   * POST /api/identity/123/toggle-status
+   * Headers: { Authorization: "Bearer <admin_token>" }
+   */
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')
   @Roles('admin')
@@ -69,6 +142,17 @@ export class IdentityController {
     return this.svc.toggleStatus(id);
   }
 
+  /**
+   * Cambia la contraseña del usuario autenticado
+   * 
+   * @param {Request} req - Request con usuario autenticado
+   * @param {ChangePasswordDto} dto - Contraseña actual y nueva
+   * @returns {Promise<{message: string}>} Mensaje de confirmación
+   * 
+   * @example
+   * POST /api/identity/change-password
+   * Body: { currentPassword: "old", newPassword: "new" }
+   */
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
   @Post('change-password')
@@ -80,6 +164,18 @@ export class IdentityController {
     return this.svc.changePassword(req.user.id, dto);
   }
 
+  /**
+   * Sube una foto de perfil para el usuario autenticado
+   * 
+   * @param {Request} req - Request con usuario autenticado
+   * @param {Express.Multer.File} profilePhoto - Archivo de imagen
+   * @returns {Promise<IdentityResponse>} Usuario con foto actualizada
+   * 
+   * @example
+   * POST /api/identity/me/upload-profile-photo
+   * Content-Type: multipart/form-data
+   * Body: profilePhoto (file)
+   */
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
   @Post('me/upload-profile-photo')
@@ -104,6 +200,16 @@ export class IdentityController {
     return this.svc.updateProfilePhoto(req.user.id, profilePhoto);
   }
 
+  /**
+   * Verifica si un email ya está registrado en el sistema
+   * 
+   * @param {object} dto - Objeto con el email a verificar
+   * @returns {Promise<void>} Void si está disponible, error si ya existe
+   * 
+   * @example
+   * POST /api/identity/check-email
+   * Body: { email: "test@example.com" }
+   */
   @Post('check-email')
   @ApiOperation({ summary: 'Verifica si un correo electrónico ya está registrado' })
   async checkEmail(@Body() dto: { email: string }): Promise<void> {

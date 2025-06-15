@@ -6,6 +6,24 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+/**
+ * Función principal que inicializa y configura la aplicación NestJS
+ * 
+ * @description Configura el servidor Express con NestJS, incluyendo:
+ * - Prefijo global de API
+ * - Servir archivos estáticos
+ * - Configuración de CORS
+ * - Documentación Swagger
+ * - Interceptores globales
+ * 
+ * @returns {Promise<void>} Promesa que se resuelve cuando el servidor está corriendo
+ * 
+ * @example
+ * ```typescript
+ * // La aplicación se inicia automáticamente al ejecutar este archivo
+ * bootstrap();
+ * ```
+ */
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
@@ -57,4 +75,6 @@ async function bootstrap() {
 
   await app.listen(3000);
 }
+
+// Iniciar la aplicación
 bootstrap();

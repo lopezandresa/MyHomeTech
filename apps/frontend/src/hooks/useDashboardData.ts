@@ -5,6 +5,48 @@ import { useRealTimeClientNotifications } from './useRealTimeClientNotifications
 import { useRealTimeServiceRequests } from './useRealTimeServiceRequests'
 import type { ServiceRequest, User } from '../types'
 
+/**
+ * @fileoverview Hook personalizado para gestión de datos del dashboard
+ * 
+ * @description Hook centralizado que maneja todos los datos del dashboard:
+ * - Solicitudes disponibles para técnicos
+ * - Trabajos asignados a técnicos
+ * - Solicitudes de clientes
+ * - Notificaciones en tiempo real
+ * - Estados de carga y error
+ * - Filtros y refrescos de datos
+ * 
+ * @version 1.0.0
+ * @author Equipo MyHomeTech
+ * @since 2024
+ */
+
+/**
+ * Interfaz de datos del dashboard
+ * 
+ * @interface DashboardData
+ * @property {ServiceRequest[]} availableRequests - Solicitudes disponibles para técnicos
+ * @property {ServiceRequest[]} technicianJobs - Trabajos asignados al técnico
+ * @property {ServiceRequest[]} clientRequests - Solicitudes del cliente
+ * @property {ServiceRequest[]} myRequests - Solicitudes del usuario actual
+ * @property {ServiceRequest[]} pendingRequests - Solicitudes pendientes
+ * @property {boolean} loading - Estado de carga general
+ * @property {boolean} isLoading - Alias de loading
+ * @property {string | null} error - Mensaje de error actual
+ * @property {User | null} user - Usuario autenticado
+ * @property {boolean} isClient - Si el usuario es cliente
+ * @property {boolean} isTechnician - Si el usuario es técnico
+ * @property {string} requestFilter - Filtro actual de solicitudes
+ * @property {Object} technicianNotifications - Sistema de notificaciones de técnico
+ * @property {Object} clientNotifications - Sistema de notificaciones de cliente
+ * @property {Function} refetchData - Función para recargar datos
+ * @property {Function} loadData - Función para cargar datos iniciales
+ * @property {Function} setError - Función para establecer errores
+ * @property {Function} setRequestFilter - Función para cambiar filtros
+ * @property {Function} setPendingRequests - Función para establecer solicitudes pendientes
+ * @property {Function} setClientRequests - Función para establecer solicitudes del cliente
+ * @property {Function} setMyRequests - Función para establecer mis solicitudes
+ */
 interface DashboardData {
   availableRequests: ServiceRequest[]
   technicianJobs: ServiceRequest[]
@@ -29,6 +71,44 @@ interface DashboardData {
   setMyRequests: (requests: ServiceRequest[] | ((prev: ServiceRequest[]) => ServiceRequest[])) => void
 }
 
+/**
+ * Hook personalizado para gestión de datos del dashboard
+ * 
+ * @description Hook principal que centraliza toda la lógica de datos del dashboard:
+ * - Carga inicial de datos según el rol del usuario
+ * - Gestión de estados de carga y error
+ * - Integración con notificaciones en tiempo real
+ * - Actualización automática cuando llegan eventos
+ * - Filtrado de solicitudes
+ * - Prevención de cargas duplicadas
+ * 
+ * @returns {DashboardData} Objeto con todos los datos y funciones del dashboard
+ * 
+ * @example
+ * ```typescript
+ * function Dashboard() {
+ *   const {
+ *     availableRequests,
+ *     clientRequests,
+ *     loading,
+ *     error,
+ *     isClient,
+ *     isTechnician,
+ *     refetchData
+ *   } = useDashboardData();
+ * 
+ *   if (loading) return <Loading />;
+ *   if (error) return <Error message={error} />;
+ * 
+ *   return (
+ *     <div>
+ *       {isClient && <ClientRequests requests={clientRequests} />}
+ *       {isTechnician && <AvailableJobs requests={availableRequests} />}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export const useDashboardData = (): DashboardData => {
   const { user } = useAuth()
   const [availableRequests, setAvailableRequests] = useState<ServiceRequest[]>([])
@@ -91,6 +171,50 @@ export const useDashboardData = (): DashboardData => {
     }
   }, [user])
 
+  /**
+   * Función para cargar datos iniciales del dashboard
+   * 
+   * @description Carga todos los datos necesarios según el rol del usuario:
+   * - Para técnicos: solicitudes disponibles y trabajos asignados
+   * - Para clientes: sus solicitudes de servicio
+   * - Maneja estados de carga y error
+   * 
+   * @example
+   * ```typescript
+   * await loadData(); // Carga datos según rol del usuario
+   * ```
+   */
+  const loadData = useCallback(async () => {
+    if (!user) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (user.role === 'client') {
+        await fetchClientData()
+      } else if (user.role === 'technician') {
+        await fetchTechnicianData()
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+      setError('Error al cargar los datos del dashboard')
+    } finally {
+      setLoading(false)
+    }
+  }, [user, fetchClientData, fetchTechnicianData])
+
+  /**
+   * Función para recargar datos del dashboard
+   * 
+   * @description Recarga todos los datos forzando una nueva consulta al servidor.
+   * Útil para refrescar después de acciones como aceptar solicitudes.
+   * 
+   * @example
+   * ```typescript
+   * await refetchData(); // Fuerza recarga de datos
+   * ```
+   */
   const refetchData = useCallback(async () => {
     if (!user || dataFetched) return
     
@@ -111,27 +235,6 @@ export const useDashboardData = (): DashboardData => {
       setLoading(false)
     }
   }, [user, dataFetched, fetchTechnicianData, fetchClientData])
-
-  // Función para cargar datos
-  const loadData = useCallback(async () => {
-    if (!user) return
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      if (user.role === 'client') {
-        await fetchClientData()
-      } else if (user.role === 'technician') {
-        await fetchTechnicianData()
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-      setError('Error al cargar los datos del dashboard')
-    } finally {
-      setLoading(false)
-    }
-  }, [user, fetchClientData, fetchTechnicianData])
 
   // Escuchar evento de refresh desde las acciones
   useEffect(() => {
@@ -186,19 +289,22 @@ export const useDashboardData = (): DashboardData => {
     if (user?.role === 'client' && clientNotifications.notifications.length > 0) {
       const latestNotification = clientNotifications.notifications[0]
       
-      setClientRequests(prev => {
-        const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest.id)
-        if (existingIndex >= 0) {
-          // Actualizar solicitud existente
-          const updated = [...prev]
-          updated[existingIndex] = latestNotification.serviceRequest
-          return updated
-        } else if (latestNotification.type !== 'expired') {
-          // Agregar nueva solicitud (excepto las expiradas)
-          return [latestNotification.serviceRequest, ...prev]
-        }
-        return prev
-      })
+      // Verificar que serviceRequest existe antes de usarlo
+      if (latestNotification.serviceRequest) {
+        setClientRequests(prev => {
+          const existingIndex = prev.findIndex(req => req.id === latestNotification.serviceRequest!.id)
+          if (existingIndex >= 0) {
+            // Actualizar solicitud existente
+            const updated = [...prev]
+            updated[existingIndex] = latestNotification.serviceRequest!
+            return updated
+          } else if (latestNotification.type !== 'expired') {
+            // Agregar nueva solicitud (excepto las expiradas)
+            return [latestNotification.serviceRequest!, ...prev]
+          }
+          return prev
+        })
+      }
     }
   }, [user?.role, clientNotifications.notifications])
 

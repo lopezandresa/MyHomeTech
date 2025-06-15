@@ -2,10 +2,52 @@ import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
+/**
+ * @fileoverview Componente de redirección para usuarios ya autenticados
+ * 
+ * @description Redirige usuarios autenticados lejos de páginas públicas
+ * como login/registro, enviándolos directamente al dashboard.
+ * Incluye pantalla de carga mientras se verifica el estado.
+ * 
+ * @version 1.0.0
+ * @author Equipo MyHomeTech
+ * @since 2024
+ */
+
+/**
+ * Props del componente RedirectIfAuthenticated
+ * 
+ * @interface RedirectIfAuthenticatedProps
+ * @property {React.ReactNode} children - Componentes de página pública
+ */
 interface RedirectIfAuthenticatedProps {
   children: React.ReactNode
 }
 
+/**
+ * Componente de redirección condicional
+ * 
+ * @description Wrapper para páginas públicas que redirige usuarios autenticados:
+ * - Si está cargando, muestra spinner elegante
+ * - Si está autenticado, redirige al dashboard
+ * - Si no está autenticado, muestra la página pública (children)
+ * - Evita que usuarios autenticados vean login/registro
+ * 
+ * @param {RedirectIfAuthenticatedProps} props - Props del componente
+ * @returns {JSX.Element} Loading, Navigate o children según estado
+ * 
+ * @example
+ * ```tsx
+ * <Route 
+ *   index 
+ *   element={
+ *     <RedirectIfAuthenticated>
+ *       <HomePage />
+ *     </RedirectIfAuthenticated>
+ *   } 
+ * />
+ * ```
+ */
 const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth()
 
@@ -26,7 +68,7 @@ const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ child
     return <Navigate to="/dashboard" replace />
   }
 
-  // Si no está autenticado, mostrar el contenido (home)
+  // Si no está autenticado, mostrar la página pública
   return <>{children}</>
 }
 

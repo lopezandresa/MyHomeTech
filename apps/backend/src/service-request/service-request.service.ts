@@ -15,10 +15,33 @@ import { Technician } from '../technician/technician.entity';
 import { Appliance } from '../appliance/appliance.entity';
 import { ServiceRequestGateway } from './service-request.gateway';
 
+/**
+ * Servicio principal para la gestión de solicitudes de servicio técnico
+ * 
+ * @description Maneja todo el ciclo de vida de las solicitudes de servicio:
+ * - Creación y validación de solicitudes
+ * - Notificación a técnicos elegibles
+ * - Gestión de fechas alternativas
+ * - Control de disponibilidad
+ * - Estados de solicitudes (pendiente, aceptada, completada, etc.)
+ * - Notificaciones en tiempo real vía WebSocket
+ * 
+ * @class ServiceRequestService
+ */
 @Injectable()
 export class ServiceRequestService {
   private readonly logger = new Logger(ServiceRequestService.name);
 
+  /**
+   * Constructor del servicio de solicitudes de servicio
+   * 
+   * @param {Repository<ServiceRequest>} srRepo - Repositorio de solicitudes de servicio
+   * @param {Repository<AlternativeDateProposal>} proposalRepo - Repositorio de propuestas de fechas alternativas
+   * @param {Repository<Address>} addressRepo - Repositorio de direcciones
+   * @param {Repository<Technician>} technicianRepo - Repositorio de técnicos
+   * @param {Repository<Appliance>} applianceRepo - Repositorio de electrodomésticos
+   * @param {ServiceRequestGateway} gateway - Gateway para notificaciones WebSocket
+   */
   constructor(
     @InjectRepository(ServiceRequest)
     private readonly srRepo: Repository<ServiceRequest>,    
@@ -33,6 +56,26 @@ export class ServiceRequestService {
     private readonly gateway: ServiceRequestGateway,
   ) {}
 
+  /**
+   * Crea una nueva solicitud de servicio técnico
+   * 
+   * @param {number} clientId - ID del cliente que solicita el servicio
+   * @param {CreateServiceRequestDto} dto - Datos de la solicitud
+   * @returns {Promise<ServiceRequest>} Solicitud creada
+   * @throws {BadRequestException} Si la dirección no pertenece al cliente, horario inválido o fecha pasada
+   * 
+   * @example
+   * ```typescript
+   * const request = await serviceRequestService.create(1, {
+   *   applianceId: 5,
+   *   addressId: 2,
+   *   description: "Refrigerador no enfría",
+   *   serviceType: "repair",
+   *   proposedDateTime: "2024-12-20T10:00:00Z",
+   *   validHours: 24
+   * });
+   * ```
+   */
   async create(clientId: number, dto: CreateServiceRequestDto): Promise<ServiceRequest> {
     // Validar que la dirección pertenece al cliente
     const address = await this.addressRepo.findOne({
@@ -145,7 +188,26 @@ export class ServiceRequestService {
     }
   }
 
-  /** Verificar disponibilidad de técnico para una fecha específica */
+  /**
+   * Verifica si un técnico tiene disponibilidad en una fecha específica
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @param {Date} proposedDateTime - Fecha y hora propuesta
+   * @returns {Promise<boolean>} true si hay conflicto, false si está disponible
+   * 
+   * @description Usa una ventana de 6 horas (3 antes y 3 después) para evitar solapamientos
+   * 
+   * @example
+   * ```typescript
+   * const hasConflict = await serviceRequestService.checkTechnicianAvailability(
+   *   123, 
+   *   new Date('2024-12-20T10:00:00Z')
+   * );
+   * if (!hasConflict) {
+   *   // Técnico disponible
+   * }
+   * ```
+   */
   async checkTechnicianAvailability(technicianId: number, proposedDateTime: Date): Promise<boolean> {
     const proposedDate = new Date(proposedDateTime);
     
@@ -165,7 +227,22 @@ export class ServiceRequestService {
     return !!conflictingRequest; // true si hay conflicto
   }
 
-  /** Verificar disponibilidad detallada del técnico para mostrar al usuario */
+  /**
+   * Verifica disponibilidad del técnico con información detallada para el usuario
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @param {Date} proposedDateTime - Fecha y hora propuesta
+   * @returns {Promise<object>} Objeto con disponibilidad y detalles del conflicto
+   * 
+   * @example
+   * ```typescript
+   * const availability = await serviceRequestService.checkTechnicianAvailabilityDetailed(
+   *   123, 
+   *   new Date('2024-12-20T10:00:00Z')
+   * );
+   * // Retorna: { available: false, reason: "Ya tienes un servicio programado 2 hora(s) antes", conflictingService: {...} }
+   * ```
+   */
   async checkTechnicianAvailabilityDetailed(technicianId: number, proposedDateTime: Date): Promise<{
     available: boolean;
     reason?: string;
@@ -214,7 +291,14 @@ export class ServiceRequestService {
     return { available: true };
   }
 
-  /** Marcar solicitudes expiradas */
+  /**
+   * Marca solicitudes expiradas automáticamente
+   * 
+   * @returns {Promise<void>} Void cuando se complete la actualización
+   * 
+   * @description Ejecuta una consulta de actualización masiva para cambiar
+   * el estado de solicitudes pendientes que han pasado su fecha de expiración
+   */
   async markExpiredRequests(): Promise<void> {
     const now = new Date();
     await this.srRepo.update(
@@ -229,7 +313,22 @@ export class ServiceRequestService {
     );
   }
 
-  /** Técnicos: solicitudes pendientes filtradas por especialidad y disponibilidad */
+  /**
+   * Obtiene solicitudes pendientes filtradas por especialidad del técnico
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @returns {Promise<ServiceRequest[]>} Lista de solicitudes disponibles para el técnico
+   * 
+   * @description Filtra solicitudes por:
+   * - Estado pendiente
+   * - Especialidades del técnico
+   * - Incluye propuestas de fechas alternativas del técnico
+   * 
+   * @example
+   * ```typescript
+   * const availableRequests = await serviceRequestService.findPendingForTechnician(123);
+   * ```
+   */
   async findPendingForTechnician(technicianId: number): Promise<ServiceRequest[]> {
     // Obtener el técnico con sus especialidades
     const technician = await this.technicianRepo.findOne({
@@ -267,7 +366,13 @@ export class ServiceRequestService {
 
     return result;
   }
-  /** Todas las solicitudes pendientes (para admin) */
+  /**
+   * Obtiene todas las solicitudes pendientes (para administradores)
+   * 
+   * @returns {Promise<ServiceRequest[]>} Lista de todas las solicitudes pendientes
+   * 
+   * @description Actualiza solicitudes expiradas antes de retornar la lista
+   */
   async findPending(): Promise<ServiceRequest[]> {
     await this.markExpiredRequests();
     return this.srRepo.find({
@@ -277,7 +382,26 @@ export class ServiceRequestService {
     });
   }
 
-  /** ⚡ Técnico acepta una solicitud - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Técnico acepta una solicitud de servicio
+   * 
+   * @param {number} id - ID de la solicitud
+   * @param {number} technicianId - ID del técnico que acepta
+   * @returns {Promise<ServiceRequest>} Solicitud actualizada con técnico asignado
+   * @throws {NotFoundException} Si la solicitud no existe o no está disponible
+   * @throws {ConflictException} Si el técnico no está disponible en esa fecha
+   * 
+   * @description Proceso de aceptación:
+   * - Verifica disponibilidad del técnico
+   * - Programa la solicitud automáticamente
+   * - Notifica al cliente instantáneamente
+   * - Notifica a otros técnicos que ya no está disponible
+   * 
+   * @example
+   * ```typescript
+   * const acceptedRequest = await serviceRequestService.acceptByTechnician(456, 123);
+   * ```
+   */
   async acceptByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { id, status: ServiceRequestStatus.PENDING },
@@ -327,7 +451,21 @@ export class ServiceRequestService {
     return updatedRequest;
   }
 
-  /** ⚡ Cliente marca como completada - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Cliente marca una solicitud como completada
+   * 
+   * @param {number} id - ID de la solicitud
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest>} Solicitud marcada como completada
+   * @throws {NotFoundException} Si la solicitud no existe o no está programada
+   * 
+   * @description Notifica instantáneamente al técnico sobre la finalización
+   * 
+   * @example
+   * ```typescript
+   * const completedRequest = await serviceRequestService.completeByClient(456, 789);
+   * ```
+   */
   async completeByClient(id: number, clientId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { 
@@ -357,7 +495,21 @@ export class ServiceRequestService {
     return updatedRequest;
   }
 
-  /** ⚡ Cliente cancela solicitud - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Cliente cancela una solicitud pendiente
+   * 
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest>} Solicitud cancelada
+   * @throws {NotFoundException} Si la solicitud no existe o no se puede cancelar
+   * 
+   * @description Solo actualiza el estado sin notificar a técnicos (las cancelaciones de clientes no son relevantes para técnicos)
+   * 
+   * @example
+   * ```typescript
+   * const cancelledRequest = await serviceRequestService.cancelByClient(456, 789);
+   * ```
+   */
   async cancelByClient(serviceRequestId: number, clientId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { 
@@ -377,7 +529,7 @@ export class ServiceRequestService {
     
     const updatedRequest = await this.srRepo.save(req);
     
-    // ⚡ NOTIFICACIÓN INSTANTÁNEA DE CANCELACIÓN A TODOS LOS TÉCNICOS ELEGIBLES
+    // ⚡ NOTIFICAR A TÉCNICOS - Las cancelaciones SÍ son relevantes para refrescar listas
     setImmediate(() => {
       this.notifyRequestNoLongerAvailable(serviceRequestId);
     });
@@ -433,7 +585,32 @@ export class ServiceRequestService {
     }
   }
 
-  /** ⚡ Técnico propone fecha alternativa - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Técnico propone una fecha alternativa para una solicitud
+   * 
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @param {number} technicianId - ID del técnico que propone
+   * @param {string} alternativeDateTime - Nueva fecha propuesta (ISO string)
+   * @param {string} [comment] - Comentario opcional
+   * @returns {Promise<AlternativeDateProposal>} Propuesta creada
+   * @throws {NotFoundException} Si la solicitud no existe
+   * @throws {BadRequestException} Si la fecha es inválida o el técnico alcanzó el límite
+   * @throws {ConflictException} Si el técnico no está disponible
+   * 
+   * @description Validaciones:
+   * - Horario de trabajo (6 AM - 6 PM)
+   * - Fecha futura
+   * - Disponibilidad del técnico
+   * - Límite de 3 propuestas por técnico
+   * - Fechas únicas (al menos 1 hora de diferencia)
+   * 
+   * @example
+   * ```typescript
+   * const proposal = await serviceRequestService.proposeAlternativeDate(
+   *   456, 123, "2024-12-21T14:00:00Z", "Mejor horario para mí"
+   * );
+   * ```
+   */
   async proposeAlternativeDate(serviceRequestId: number, technicianId: number, alternativeDateTime: string, comment?: string): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud existe y está en estado correcto
     const serviceRequest = await this.srRepo.findOne({
@@ -549,7 +726,27 @@ export class ServiceRequestService {
     return proposalWithTechnician!;
   }
 
-  /** ⚡ Cliente acepta propuesta de fecha alternativa - NOTIFICACIONES INSTANTÁNEAS */
+  /**
+   * Cliente acepta una propuesta de fecha alternativa
+   * 
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @param {number} proposalId - ID de la propuesta
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest>} Solicitud programada con nueva fecha
+   * @throws {NotFoundException} Si la solicitud o propuesta no existe
+   * @throws {ConflictException} Si el técnico ya no está disponible
+   * 
+   * @description Proceso:
+   * - Programa la solicitud con la nueva fecha
+   * - Marca la propuesta como aceptada
+   * - Notifica al técnico sobre la aceptación
+   * - Rechaza automáticamente otras propuestas
+   * 
+   * @example
+   * ```typescript
+   * const scheduledRequest = await serviceRequestService.acceptAlternativeDate(456, 789, 123);
+   * ```
+   */
   async acceptAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<ServiceRequest> {
     // Verificar que la solicitud pertenece al cliente
     const serviceRequest = await this.srRepo.findOne({
@@ -613,7 +810,17 @@ export class ServiceRequestService {
     return updatedRequest;
   }
 
-  /** ⚡ Cliente rechaza propuesta de fecha alternativa - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Cliente rechaza una propuesta de fecha alternativa
+   * 
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @param {number} proposalId - ID de la propuesta
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<AlternativeDateProposal>} Propuesta marcada como rechazada
+   * @throws {NotFoundException} Si la solicitud o propuesta no existe
+   * 
+   * @description Notifica instantáneamente al técnico sobre el rechazo
+   */
   async rejectAlternativeDate(serviceRequestId: number, proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
     // Verificar que la solicitud pertenece al cliente
     const serviceRequest = await this.srRepo.findOne({
@@ -654,7 +861,17 @@ export class ServiceRequestService {
     return updatedProposal;
   }
 
-  /** ⚡ Cliente acepta propuesta de fecha alternativa por ID de propuesta - NOTIFICACIONES INSTANTÁNEAS */
+  /**
+   * Cliente acepta propuesta de fecha alternativa por ID de propuesta
+   * 
+   * @param {number} proposalId - ID de la propuesta
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest>} Solicitud programada
+   * @throws {NotFoundException} Si la propuesta no existe o no pertenece al cliente
+   * 
+   * @description Método de conveniencia que busca la propuesta y delega
+   * al método acceptAlternativeDate principal
+   */
   async acceptAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<ServiceRequest> {
     // Buscar la propuesta con la solicitud asociada
     const proposal = await this.proposalRepo.findOne({
@@ -677,7 +894,14 @@ export class ServiceRequestService {
     return this.acceptAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
   }
 
-  /** ⚡ Cliente rechaza propuesta de fecha alternativa por ID de propuesta - NOTIFICACIÓN INSTANTÁNEA */
+  /**
+   * Cliente rechaza propuesta de fecha alternativa por ID de propuesta
+   * 
+   * @param {number} proposalId - ID de la propuesta
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<AlternativeDateProposal>} Propuesta rechazada
+   * @throws {NotFoundException} Si la propuesta no existe o no pertenece al cliente
+   */
   async rejectAlternativeDateByProposalId(proposalId: number, clientId: number): Promise<AlternativeDateProposal> {
     // Buscar la propuesta con la solicitud asociada
     const proposal = await this.proposalRepo.findOne({
@@ -700,7 +924,17 @@ export class ServiceRequestService {
     return this.rejectAlternativeDate(proposal.serviceRequestId, proposalId, clientId);
   }
 
-  // Métodos auxiliares de consulta
+  /**
+   * Busca una solicitud por ID con todas sus relaciones
+   * 
+   * @param {number} id - ID de la solicitud
+   * @returns {Promise<ServiceRequest | null>} Solicitud encontrada o null
+   * 
+   * @example
+   * ```typescript
+   * const request = await serviceRequestService.findById(456);
+   * ```
+   */
   async findById(id: number): Promise<ServiceRequest | null> {
     return this.srRepo.findOne({
       where: { id },
@@ -708,6 +942,14 @@ export class ServiceRequestService {
     });
   }
 
+  /**
+   * Obtiene todas las solicitudes de un cliente
+   * 
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest[]>} Lista de solicitudes del cliente
+   * 
+   * @description Ordenadas por fecha de creación (más recientes primero)
+   */
   async findByClient(clientId: number): Promise<ServiceRequest[]> {
     return this.srRepo.find({ 
       where: { clientId },
@@ -716,6 +958,14 @@ export class ServiceRequestService {
     });
   }
 
+  /**
+   * Obtiene todas las solicitudes asignadas a un técnico
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @returns {Promise<ServiceRequest[]>} Lista de solicitudes del técnico
+   * 
+   * @description Ordenadas por fecha programada (próximas primero)
+   */
   async findByTechnician(technicianId: number): Promise<ServiceRequest[]> {
     return this.srRepo.find({ 
       where: { technicianId },
@@ -724,7 +974,25 @@ export class ServiceRequestService {
     });
   }
 
-  /** Obtener calendario de un técnico (sus servicios programados) */
+  /**
+   * Obtiene el calendario de servicios programados de un técnico
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @param {Date} [startDate] - Fecha de inicio del período
+   * @param {Date} [endDate] - Fecha de fin del período
+   * @returns {Promise<ServiceRequest[]>} Servicios programados en el período
+   * 
+   * @description Solo incluye servicios con estado SCHEDULED
+   * 
+   * @example
+   * ```typescript
+   * const calendar = await serviceRequestService.getTechnicianCalendar(
+   *   123, 
+   *   new Date('2024-12-01'), 
+   *   new Date('2024-12-31')
+   * );
+   * ```
+   */
   async getTechnicianCalendar(technicianId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
     const query = this.srRepo.createQueryBuilder('serviceRequest')
       .leftJoinAndSelect('serviceRequest.client', 'client')
@@ -743,7 +1011,16 @@ export class ServiceRequestService {
     return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
   }
 
-  /** Obtener calendario de un cliente (sus servicios programados) */
+  /**
+   * Obtiene el calendario de servicios de un cliente
+   * 
+   * @param {number} clientId - ID del cliente
+   * @param {Date} [startDate] - Fecha de inicio del período
+   * @param {Date} [endDate] - Fecha de fin del período
+   * @returns {Promise<ServiceRequest[]>} Servicios del cliente en el período
+   * 
+   * @description Incluye servicios SCHEDULED y COMPLETED
+   */
   async getClientCalendar(clientId: number, startDate?: Date, endDate?: Date): Promise<ServiceRequest[]> {
     const query = this.srRepo.createQueryBuilder('serviceRequest')
       .leftJoinAndSelect('serviceRequest.technician', 'technician')
@@ -764,8 +1041,15 @@ export class ServiceRequestService {
     return query.orderBy('serviceRequest.scheduledAt', 'ASC').getMany();
   }
 
-
-  /** Obtener solicitudes del cliente con propuestas */
+  /**
+   * Obtiene solicitudes del cliente con todas sus propuestas de fechas alternativas
+   * 
+   * @param {number} clientId - ID del cliente
+   * @returns {Promise<ServiceRequest[]>} Solicitudes con propuestas incluidas
+   * 
+   * @description Útil para mostrar al cliente todas sus solicitudes
+   * con las propuestas recibidas de los técnicos
+   */
   async getClientRequests(clientId: number): Promise<ServiceRequest[]> {
     const req = this.srRepo
     .createQueryBuilder('sr')
@@ -781,7 +1065,14 @@ export class ServiceRequestService {
     return req;
   }
 
-  /** Obtener propuestas de fechas alternativas para una solicitud */
+  /**
+   * Obtiene todas las propuestas de fechas alternativas para una solicitud
+   * 
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @returns {Promise<AlternativeDateProposal[]>} Lista de propuestas
+   * 
+   * @description Ordenadas por fecha de creación (más antiguas primero)
+   */
   async getAlternativeDateProposals(serviceRequestId: number): Promise<AlternativeDateProposal[]> {
     return this.proposalRepo.find({
       where: { serviceRequestId },
@@ -790,7 +1081,14 @@ export class ServiceRequestService {
     });
   }
 
-  /** Obtener propuestas de fechas alternativas de un técnico */
+  /**
+   * Obtiene todas las propuestas de fechas alternativas de un técnico
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @returns {Promise<AlternativeDateProposal[]>} Lista de propuestas del técnico
+   * 
+   * @description Incluye información de la solicitud y cliente asociados
+   */
   async getTechnicianAlternativeDateProposals(technicianId: number): Promise<AlternativeDateProposal[]> {
     return this.proposalRepo.find({
       where: { technicianId },
@@ -799,7 +1097,16 @@ export class ServiceRequestService {
     });
   }
 
-  // ⚡ Método optimizado para notificar rechazos en paralelo
+  /**
+   * Notifica en paralelo sobre propuestas y ofertas rechazadas
+   * 
+   * @private
+   * @param {number} serviceRequestId - ID de la solicitud
+   * @param {number} acceptedProposalId - ID de la propuesta aceptada
+   * @returns {Promise<void>} Void cuando se completen las notificaciones
+   * 
+   * @description Optimizado para enviar notificaciones paralelas a múltiples técnicos
+   */
   private async notifyRejectedProposalsAndOffers(serviceRequestId: number, acceptedProposalId: number): Promise<void> {
     try {
       // Obtener todas las propuestas rechazadas de forma asíncrona

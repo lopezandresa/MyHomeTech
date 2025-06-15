@@ -2,6 +2,50 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { CogIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 
+/**
+ * @fileoverview Página de configuración de MyHomeTech
+ * 
+ * @description Página protegida para gestión de configuraciones del usuario:
+ * - Placeholder para funcionalidad futura
+ * - Navegación de regreso al dashboard
+ * - Diseño consistente con el resto de la aplicación
+ * - Preparada para integración con componentes de configuración
+ * 
+ * @version 1.0.0
+ * @author Equipo MyHomeTech
+ * @since 2024
+ */
+
+/**
+ * Componente de página de configuración
+ * 
+ * @description Página que eventualmente permitirá a los usuarios gestionar
+ * sus configuraciones y preferencias. Actualmente muestra un mensaje de desarrollo
+ * y proporciona navegación de regreso al dashboard.
+ * 
+ * Funcionalidades futuras planeadas:
+ * - Preferencias de notificación
+ * - Configuración de privacidad
+ * - Preferencias de idioma
+ * - Configuración de zona horaria
+ * - Gestión de dispositivos conectados
+ * - Configuración de tema (claro/oscuro)
+ * 
+ * @returns {JSX.Element} Página de configuración con placeholder
+ * 
+ * @example
+ * ```tsx
+ * // Usado en App.tsx como ruta protegida
+ * <Route 
+ *   path="/settings" 
+ *   element={
+ *     <ProtectedRoute>
+ *       <SettingsPage />
+ *     </ProtectedRoute>
+ *   } 
+ * />
+ * ```
+ */
 const SettingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -25,7 +69,7 @@ const SettingsPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-              <p className="text-gray-600">Ajusta las preferencias de tu cuenta</p>
+              <p className="text-gray-600">Personaliza tu experiencia en MyHomeTech</p>
             </div>
           </div>
         </div>

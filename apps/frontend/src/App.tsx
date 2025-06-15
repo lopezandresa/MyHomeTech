@@ -9,6 +9,42 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 
+/**
+ * @fileoverview Componente principal de la aplicación MyHomeTech Frontend
+ * 
+ * @description Configura la estructura principal de la aplicación incluyendo:
+ * - Sistema de rutas con React Router
+ * - Contextos globales (Auth, Toast)
+ * - Protección de rutas según autenticación
+ * - Layout responsivo
+ * 
+ * @version 1.0.0
+ * @author Equipo MyHomeTech
+ * @since 2024
+ */
+
+/**
+ * Componente raíz de la aplicación MyHomeTech
+ * 
+ * @description Configura la estructura completa de la aplicación con:
+ * - Router para navegación SPA
+ * - AuthProvider para gestión de autenticación global
+ * - ToastProvider para notificaciones toast
+ * - Sistema de rutas protegidas y públicas
+ * - Redirecciones automáticas según estado de autenticación
+ * 
+ * @returns {JSX.Element} Árbol de componentes de la aplicación
+ * 
+ * @example
+ * ```tsx
+ * // La aplicación se renderiza automáticamente desde main.tsx
+ * // Estructura de rutas:
+ * // / - Página principal (redirige a /dashboard si está autenticado)
+ * // /dashboard - Dashboard principal (protegida)
+ * // /profile - Perfil de usuario (protegida)
+ * // /settings - Configuración (protegida)
+ * ```
+ */
 function App() {
   return (
     <Router>

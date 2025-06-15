@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   XCircleIcon,
@@ -31,13 +31,38 @@ import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 const Dashboard: React.FC = () => {
   // Hook personalizado para datos del dashboard
   const dashboardData = useDashboardData()
-    // Hook personalizado para acciones del dashboard
+  // Hook personalizado para acciones del dashboard
   const dashboardActions = useDashboardActions()
 
   // Estados adicionales para UI
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showRecentJobAlert, setShowRecentJobAlert] = useState(false)
+
+  // Funciones wrapper para ajustar firmas de función
+  const handleCompleteServiceWrapper = useCallback((requestId: number) => {
+    return dashboardActions.handleCompleteService(requestId, dashboardData.user?.id || 0)
+  }, [dashboardActions.handleCompleteService, dashboardData.user?.id])
+
+  const handleCancelRequestWrapper = useCallback((requestId: number) => {
+    return dashboardActions.handleCancelRequest(requestId, dashboardData.user?.id || 0, 'Cancelado por el usuario')
+  }, [dashboardActions.handleCancelRequest, dashboardData.user?.id])
+
+  const handleAcceptAlternativeDateWrapper = useCallback((proposalId: number) => {
+    return dashboardActions.handleAcceptAlternativeDate(0, dashboardData.user?.id || 0, proposalId)
+  }, [dashboardActions.handleAcceptAlternativeDate, dashboardData.user?.id])
+
+  const handleRejectAlternativeDateWrapper = useCallback((proposalId: number) => {
+    return dashboardActions.handleRejectAlternativeDate(0, dashboardData.user?.id || 0, proposalId)
+  }, [dashboardActions.handleRejectAlternativeDate, dashboardData.user?.id])
+
+  const handleAcceptDirectlyWrapper = useCallback((requestId: number) => {
+    return dashboardActions.handleAcceptDirectly(requestId, dashboardData.user?.id || 0)
+  }, [dashboardActions.handleAcceptDirectly, dashboardData.user?.id])
+
+  const handleProposeAlternativeDateWrapper = useCallback((requestId: number, alternativeDate: string) => {
+    return dashboardActions.handleProposeAlternativeDate(requestId, dashboardData.user?.id || 0, alternativeDate)
+  }, [dashboardActions.handleProposeAlternativeDate, dashboardData.user?.id])
 
   // Efecto para mostrar alerta de nuevos trabajos para técnicos
   useEffect(() => {
@@ -67,10 +92,10 @@ const Dashboard: React.FC = () => {
               clientRequests={dashboardData.clientRequests}
               requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
               setRequestFilter={dashboardData.setRequestFilter}              setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
-              handleCompleteService={dashboardActions.handleCompleteService}
-              handleCancelRequest={dashboardActions.handleCancelRequest}
-              handleAcceptAlternativeDate={dashboardActions.handleAcceptAlternativeDate}
-              handleRejectAlternativeDate={dashboardActions.handleRejectAlternativeDate}
+              handleCompleteService={handleCompleteServiceWrapper}
+              handleCancelRequest={handleCancelRequestWrapper}
+              handleAcceptAlternativeDate={handleAcceptAlternativeDateWrapper}
+              handleRejectAlternativeDate={handleRejectAlternativeDateWrapper}
             />
           )
         case 'profile':
@@ -84,10 +109,10 @@ const Dashboard: React.FC = () => {
               requestFilter={dashboardData.requestFilter as "all" | "in-progress"}
               setRequestFilter={dashboardData.setRequestFilter}
               setShowNewRequestModal={dashboardActions.setShowNewRequestModal}
-              handleCompleteService={dashboardActions.handleCompleteService}
-              handleCancelRequest={dashboardActions.handleCancelRequest}
-              handleAcceptAlternativeDate={dashboardActions.handleAcceptAlternativeDate}
-              handleRejectAlternativeDate={dashboardActions.handleRejectAlternativeDate}
+              handleCompleteService={handleCompleteServiceWrapper}
+              handleCancelRequest={handleCancelRequestWrapper}
+              handleAcceptAlternativeDate={handleAcceptAlternativeDateWrapper}
+              handleRejectAlternativeDate={handleRejectAlternativeDateWrapper}
             />
           )
       }
@@ -106,10 +131,10 @@ const Dashboard: React.FC = () => {
               showRecentJobAlert={showRecentJobAlert}
               setShowRecentJobAlert={setShowRecentJobAlert}
               technicianNotifications={dashboardData.technicianNotifications}
-              handleAcceptDirectly={dashboardActions.handleAcceptDirectly}
+              handleAcceptDirectly={handleAcceptDirectlyWrapper}
               setSelectedRequest={dashboardActions.setSelectedRequest}
               handleReconnect={handleReconnect}
-              handleProposeAlternativeDate={dashboardActions.handleProposeAlternativeDate}
+              handleProposeAlternativeDate={handleProposeAlternativeDateWrapper}
             />
           )
         case 'my-jobs':
@@ -136,10 +161,10 @@ const Dashboard: React.FC = () => {
               showRecentJobAlert={showRecentJobAlert}
               setShowRecentJobAlert={setShowRecentJobAlert}
               technicianNotifications={dashboardData.technicianNotifications}
-              handleAcceptDirectly={dashboardActions.handleAcceptDirectly}
+              handleAcceptDirectly={handleAcceptDirectlyWrapper}
               setSelectedRequest={dashboardActions.setSelectedRequest}
               handleReconnect={handleReconnect}
-              handleProposeAlternativeDate={dashboardActions.handleProposeAlternativeDate}
+              handleProposeAlternativeDate={handleProposeAlternativeDateWrapper}
             />
           )
       }
@@ -334,12 +359,6 @@ const Dashboard: React.FC = () => {
                                 <h4 className="font-medium text-gray-900 text-sm">
                                   {notification.serviceRequest?.appliance?.name || 'Solicitud de servicio'}
                                 </h4>
-                                <p className="text-sm text-gray-600 mb-1">
-                                  {notification.serviceRequest?.clientPrice 
-                                    ? `$${notification.serviceRequest.clientPrice.toLocaleString()} COP`
-                                    : 'Precio no disponible'
-                                  }
-                                </p>
                                 <p className="text-xs text-gray-500">
                                   {notification.timestamp?.toLocaleTimeString?.() || 'Fecha no disponible'}
                                 </p>
@@ -554,7 +573,7 @@ const Dashboard: React.FC = () => {
               </div>              {/* Botones */}
               <div className="flex space-x-4">
                 <button
-                  onClick={() => dashboardActions.handleProposeAlternativeDate(dashboardActions.selectedRequest!.id, dashboardActions.alternativeDate)}
+                  onClick={() => handleProposeAlternativeDateWrapper(dashboardActions.selectedRequest!.id, dashboardActions.alternativeDate)}
                   disabled={!dashboardActions.alternativeDate}
                   className="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
