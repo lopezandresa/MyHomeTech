@@ -1,34 +1,9 @@
-import { CheckCircleIcon, ShieldCheckIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import AuthModal from './auth/AuthModal'
 
 const Contact = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false)
-
-
-  const benefits = [
-    {
-      icon: CheckCircleIcon,
-      title: 'Técnicos Verificados',
-      description: 'Todos nuestros técnicos están certificados y han pasado verificación de antecedentes.'
-    },
-    {
-      icon: ShieldCheckIcon,
-      title: 'Servicio Garantizado',
-      description: 'Garantía en todos los trabajos realizados. Tu satisfacción es nuestra prioridad.'
-    },
-    {
-      icon: ClockIcon,
-      title: 'Respuesta Rápida',
-      description: 'Conecta con técnicos disponibles en tu zona en cuestión de minutos.'
-    },
-    {
-      icon: CurrencyDollarIcon,
-      title: 'Precios Justos',
-      description: 'Tú estableces el precio que estás dispuesto a pagar por el servicio.'
-    }
-  ]
 
   const steps = [
     {
@@ -61,46 +36,6 @@ const Contact = () => {
     <>
       <section id="contact" className="py-24 bg-gradient-to-br from-blue-50 via-white to-blue-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              ¿Necesitas un
-              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> técnico especializado?</span>
-            </h2>
-            
-           
-          </motion.div>
-
-          {/* Benefits Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20"
-          >
-            {benefits.map((benefit, index) => (
-              <motion.div
-                key={benefit.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 text-center group"
-              >
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <benefit.icon className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{benefit.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
 
           {/* How it Works Section */}
           <motion.div
