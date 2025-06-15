@@ -5,6 +5,7 @@ import type { AdminStats, AdminUserManagement, UserFilters } from '../types'
 import AdminStatsCard from '../components/admin/AdminStatsCard' 
 import UserManagementTable from '../components/admin/UserManagementTable'
 import CreateAdminModal from '../components/admin/CreateAdminModal'
+import EditUserModal from '../components/admin/EditUserModal'
 import { FiUsers, FiUserPlus, FiSettings, FiActivity } from 'react-icons/fi'
 
 /**
@@ -12,17 +13,17 @@ import { FiUsers, FiUserPlus, FiSettings, FiActivity } from 'react-icons/fi'
  */
 const AdminPage: React.FC = () => {  const { user } = useAuth()
   const [stats, setStats] = useState<AdminStats | null>(null)
-  const [users, setUsers] = useState<AdminUserManagement[]>([])
   const [filteredUsers, setFilteredUsers] = useState<AdminUserManagement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<AdminUserManagement | null>(null)
   const [filters, setFilters] = useState<UserFilters>({
     role: 'all',
     status: 'all',
     search: ''
   })
-
   // Verificar que el usuario sea administrador
   if (!user || user.role !== 'admin') {
     return (
@@ -41,20 +42,23 @@ const AdminPage: React.FC = () => {  const { user } = useAuth()
 
   useEffect(() => {
     applyFilters()
-  }, [users, filters])
+  }, [filters]) // Solo aplicar filtros cuando cambien los filtros, no cuando cambien los usuarios
 
   const loadData = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const [statsData, usersData] = await Promise.all([
+      const [statsData] = await Promise.all([
         adminService.getSystemStats(),
-        adminService.getAllUsers()
+        // No necesitamos cargar todos los usuarios ya que usamos getFilteredUsers directamente
       ])
       
       setStats(statsData)
-      setUsers(usersData)
+      
+      // Aplicar filtros después de cargar los datos
+      const filtered = await adminService.getFilteredUsers(filters)
+      setFilteredUsers(filtered)
     } catch (err) {
       console.error('Error al cargar datos:', err)
       setError('Error al cargar los datos del panel de administrador')
@@ -84,10 +88,26 @@ const AdminPage: React.FC = () => {  const { user } = useAuth()
   const handleFilterChange = (newFilters: Partial<UserFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
   }
-
   const handleCreateAdmin = async () => {
     setShowCreateModal(false)
     await loadData() // Recargar datos después de crear admin
+  }
+
+  const handleEditUser = (user: AdminUserManagement) => {
+    setSelectedUser(user)
+    setShowEditModal(true)
+  }
+
+  const handleUserUpdate = async (userId: number, userData: any) => {
+    try {
+      await adminService.updateUser(userId, userData)
+      await loadData() // Recargar datos después de actualizar usuario
+      setShowEditModal(false)
+      setSelectedUser(null)
+    } catch (err) {
+      console.error('Error al actualizar usuario:', err)
+      throw err // Re-throw para que el modal pueda manejar el error
+    }
   }
 
   if (loading) {
@@ -201,23 +221,33 @@ const AdminPage: React.FC = () => {  const { user } = useAuth()
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <FiUsers className="text-blue-600" />
             Gestión de Usuarios
-          </h2>
-            <UserManagementTable
+          </h2>            <UserManagementTable
             users={filteredUsers}
             filters={filters}
             onFilterChange={handleFilterChange}
             onToggleStatus={handleToggleUserStatus}
-            onEditUser={() => {}} // Función vacía ya que AdminPage no implementa edición completa
+            onEditUser={handleEditUser}
             onCreateAdmin={() => setShowCreateModal(true)}
             loading={loading}
-          />        </div>
-      </div>
-
-      {/* Create Admin Modal */}
+          /></div>
+      </div>      {/* Create Admin Modal */}
       {showCreateModal && (
         <CreateAdminModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateAdmin}
+        />
+      )}
+
+      {/* Edit User Modal */}
+      {showEditModal && selectedUser && (
+        <EditUserModal
+          isOpen={showEditModal}
+          user={selectedUser}
+          onClose={() => {
+            setShowEditModal(false)
+            setSelectedUser(null)
+          }}
+          onSave={handleUserUpdate}
         />
       )}
     </div>

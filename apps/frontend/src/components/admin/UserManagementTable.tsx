@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import type { AdminUserManagement, UserFilters } from '../../types'
 import { FiSearch, FiFilter, FiToggleLeft, FiToggleRight, FiUser, FiMail, FiEdit2, FiUserPlus } from 'react-icons/fi'
 import { useAuth } from '../../contexts/AuthContext'
@@ -27,6 +27,9 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
 }) => {
   const { user: currentUser } = useAuth()
   const isCurrentUserAdmin = currentUser?.role === 'admin'
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [isUserAction, setIsUserAction] = useState(true)
+  
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -83,12 +86,37 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Búsqueda */}
           <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />            <input
+              ref={searchInputRef}
               type="text"
               placeholder="Buscar por nombre, email o teléfono..."
               value={filters.search}
-              onChange={(e) => onFilterChange({ search: e.target.value })}
+              onChange={(e) => {
+                console.log('Search input changed to:', e.target.value)
+                console.log('Is user action:', isUserAction)
+                console.log('Active element:', document.activeElement === searchInputRef.current)
+                  // Solo actualizar si el input tiene foco (es una acción directa del usuario)
+                if (document.activeElement === searchInputRef.current) {
+                  console.log('Updating search filter - input has focus')
+                  onFilterChange({ search: e.target.value })                } else {
+                  console.log('Ignoring search change - input does not have focus')
+                  // Prevenir la actualización restaurando el valor
+                  e.preventDefault()
+                  setTimeout(() => {
+                    if (searchInputRef.current) {
+                      searchInputRef.current.value = filters.search || ''
+                    }
+                  }, 0)
+                }
+              }}
+              onFocus={() => {
+                console.log('Search input focused')
+                setIsUserAction(true)
+              }}
+              onBlur={() => {
+                console.log('Search input blurred')
+                setIsUserAction(false)
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -200,21 +228,27 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
                     {formatDate(user.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      {/* Botón de Editar */}
-                      <button
-                        onClick={() => onEditUser(user)}
+                    <div className="flex items-center space-x-2">                      {/* Botón de Editar */}                      <button
+                        onClick={(e) => {
+                          console.log('Edit button clicked, preventing default and propagation')
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log('Calling onEditUser with user:', user.firstName, user.firstLastName)
+                          onEditUser(user)
+                        }}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
                         title="Editar usuario"
                       >
                         <FiEdit2 className="w-4 h-4" />
                         Editar
-                      </button>
-
-                      {/* Botón de Activar */}
+                      </button>                      {/* Botón de Activar */}
                       {!user.status && (
                         <button
-                          onClick={() => onToggleStatus(user.id)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onToggleStatus(user.id)
+                          }}
                           className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
                           title="Activar usuario"
                         >
@@ -226,7 +260,11 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
                       {/* Botón de Desactivar */}
                       {user.status && (
                         <button
-                          onClick={() => onToggleStatus(user.id)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onToggleStatus(user.id)
+                          }}
                           className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
                           title="Desactivar usuario"
                         >
