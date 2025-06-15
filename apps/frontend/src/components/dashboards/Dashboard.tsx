@@ -332,48 +332,50 @@ const Dashboard: React.FC = () => {
                         <BellIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500">No hay notificaciones</p>
                       </div>
-                    ) : (
-                      <div className="divide-y divide-gray-100">
-                        {dashboardData.technicianNotifications.notifications.map((notification: any, index: number) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="p-4 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <WrenchScrewdriverIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                    notification.type === 'new' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : notification.type === 'updated'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {notification.type === 'new' ? 'Nueva' : 
-                                     notification.type === 'updated' ? 'Actualizada' : 'Removida'}
-                                  </span>
-                                </div>
-                                <h4 className="font-medium text-gray-900 text-sm">
-                                  {notification.serviceRequest?.appliance?.name || 'Solicitud de servicio'}
-                                </h4>
-                                <p className="text-xs text-gray-500">
-                                  {notification.timestamp?.toLocaleTimeString?.() || 'Fecha no disponible'}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => dashboardData.technicianNotifications.dismissNotification(index)}
-                                className="text-gray-400 hover:text-gray-600 ml-2"
-                              >
-                                <XMarkIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
+                    ) : null
+                    // (
+                    //   <div className="divide-y divide-gray-100">
+                    //     {dashboardData.technicianNotifications.notifications.map((notification: any, index: number) => (
+                    //       <motion.div
+                    //         key={index}
+                    //         initial={{ opacity: 0, x: -10 }}
+                    //         animate={{ opacity: 1, x: 0 }}
+                    //         className="p-4 hover:bg-gray-50 transition-colors"
+                    //       >
+                    //         <div className="flex items-start justify-between">
+                    //           <div className="flex-1">
+                    //             <div className="flex items-center space-x-2 mb-2">
+                    //               <WrenchScrewdriverIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    //               <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    //                 notification.type === 'new' 
+                    //                   ? 'bg-green-100 text-green-800' 
+                    //                   : notification.type === 'updated'
+                    //                   ? 'bg-blue-100 text-blue-800'
+                    //                   : 'bg-red-100 text-red-800'
+                    //               }`}>
+                    //                 {notification.type === 'new' ? 'Nueva' : 
+                    //                  notification.type === 'updated' ? 'Actualizada' : 'Removida'}
+                    //               </span>
+                    //             </div>
+                    //             <h4 className="font-medium text-gray-900 text-sm">
+                    //               {notification.serviceRequest?.appliance?.name || 'Solicitud de servicio'}
+                    //             </h4>
+                    //             <p className="text-xs text-gray-500">
+                    //               {notification.timestamp?.toLocaleTimeString?.() || 'Fecha no disponible'}
+                    //             </p>
+                    //           </div>
+                    //           <button
+                    //             onClick={() => dashboardData.technicianNotifications.dismissNotification(index)}
+                    //             className="text-gray-400 hover:text-gray-600 ml-2"
+                    //           >
+                    //             <XMarkIcon className="h-4 w-4" />
+                    //           </button>
+                    //         </div>
+                    //       </motion.div>
+                    //     ))}
+                    //   </div>
+                   // )
+                    }
                   </div>
                 </motion.div>
               )}
