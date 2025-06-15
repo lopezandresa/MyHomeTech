@@ -29,6 +29,9 @@ import TechnicianPerformanceTable from '../admin/TechnicianPerformanceTable'
 import ServiceRequestChart from '../admin/ServiceRequestChart'
 import { adminService } from '../../services/adminService'
 import EditUserModal from '../admin/EditUserModal'
+import { helpTicketService } from '../../services/helpTicketService'
+import HelpTicketStatsCard from '../admin/HelpTicketStatsCard' 
+import AdminHelpTickets from '../admin/AdminHelpTickets'
 
 // Utility function to format date
 import { useDashboardData } from '../../hooks/useDashboardData'
@@ -53,6 +56,7 @@ const Dashboard: React.FC = () => {
   const [adminUsers, setAdminUsers] = useState<any[]>([])
   const [adminTechnicianPerformance, setAdminTechnicianPerformance] = useState<any[]>([])
   const [adminServiceData, setAdminServiceData] = useState<any>(null)
+  const [helpTicketStats, setHelpTicketStats] = useState<any>(null)
   const [adminLoading, setAdminLoading] = useState(false)
   const [adminError, setAdminError] = useState<string | null>(null)
   const [userFilters, setUserFilters] = useState<UserFilters>({
@@ -77,18 +81,21 @@ const Dashboard: React.FC = () => {
         systemStats,
         serviceStats,
         techPerformance,
-        allUsers
+        allUsers,
+        helpStats
       ] = await Promise.all([
         adminService.getSystemStats(),
         adminService.getServiceRequestStats(),
         adminService.getTechnicianPerformance(),
-        adminService.getAllUsers()
+        adminService.getAllUsers(),
+        helpTicketService.getTicketStats()
       ])
       
       setAdminStats(systemStats)
       setAdminServiceData(serviceStats)
       setAdminTechnicianPerformance(techPerformance)
       setAdminUsers(allUsers)
+      setHelpTicketStats(helpStats)
     } catch (err: any) {
       console.error('Error loading admin data:', err)
       setAdminError('Error al cargar los datos del administrador')
@@ -294,7 +301,7 @@ const Dashboard: React.FC = () => {
 
               {/* Tarjetas de estadísticas principales */}
               {adminStats && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <AdminStatsCard
                     title="Total de Usuarios"
                     value={adminStats.totalUsers}
@@ -313,6 +320,11 @@ const Dashboard: React.FC = () => {
                     icon={<FiCheckCircle className="h-6 w-6" />}
                     color="purple"
                   />
+                  {helpTicketStats && (
+                    <HelpTicketStatsCard
+                      stats={helpTicketStats}
+                    />
+                  )}
                 </div>
               )}
 
@@ -374,6 +386,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           )
+        case 'help-tickets':
+          return <AdminHelpTickets />
         default:
           return null
       }

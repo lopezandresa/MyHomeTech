@@ -1,17 +1,19 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BriefcaseIcon,
   CheckCircleIcon,
   ArrowPathIcon,
   WifiIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  LifebuoyIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
 import { formatDate } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import DashboardPanel from '../common/DashboardPanel'
+import CreateHelpTicketModal from '../help/CreateHelpTicketModal'
 import type { ServiceRequest } from '../../types/index'
 
 interface TechnicianJobsProps {
@@ -26,6 +28,16 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
   technicianNotifications,
   handleReconnect
 }) => {
+  // Estados para el modal de ayuda
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const [selectedServiceForHelp, setSelectedServiceForHelp] = useState<ServiceRequest | null>(null)
+
+  // Función para abrir el modal de ayuda
+  const handleHelpClick = (request: ServiceRequest) => {
+    setSelectedServiceForHelp(request)
+    setShowHelpModal(true)
+  }
+
   // Alerta de conexión para técnicos
   const renderConnectionAlert = () => {
     if (technicianNotifications.connectionStatus.state === ConnectionState.CONNECTED) {
@@ -168,9 +180,29 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
                   </p>
                 </div>
               </div>
+
+              {/* Botón de ayuda */}
+              <div className="mt-4">
+                <button
+                  onClick={() => handleHelpClick(request)}
+                  className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-800 font-medium hover:bg-blue-200 transition-all"
+                >
+                  <LifebuoyIcon className="h-5 w-5 mr-2" />
+                  Necesito ayuda con este trabajo
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* Modal para crear ticket de ayuda */}
+      {showHelpModal && selectedServiceForHelp && (
+        <CreateHelpTicketModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+          serviceRequest={selectedServiceForHelp}
+        />
       )}
     </DashboardPanel>
   )

@@ -393,7 +393,7 @@ export class ServiceRequestService {
   async findAll(): Promise<ServiceRequest[]> {
     await this.markExpiredRequests();
     return this.srRepo.find({
-      relations: ['client', 'appliance', 'address', 'technician'],
+      relations: ['client', 'appliance', 'address', 'technician', 'cancelledByUser'],
       order: { createdAt: 'DESC' }
     });
   }
@@ -969,7 +969,7 @@ export class ServiceRequestService {
   async findByClient(clientId: number): Promise<ServiceRequest[]> {
     return this.srRepo.find({ 
       where: { clientId },
-      relations: ['client', 'appliance', 'address', 'technician'],
+      relations: ['client', 'appliance', 'address', 'technician', 'cancelledByUser'],
       order: { createdAt: 'DESC' }
     });
   }
@@ -980,14 +980,28 @@ export class ServiceRequestService {
    * @param {number} technicianId - ID del técnico
    * @returns {Promise<ServiceRequest[]>} Lista de solicitudes del técnico
    * 
-   * @description Ordenadas por fecha programada (próximas primero)
+   * @description Ordenadas por estado (programados primero) y fecha programada (próximas primero)
    */
   async findByTechnician(technicianId: number): Promise<ServiceRequest[]> {
-    return this.srRepo.find({ 
-      where: { technicianId },
-      relations: ['client', 'appliance', 'address', 'technician'],
-      order: { scheduledAt: 'ASC' }
-    });
+    return this.srRepo
+      .createQueryBuilder('sr')
+      .leftJoinAndSelect('sr.client', 'client')
+      .leftJoinAndSelect('sr.appliance', 'appliance')
+      .leftJoinAndSelect('sr.address', 'address')
+      .leftJoinAndSelect('sr.technician', 'technician')
+      .leftJoinAndSelect('sr.cancelledByUser', 'cancelledByUser')
+      .where('sr.technicianId = :technicianId', { technicianId })
+      .addOrderBy(
+        `CASE 
+          WHEN sr.status = 'scheduled' THEN 1 
+          WHEN sr.status = 'completed' THEN 2 
+          WHEN sr.status = 'cancelled' THEN 3 
+          ELSE 4 
+        END`, 
+        'ASC'
+      )
+      .addOrderBy('sr.scheduledAt', 'ASC')
+      .getMany();
   }
 
   /**

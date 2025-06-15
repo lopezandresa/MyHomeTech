@@ -10,7 +10,7 @@ export interface User {
   profilePhotoUrl?: string
   profilePhotoPublicId?: string
   // Campo calculado para compatibilidad
-  get fullName(): string
+  fullName?: string
   // Agregar propiedad name para compatibilidad
   name?: string
 }
@@ -137,6 +137,10 @@ export interface ServiceRequest {
   scheduledAt?: string
   completedAt?: string
   cancelledAt?: string
+  // Información del ticket de cancelación
+  cancellationReason?: string
+  cancelledByUserId?: number
+  cancellationTicketCreatedAt?: string
   // Nueva propiedad para propuestas de fechas alternativas
   alternativeDateProposals?: AlternativeDateProposal[]
   // Relaciones
@@ -144,6 +148,7 @@ export interface ServiceRequest {
   technician?: User
   appliance: Appliance
   address: Address
+  cancelledByUser?: User
   createdAt: string
   updatedAt: string
 }
@@ -321,4 +326,78 @@ export interface UserFilters {
   role?: 'client' | 'technician' | 'admin' | 'all'
   status?: 'active' | 'inactive' | 'all'
   search?: string
+}
+
+// Tipos para sistema de tickets de ayuda
+export const HelpTicketType = {
+  CANCEL_SERVICE: 'cancel_service',
+  RESCHEDULE_SERVICE: 'reschedule_service',
+  TECHNICAL_ISSUE: 'technical_issue',
+  PAYMENT_ISSUE: 'payment_issue',
+  GENERAL_INQUIRY: 'general_inquiry',
+  COMPLAINT: 'complaint'
+} as const
+
+export type HelpTicketType = typeof HelpTicketType[keyof typeof HelpTicketType]
+
+export const HelpTicketStatus = {
+  PENDING: 'pending',
+  IN_REVIEW: 'in_review',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  RESOLVED: 'resolved'
+} as const
+
+export type HelpTicketStatus = typeof HelpTicketStatus[keyof typeof HelpTicketStatus]
+
+export interface HelpTicket {
+  id: number
+  type: HelpTicketType
+  subject: string
+  description: string
+  reason?: string
+  status: HelpTicketStatus
+  adminResponse?: string
+  adminNotes?: string
+  userId: number
+  serviceRequestId?: number
+  assignedAdminId?: number
+  resolvedByAdminId?: number
+  createdAt: string
+  updatedAt: string
+  resolvedAt?: string
+  // Relaciones
+  user: User
+  serviceRequest?: ServiceRequest
+  assignedAdmin?: User
+  resolvedByAdmin?: User
+  // Computed properties
+  userName: string
+  userRole: string
+  isCancellationRequest: boolean
+  isPending: boolean
+  isResolved: boolean
+}
+
+export interface CreateHelpTicketRequest {
+  type: HelpTicketType
+  subject: string
+  description: string
+  reason?: string
+  serviceRequestId?: number
+}
+
+export interface RespondHelpTicketRequest {
+  status: HelpTicketStatus
+  adminResponse: string
+  adminNotes?: string
+}
+
+export interface HelpTicketStats {
+  total: number
+  pending: number
+  inReview: number
+  approved: number
+  rejected: number
+  resolved: number
 }

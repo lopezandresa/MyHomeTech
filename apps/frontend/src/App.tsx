@@ -8,6 +8,9 @@ import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import HelpPage from './pages/HelpPage'
+import AdminHelpTicketsPage from './pages/admin/AdminHelpTicketsPage'
+import QuickHelpButton from './components/help/QuickHelpButton'
 
 /**
  * @fileoverview Componente principal de la aplicación MyHomeTech Frontend
@@ -43,6 +46,8 @@ import SettingsPage from './pages/SettingsPage'
  * // /dashboard - Dashboard principal (protegida)
  * // /profile - Perfil de usuario (protegida)
  * // /settings - Configuración (protegida)
+ * // /help - Página de ayuda (protegida)
+ * // /admin/help-tickets - Gestión de tickets de ayuda (protegida, rol: admin)
  * ```
  */
 function App() {
@@ -80,6 +85,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              
               <Route 
                 path="/settings" 
                 element={
@@ -88,11 +94,35 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+
+              {/* Sistema de Ayuda */}
+              <Route 
+                path="/help" 
+                element={
+                  <ProtectedRoute>
+                    <HelpPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* Rutas de administrador */}
+              <Route 
+                path="/admin/help-tickets" 
+                element={
+                  <ProtectedRoute>
+                    <AdminHelpTicketsPage />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Ruta catch-all para redireccionar a home */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+
+          {/* Botón de ayuda flotante - Se muestra solo si el usuario está autenticado (verificación interna) */}
+          <QuickHelpButton />
+          
         </ToastProvider>
       </AuthProvider>
     </Router>

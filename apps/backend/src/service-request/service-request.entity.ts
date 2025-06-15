@@ -114,4 +114,18 @@ export class ServiceRequest {
 
   @Column({ type: 'timestamp', nullable: true })
   expiredAt?: Date;
+
+  /** Información del ticket de cancelación */
+  @Column({ type: 'text', nullable: true })
+  cancellationReason?: string;
+
+  @ManyToOne(() => Identity, { nullable: true })
+  @JoinColumn({ name: 'cancelledByUserId' })
+  cancelledByUser?: Identity;
+
+  @Column({ nullable: true })
+  cancelledByUserId?: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  cancellationTicketCreatedAt?: Date;
 }

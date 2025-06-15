@@ -9,7 +9,8 @@ import {
   CalendarDaysIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  BellIcon
+  BellIcon,
+  LifebuoyIcon
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
@@ -18,6 +19,7 @@ import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
 import AlternativeDateProposalCard from '../AlternativeDateProposalCard'
 import TechnicianInfo from '../TechnicianInfo'
+import CreateHelpTicketModal from '../help/CreateHelpTicketModal'
 import type { ServiceRequest } from '../../types/index'
 
 interface ClientRequestsProps {
@@ -49,6 +51,10 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
   const [requestToCancel, setRequestToCancel] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
   const [expandedProposals, setExpandedProposals] = useState<Set<number>>(new Set())
+  
+  // Estados para el modal de ayuda
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const [selectedServiceForHelp, setSelectedServiceForHelp] = useState<ServiceRequest | null>(null)
   
   // Función para alternar la expansión de propuestas
   const toggleProposalsExpansion = (requestId: number) => {
@@ -97,6 +103,12 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
       setShowConfirmModal(false)
       setRequestToCancel(null)
     }
+  }
+
+  // Función para abrir el modal de ayuda
+  const handleHelpClick = (request: ServiceRequest) => {
+    setSelectedServiceForHelp(request)
+    setShowHelpModal(true)
   }
 
   if (isLoading) {
@@ -375,12 +387,75 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                             Técnico: <span className="font-medium">{request.technician.firstName} {request.technician.firstLastName}</span>
                           </p>
                         )}
-                        <button
-                          onClick={() => handleCompleteService(request.id)}
-                          className="mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                        >
-                          Marcar como completada
-                        </button>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => handleCompleteService(request.id)}
+                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
+                          >
+                            <span>Marcar como completada</span>
+                          </button>
+                          <button
+                            onClick={() => handleHelpClick(request)}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
+                          >
+                            <LifebuoyIcon className="h-4 w-4" />
+                            <span>Ayuda</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {request.status === 'cancelled' && (
+                      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                        <p className="font-medium text-red-800 mb-2">Servicio cancelado</p>
+                        <p className="text-sm text-gray-600">
+                          Fecha de cancelación: <span className="font-medium">
+                            {formatDate(request.cancelledAt!)}
+                          </span>
+                        </p>
+                        
+                        {/* Información del ticket de cancelación */}
+                        {request.cancellationReason && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm font-medium text-gray-700 mb-1">
+                              Información de cancelación:
+                            </p>
+                            <p className="text-sm text-gray-600 mb-2">
+                              <span className="font-medium">Motivo:</span> {request.cancellationReason}
+                            </p>
+                            {request.cancelledByUser && (
+                              <p className="text-sm text-gray-600 mb-2">
+                                <span className="font-medium">Cancelado por:</span> {' '}
+                                {request.cancelledByUser.firstName} {request.cancelledByUser.firstLastName}
+                                {request.cancelledByUser.role === 'admin' && (
+                                  <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    Administrador
+                                  </span>
+                                )}
+                              </p>
+                            )}
+                            {request.cancellationTicketCreatedAt && (
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Ticket creado:</span> {' '}
+                                {formatDate(request.cancellationTicketCreatedAt)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {request.status === 'completed' && (
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <p className="font-medium text-green-800 mb-2">Servicio completado</p>
+                        <p className="text-sm text-gray-600">
+                          Completado el: <span className="font-medium">{formatDate(request.completedAt!)}</span>
+                        </p>
+                        {request.technician && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            Técnico: <span className="font-medium">{request.technician.firstName} {request.technician.firstLastName}</span>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -403,6 +478,15 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
         confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
         isLoading={isCancelling}
       />
+
+      {/* Modal para crear ticket de ayuda */}
+      {showHelpModal && selectedServiceForHelp && (
+        <CreateHelpTicketModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+          serviceRequest={selectedServiceForHelp}
+        />
+      )}
     </DashboardPanel>
   )
 }

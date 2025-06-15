@@ -6,7 +6,8 @@ import {
   WrenchScrewdriverIcon,
   BriefcaseIcon,
   ArrowRightOnRectangleIcon,
-  HomeIcon
+  HomeIcon,
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import DashboardHeader from '../DashboardHeader'
@@ -88,6 +89,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           label: 'Técnicos',
           description: 'Rendimiento y estadísticas',
           icon: WrenchScrewdriverIcon
+        },
+        {
+          id: 'help-tickets',
+          label: 'Tickets de Ayuda',
+          description: 'Gestionar tickets de soporte',
+          icon: QuestionMarkCircleIcon
         },
         {
           id: 'analytics',
