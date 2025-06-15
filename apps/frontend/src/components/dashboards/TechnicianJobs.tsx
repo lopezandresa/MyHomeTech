@@ -218,15 +218,18 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
 
               {/* Información adicional para servicios completados */}
               {request.status === 'completed' && (
-                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <h4 className="font-medium text-green-800 mb-2">Servicio Completado</h4>
-                  {request.completedAt && (
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Completado el:</span> {formatDate(request.completedAt)}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="p-4 bg-green-50 rounded-lg">
+                <p className="font-medium text-green-800 mb-2">Servicio completado</p>
+                <p className="text-sm text-gray-600">
+                  Completado el: <span className="font-medium">{formatDate(request.completedAt!)}</span>
+                </p>
+                {request.technician && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Técnico: <span className="font-medium">{request.technician.firstName} {request.technician.firstLastName}</span>
+                  </p>
+                )}
+              </div>
+            )}
 
               {/* Botón de ayuda */}
               <div className="mt-4">

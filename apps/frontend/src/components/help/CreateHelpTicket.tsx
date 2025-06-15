@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { helpTicketService } from '../../services/helpTicketService';
 import { Send, AlertCircle } from 'lucide-react';
 import { HelpTicketType, type CreateHelpTicketRequest } from '../../types';
@@ -10,7 +9,6 @@ interface CreateHelpTicketProps {
 }
 
 const CreateHelpTicket: React.FC<CreateHelpTicketProps> = ({ onSuccess, compact = false }) => {
-  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateHelpTicketRequest>({
     type: HelpTicketType.GENERAL_INQUIRY,
     subject: '',
