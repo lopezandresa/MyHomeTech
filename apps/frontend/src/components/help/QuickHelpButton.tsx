@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LifebuoyIcon,
   XMarkIcon,
-  QuestionMarkCircleIcon,
   ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
@@ -77,13 +76,6 @@ const QuickHelpButton: React.FC<QuickHelpButtonProps> = ({
   };
 
   const quickActions = [
-    {
-      type: 'general_inquiry' as HelpTicketType,
-      label: 'Consulta General',
-      icon: QuestionMarkCircleIcon,
-      description: 'Hacer una pregunta general',
-      color: 'text-blue-600'
-    },
     {
       type: 'technical_issue' as HelpTicketType,
       label: 'Problema Técnico',

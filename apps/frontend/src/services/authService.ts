@@ -55,7 +55,7 @@ class AuthService {
       const token = localStorage.getItem('authToken')
       if (token) {
         // Llamar al endpoint de logout del backend de forma asíncrona
-        api.post('/auth/logout').catch((error) => {
+        api.post('/auth/logout').catch(() => {
           //console.warn('Error en logout del backend (ignorado):', error)
         })
       }
@@ -216,7 +216,8 @@ class AuthService {
       if (error.response?.status === 409) {
         return true // Si el status es 409, el correo ya existe
       }
-      throw error // Para cualquier otro error, propagar
+      return false // Si es otro error, asumir que el correo no existe
+      //throw error // Para cualquier otro error, propagar
     }
   }
 }

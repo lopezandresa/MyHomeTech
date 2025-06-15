@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { authService } from '../../services/authService'
+import { useToast } from '../common/ToastProvider'
 
 interface LoginProps {
   onSwitchToRegister: () => void
@@ -10,13 +10,12 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
-  const navigate = useNavigate()
+  const { showError } = useToast()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,11 +24,9 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
       ...prev,
       [name]: value
     }))
-    if (error) setError(null)
   }
 
   const performLogin = async () => {
-    setError(null)
     setIsLoading(true)
     
     try {
@@ -54,9 +51,9 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
       window.location.href = '/dashboard'
       
     } catch (error: any) {
-      // Mostrar error SOLO en el modal
+      // Mostrar error con toast en lugar del banner
       const errorMessage = error.message || 'Error al iniciar sesión'
-      setError(errorMessage)
+      showError('Error de autenticación', errorMessage, 2500)
     } finally {
       setIsLoading(false)
     }
@@ -83,16 +80,6 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
         <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
         <p className="text-gray-600 mt-2">Accede a tu cuenta para continuar</p>
       </div>
-
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <p className="text-red-800 text-sm">{error}</p>
-        </motion.div>
-      )}
 
       <div className="space-y-6">
         <div>

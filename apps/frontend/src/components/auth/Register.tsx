@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon, UserIcon, WrenchScrewdriverIcon, IdentificationIcon, CalendarDaysIcon, PhoneIcon, ClockIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '../../contexts/AuthContext'
+import { authService } from '../../services/authService'
+import { useToast } from '../common/ToastProvider'
 
 interface RegisterProps {
   onSwitchToLogin: () => void
@@ -10,8 +10,8 @@ interface RegisterProps {
 }
 
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
-  const { register, login, isLoading } = useAuth()
-  const navigate = useNavigate()
+  const { showError, showSuccess } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<{
     firstName: string
     middleName: string
@@ -45,7 +45,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Utility function to capitalize names
   const capitalizeName = (name: string, isLastName: boolean = false): string => {
@@ -82,7 +81,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
       ...prev,
       [name]: processedValue
     }))
-    if (error) setError(null)
   }
 
   const handleRoleChange = (role: 'client' | 'technician') => {
@@ -92,71 +90,67 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     }))
   }
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    // Validaciones
-    if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden')
-      return
-    }
-
-    if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
-      return
-    }
-
-    // Validar campos según el rol
-    if (!formData.cedula.trim() || !formData.birthDate) {
-      setError('La cédula y fecha de nacimiento son obligatorios')
-      return
-    }
-
-    if (formData.role === 'client' && !formData.phone.trim()) {
-      setError('El teléfono es obligatorio para clientes')
-      return
-    }
-
-    if (formData.role === 'technician') {
-      if (formData.experienceYears < 0) {
-        setError('Los años de experiencia no pueden ser negativos')
-        return
-      }
-      if (!formData.idPhotoFile) {
-        setError('La foto de cédula es obligatoria para técnicos')
-        return
-      }
-    }
-
-    // Validar correo electrónico
-    try {
-      const { authService } = await import('../../services/authService')
-      const emailExists = await authService.checkEmailExists(formData.email)
-      if (emailExists) {
-        setError('El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.')
-        return
-      }
-    } catch (error) {
-      console.error('Error al verificar email:', error)
-      // Continuar con el proceso de registro si hay un error en la verificación
-    }
+  const performRegister = async () => {
+    setIsLoading(true)
 
     try {
-      // Enviar datos básicos de usuario
-      const user = await register(
-        formData.firstName, 
-        formData.middleName, 
-        formData.firstLastName, 
-        formData.secondLastName, 
-        formData.email, 
-        formData.password, 
-        formData.role
-      )
+      // Validaciones
+      if (formData.password !== formData.confirmPassword) {
+        showError('Error de validación', 'Las contraseñas no coinciden', 3000)
+        return
+      }
+
+      if (formData.password.length < 6) {
+        showError('Error de validación', 'La contraseña debe tener al menos 6 caracteres', 3000)
+        return
+      }
+
+      // Validar campos según el rol
+      if (!formData.cedula.trim() || !formData.birthDate) {
+        showError('Error de validación', 'La cédula y fecha de nacimiento son obligatorios', 3000)
+        return
+      }
+
+      if (formData.role === 'client' && !formData.phone.trim()) {
+        showError('Error de validación', 'El teléfono es obligatorio para clientes', 3000)
+        return
+      }
+
+      if (formData.role === 'technician') {
+        if (formData.experienceYears < 0) {
+          showError('Error de validación', 'Los años de experiencia no pueden ser negativos', 3000)
+          return
+        }
+        if (!formData.idPhotoFile) {
+          showError('Error de validación', 'La foto de cédula es obligatoria para técnicos', 3000)
+          return
+        }
+      }
+
+      // Validar correo electrónico
+      try {
+        const emailExists = await authService.checkEmailExists(formData.email)
+        if (emailExists) {
+          showError('Email ya registrado', 'El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.', 4000)
+          return
+        }
+      } catch (error) {
+        // Continuar con el proceso de registro si hay un error en la verificación
+      }
+
+      // Llamar directamente al authService para registro
+      const user = await authService.register({
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        firstLastName: formData.firstLastName,
+        secondLastName: formData.secondLastName,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      })
       
       // Crear perfil según el rol
       if (formData.role === 'client') {
-        // Importar clientService y crear perfil de cliente
         const { clientService } = await import('../../services/clientService')
         await clientService.createProfile({
           identityId: user.id,
@@ -172,24 +166,47 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
           cedula: formData.cedula,
           birthDate: formData.birthDate,
           experienceYears: formData.experienceYears,
-          specialties: [], // El técnico puede actualizar esto después
+          specialties: [],
           idPhotoFile: formData.idPhotoFile || undefined
         })
       }
 
       // Hacer login automático después del registro exitoso
-      await login(formData.email, formData.password)
+      const loginResult = await authService.login({ 
+        email: formData.email, 
+        password: formData.password 
+      })
+
+      // Actualizar localStorage y contexto
+      localStorage.setItem('authToken', loginResult.token)
+      localStorage.setItem('user', JSON.stringify(loginResult.user))
+      
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { user: loginResult.user, token: loginResult.token } 
+      }))
+
+      showSuccess('¡Registro exitoso!', 'Tu cuenta ha sido creada. Bienvenido a MyHomeTech', 3000)
+      
       onClose()
-      // Redirigir al dashboard después del registro exitoso
-      navigate('/dashboard', { replace: true })
+      window.location.href = '/dashboard'
+      
     } catch (error: any) {
-      console.error('Register error:', error)
       if (error.response?.status === 409) {
-        setError('El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.')
+        showError('Email ya registrado', 'El correo electrónico ya está registrado. Por favor utiliza otro correo o inicia sesión.', 4000)
       } else {
-        setError(error.response?.data?.message || 'Error al registrar usuario')
+        const errorMessage = error.response?.data?.message || error.message || 'Error al registrar usuario'
+        showError('Error de registro', errorMessage, 3000)
       }
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    performRegister()
+    return false
   }
 
   return (
@@ -213,16 +230,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
         <h2 className="text-2xl font-bold text-gray-900">Crear Cuenta</h2>
         <p className="text-gray-600 mt-2">Únete a la comunidad MyHomeTech</p>
       </div>
-
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <p className="text-red-800 text-sm">{error}</p>
-        </motion.div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Selector de tipo de usuario */}
