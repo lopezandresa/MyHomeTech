@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Address } from '../address/address.entity';
 export type Role = 'client' | 'technician' | 'admin';
@@ -50,6 +50,13 @@ export class Identity {
   @ManyToOne(() => Address, { nullable: true })
   @JoinColumn({ name: 'primaryAddressId' })
   primaryAddress?: Address;
+
+  // Timestamps automáticos
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   // Getter para nombre completo (compatibilidad)
   get fullName(): string {
