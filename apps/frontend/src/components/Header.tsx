@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bars3Icon, XMarkIcon, UserIcon } from '@heroicons/react/24/outline'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './auth/AuthModal'
 import UserMenu from './auth/UserMenu'
@@ -8,13 +9,24 @@ import UserMenu from './auth/UserMenu'
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   const navigation = [
     { name: 'Inicio', href: '#hero', section: 'hero' },
     { name: 'Acerca de', href: '#about', section: 'about' },
+    { name: 'Proceso', href: '#contact', section: 'contact' },
   ]
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleAuthClick = () => {
     setAuthModalOpen(true)
@@ -41,104 +53,219 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
-        <nav className="mx-auto max-w-7xl px-6 lg:px-8" aria-label="Top">
-          <div className="flex w-full items-center justify-between border-b border-blue-500/10 py-4 lg:border-none">
-            <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-3">
-                <img 
-                  src="/MyHomeTech-Logo-1.svg" 
-                  alt="MyHomeTech" 
-                  className="h-14 w-14"
-                />
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                  MyHomeTech
-                </span>
-              </Link>
-            </div>
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+          scrolled 
+            ? 'bg-white/90 backdrop-blur-md shadow-lg border-b border-gray-100' 
+            : 'bg-white/80 backdrop-blur-sm'
+        }`}
+      >
+        <nav className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex w-full items-center justify-between py-4">
             
-            <div className="ml-10 hidden space-x-8 lg:block">
-              {navigation.map((link) => (
-                <button
-                  key={link.name}
-                  onClick={() => handleNavigationClick(link)}
-                  className="text-base font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+            {/* Logo */}
+            <motion.div
+             // whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Link to="/" className="flex items-center space-x-3 group">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-xl"
+                  />
+                  <div className="relative bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-2 shadow-lg">
+                    <img 
+                      src="/MyHomeTech-Logo-1.svg" 
+                      alt="MyHomeTech" 
+                      className="h-10 w-10"
+                    />
+                  </div>
+
+                <motion.span
+                  initial={{ backgroundPosition: "0% 50%" }}
+                  animate={{ backgroundPosition: "100% 50%" }}
+                  transition={{ duration: 4, repeat: Infinity, repeatType: "reverse" }}
+                  className="text-xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent"
                 >
-                  {link.name}
-                </button>
+                  MyHomeTech
+                </motion.span>
+              </Link>
+            </motion.div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-1">
+              {navigation.map((link, index) => (
+                <motion.button
+                  key={link.name}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  onClick={() => handleNavigationClick(link)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200 rounded-xl group"
+                >
+                  <motion.span
+                    className="absolute inset-0 bg-blue-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    layoutId="navbar-hover"
+                  />
+                  <span className="relative">{link.name}</span>
+                </motion.button>
               ))}
             </div>
 
-            <div className="ml-6 hidden lg:block">
+            {/* Desktop Auth Button */}
+            <div className="hidden lg:block">
               {isAuthenticated ? (
-                <UserMenu />
-              ) : (
-                <button
-                  onClick={handleAuthClick}
-                  className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
                 >
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  Iniciar Sesión / Registrarse
-                </button>
+                  <UserMenu />
+                </motion.div>
+              ) : (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  onClick={handleAuthClick}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="group relative overflow-hidden bg-gray-900 text-white px-6 py-3 rounded-2xl font-medium text-sm shadow-xl transition-all duration-300"
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                  <span className="relative z-10 flex items-center">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    Iniciar Sesión
+                    <motion.span
+                      animate={{ x: [0, 3, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="ml-1"
+                    >
+                      ✨
+                    </motion.span>
+                  </span>
+                </motion.button>
               )}
             </div>
 
+            {/* Mobile Menu Button */}
             <div className="flex lg:hidden">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 type="button"
-                className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
+                className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 <span className="sr-only">Abrir menú principal</span>
-                {mobileMenuOpen ? (
-                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                ) : (
-                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-                )}
-              </button>
+                <AnimatePresence mode="wait">
+                  {mobileMenuOpen ? (
+                    <motion.div
+                      key="close"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="menu"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Bars3Icon className="h-6 w-6" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
             </div>
           </div>
 
-          {/* Mobile menu */}
-          {mobileMenuOpen && (
-            <div className="lg:hidden">
-              <div className="space-y-2 py-6">
-                {navigation.map((link) => (
-                  <button
-                    key={link.name}
-                    onClick={() => {
-                      handleNavigationClick(link)
-                      setMobileMenuOpen(false)
-                    }}
-                    className="block w-full text-left rounded-lg px-3 py-2 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    {link.name}
-                  </button>
-                ))}
-                
-                {isAuthenticated ? (
-                  <div className="pt-4 border-t border-gray-200">
-                    <UserMenu />
+          {/* Mobile Menu */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="lg:hidden overflow-hidden"
+              >
+                <motion.div
+                  initial={{ y: -20 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white/95 backdrop-blur-md rounded-2xl m-4 p-6 shadow-xl border border-gray-100"
+                >
+                  <div className="space-y-3">
+                    {navigation.map((link, index) => (
+                      <motion.button
+                        key={link.name}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        onClick={() => {
+                          handleNavigationClick(link)
+                          setMobileMenuOpen(false)
+                        }}
+                        whileHover={{ x: 5 }}
+                        className="block w-full text-left rounded-xl px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                      >
+                        {link.name}
+                      </motion.button>
+                    ))}
+                    
+                    <div className="pt-4 border-t border-gray-200">
+                      {isAuthenticated ? (
+                        <UserMenu />
+                      ) : (
+                        <motion.button
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
+                          onClick={() => {
+                            handleAuthClick()
+                            setMobileMenuOpen(false)
+                          }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 px-4 py-3 text-base font-medium text-white shadow-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-300"
+                        >
+                          <UserIcon className="mr-2 h-4 w-4" />
+                          Iniciar Sesión
+                          <motion.span
+                            animate={{ rotate: [0, 360] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="ml-2"
+                          >
+                            ✨
+                          </motion.span>
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => {
-                        handleAuthClick()
-                        setMobileMenuOpen(false)
-                      }}
-                      className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-3 text-base font-medium text-white shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
-                    >
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      Iniciar Sesión / Registrarse
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </nav>
-      </header>
+      </motion.header>
 
       <AuthModal 
         isOpen={authModalOpen}
