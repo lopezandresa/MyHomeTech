@@ -1,11 +1,9 @@
 import { CheckCircleIcon, ShieldCheckIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './auth/AuthModal'
 
 const Contact = () => {
-  const { isAuthenticated } = useAuth()
   const [authModalOpen, setAuthModalOpen] = useState(false)
 
 
@@ -74,12 +72,6 @@ const Contact = () => {
               ¿Necesitas un
               <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"> técnico especializado?</span>
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              {isAuthenticated ? 
-                'Ya tienes una cuenta activa. ¡Solicita tu servicio técnico cuando lo necesites!' :
-                'Únete a miles de usuarios que ya encontraron la solución perfecta para sus electrodomésticos.'
-              }
-            </p>
             
            
           </motion.div>
@@ -146,28 +138,6 @@ const Contact = () => {
             </div>
           </motion.div>
 
-          {/* Call to Action */}
-          
-
-          {/* For authenticated users */}
-          {isAuthenticated && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-r from-green-500 to-green-600 rounded-3xl p-8 md:p-12 text-center text-white"
-            >
-              <CheckCircleIcon className="h-16 w-16 mx-auto mb-4" />
-              <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                ¡Ya eres parte de HomeTech!
-              </h3>
-              <p className="text-lg md:text-xl text-green-100 mb-8 max-w-2xl mx-auto">
-                Tu cuenta está activa y lista para usar. Solicita servicios técnicos cuando los necesites 
-                y conecta con los mejores profesionales de tu zona.
-              </p>
-            </motion.div>
-          )}
         </div>
       </section>
 
