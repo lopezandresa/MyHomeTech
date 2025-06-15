@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, Between, In, Not } from 'typeorm';
+import { Repository, LessThan, Not } from 'typeorm';
 import { ServiceRequest, ServiceRequestStatus, ServiceType } from './service-request.entity';
 import { AlternativeDateProposal, AlternativeDateProposalStatus } from './alternative-date-proposal.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
@@ -207,8 +207,7 @@ export class ServiceRequestService {
    *   // Técnico disponible
    * }
    * ```
-   */
-  async checkTechnicianAvailability(technicianId: number, proposedDateTime: Date): Promise<boolean> {
+   */  async checkTechnicianAvailability(technicianId: number, proposedDateTime: Date): Promise<boolean> {
     const proposedDate = new Date(proposedDateTime);
     
     // Crear ventana de 6 horas alrededor del horario propuesto para evitar solapamientos
@@ -216,13 +215,15 @@ export class ServiceRequestService {
     const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después
 
     // Buscar si el técnico ya tiene algo agendado en esa ventana de tiempo
-    const conflictingRequest = await this.srRepo.findOne({
-      where: {
-        technicianId,
-        status: ServiceRequestStatus.SCHEDULED,
-        scheduledAt: Between(startWindow, endWindow)
-      }
-    });
+    const conflictingRequest = await this.srRepo
+      .createQueryBuilder('serviceRequest')
+      .where('serviceRequest.technicianId = :technicianId', { technicianId })
+      .andWhere('serviceRequest.status = :status', { status: ServiceRequestStatus.SCHEDULED })
+      .andWhere('serviceRequest.scheduledAt BETWEEN :startWindow AND :endWindow', {
+        startWindow,
+        endWindow
+      })
+      .getOne();
 
     return !!conflictingRequest; // true si hay conflicto
   }
@@ -257,17 +258,18 @@ export class ServiceRequestService {
     
     // Crear ventana de 6 horas alrededor del horario propuesto
     const startWindow = new Date(proposedDate.getTime() - 3 * 60 * 60 * 1000); // 3 horas antes
-    const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después
-
-    // Buscar servicios conflictivos con información detallada
-    const conflictingRequest = await this.srRepo.findOne({
-      where: {
-        technicianId,
-        status: ServiceRequestStatus.SCHEDULED,
-        scheduledAt: Between(startWindow, endWindow)
-      },
-      relations: ['client', 'appliance']
-    });
+    const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después    // Buscar servicios conflictivos con información detallada
+    const conflictingRequest = await this.srRepo
+      .createQueryBuilder('serviceRequest')
+      .leftJoinAndSelect('serviceRequest.client', 'client')
+      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
+      .where('serviceRequest.technicianId = :technicianId', { technicianId })
+      .andWhere('serviceRequest.status = :status', { status: ServiceRequestStatus.SCHEDULED })
+      .andWhere('serviceRequest.scheduledAt BETWEEN :startWindow AND :endWindow', {
+        startWindow,
+        endWindow
+      })
+      .getOne();
 
     if (conflictingRequest) {
       const scheduledTime = new Date(conflictingRequest.scheduledAt!);
@@ -660,30 +662,28 @@ export class ServiceRequestService {
 
     if (hasConflict) {
       throw new ConflictException('No estás disponible en la fecha alternativa propuesta');
-    }
-
-    // Contar propuestas existentes del técnico para esta solicitud
-    const existingProposalsCount = await this.proposalRepo.count({
-      where: {
-        serviceRequestId,
-        technicianId,
-        status: In([AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED])
-      }
-    });
+    }    // Contar propuestas existentes del técnico para esta solicitud
+    const existingProposalsCount = await this.proposalRepo
+      .createQueryBuilder('proposal')
+      .where('proposal.serviceRequestId = :serviceRequestId', { serviceRequestId })
+      .andWhere('proposal.technicianId = :technicianId', { technicianId })
+      .andWhere('proposal.status IN (:...statuses)', { 
+        statuses: [AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED] 
+      })
+      .getCount();
 
     // Verificar límite de 3 propuestas por técnico
     if (existingProposalsCount >= 3) {
       throw new BadRequestException('Has alcanzado el límite máximo de 3 propuestas de fecha alternativa para esta solicitud');
-    }
-
-    // Obtener propuestas existentes del técnico para verificar horarios únicos
-    const existingProposals = await this.proposalRepo.find({
-      where: {
-        serviceRequestId,
-        technicianId,
-        status: In([AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED])
-      }
-    });
+    }    // Obtener propuestas existentes del técnico para verificar horarios únicos
+    const existingProposals = await this.proposalRepo
+      .createQueryBuilder('proposal')
+      .where('proposal.serviceRequestId = :serviceRequestId', { serviceRequestId })
+      .andWhere('proposal.technicianId = :technicianId', { technicianId })
+      .andWhere('proposal.status IN (:...statuses)', { 
+        statuses: [AlternativeDateProposalStatus.PENDING, AlternativeDateProposalStatus.REJECTED] 
+      })
+      .getMany();
 
     // Verificar que la nueva fecha no sea igual a ninguna propuesta existente
     const proposedTime = alternativeDate.getTime();

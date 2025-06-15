@@ -14,7 +14,7 @@ interface RatingModalProps {
   isOpen: boolean
   serviceRequest: ServiceRequest
   onClose: () => void
-  onSubmit: (rating: number, comment: string) => Promise<void>
+  onSubmit: (ratingData: { score: number; comment?: string }) => Promise<void>
 }
 
 export const RatingModal: React.FC<RatingModalProps> = ({
@@ -30,7 +30,6 @@ export const RatingModal: React.FC<RatingModalProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false)
 
   if (!isOpen) return null
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -40,7 +39,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
 
     try {
       setIsSubmitting(true)
-      await onSubmit(rating, comment.trim())
+      await onSubmit({ score: rating, comment: comment.trim() })
       setIsSubmitted(true)
       
       // Cerrar el modal después de 2 segundos
