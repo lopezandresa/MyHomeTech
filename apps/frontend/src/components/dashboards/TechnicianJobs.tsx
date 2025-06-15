@@ -169,17 +169,64 @@ export const TechnicianJobs: React.FC<TechnicianJobsProps> = ({
                           minute: '2-digit'
                         })}
                       </>
-                    ) : (
-                      'Fecha por programar'                    )}
+                    ) : (                      'Fecha por programar'                    )}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Estado del servicio:</span>
-                  <p className="font-medium text-gray-700">
-                    Confirmado y agendado
-                  </p>
-                </div>
+                
               </div>
+
+              {/* Información adicional para servicios cancelados */}
+              {request.status === 'cancelled' && (
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <p className="font-medium text-red-800 mb-2">Servicio cancelado</p>
+                <p className="text-sm text-gray-600">
+                  Fecha de cancelación: <span className="font-medium">
+                    {formatDate(request.cancelledAt!)}
+                  </span>
+                </p>
+                
+                {/* Información del ticket de cancelación */}
+                {request.cancellationReason && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-1">
+                      Información de cancelación:
+                    </p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="font-medium">Motivo:</span> {request.cancellationReason}
+                    </p>
+                    {/* {request.cancelledByUser && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Cancelado por:</span> {' '}
+                        {request.cancelledByUser.firstName} {request.cancelledByUser.firstLastName} ({request.cancelledByUser.role})
+                        {request.cancelledByUser.role === 'admin' && (
+                          <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            Administrador
+                          </span>
+                        )}
+                      </p>
+                    )} */}
+                    {request.cancellationTicketCreatedAt && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Ticket creado:</span> {' '}
+                        {formatDate(request.cancellationTicketCreatedAt)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+              {/* Información adicional para servicios completados */}
+              {request.status === 'completed' && (
+                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h4 className="font-medium text-green-800 mb-2">Servicio Completado</h4>
+                  {request.completedAt && (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Completado el:</span> {formatDate(request.completedAt)}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Botón de ayuda */}
               <div className="mt-4">

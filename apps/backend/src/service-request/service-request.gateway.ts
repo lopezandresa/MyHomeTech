@@ -345,6 +345,40 @@ export class ServiceRequestGateway implements OnGatewayConnection, OnGatewayDisc
     }, 'high');
   }
 
+  // NUEVO: Notificar al técnico cuando un servicio es cancelado por un ticket de ayuda
+  notifyTechnicianServiceCancelled(serviceRequest: ServiceRequest, helpTicket: any) {
+    const room = `technician-${serviceRequest.technicianId}`;
+    if (!this.activeRooms.has(room)) return;
+
+    this.emitToRoom(room, 'service-cancelled-by-ticket', {
+      serviceRequest,
+      helpTicket,
+      message: `El servicio #${serviceRequest.id} ha sido cancelado por un ticket de ayuda`,
+      type: 'service_cancelled'
+    }, 'high');
+  }
+
+  // NUEVO: Notificar al usuario cuando su ticket de ayuda es resuelto
+  notifyUserTicketResolved(helpTicket: any) {
+    const room = `client-${helpTicket.userId}`;
+    if (!this.activeRooms.has(room)) return;
+
+    let message = 'Tu ticket de ayuda ha sido actualizado';
+    if (helpTicket.status === 'approved') {
+      message = 'Tu ticket de ayuda ha sido aprobado';
+    } else if (helpTicket.status === 'rejected') {
+      message = 'Tu ticket de ayuda ha sido rechazado';
+    } else if (helpTicket.status === 'resolved') {
+      message = 'Tu ticket de ayuda ha sido resuelto';
+    }
+
+    this.emitToRoom(room, 'help-ticket-resolved', {
+      helpTicket,
+      message,
+      type: 'ticket_resolved'
+    }, 'high');
+  }
+
   // Método de utilidad para obtener estadísticas de conexiones
   getConnectionStats() {
     return {

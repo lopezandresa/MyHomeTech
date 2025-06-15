@@ -304,9 +304,16 @@ export const useDashboardData = (): DashboardData => {
           }
           return prev
         })
+        
+        // NUEVO: Forzar recarga de datos para eventos críticos
+        if (['accepted', 'scheduled', 'completed', 'cancelled'].includes(latestNotification.type)) {
+          setTimeout(() => {
+            fetchClientData()
+          }, 500)
+        }
       }
     }
-  }, [user?.role, clientNotifications.notifications])
+  }, [user?.role, clientNotifications.notifications, fetchClientData])
 
   // Update availableRequests when real-time notifications arrive for technicians
   useEffect(() => {
@@ -325,9 +332,26 @@ export const useDashboardData = (): DashboardData => {
         setAvailableRequests(prev => 
           prev.filter(req => req.id !== latestNotification.serviceRequest.id)
         )
+      } else if (latestNotification.type === 'updated') {
+        // NUEVO: Manejar actualizaciones de solicitudes
+        setAvailableRequests(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id ? latestNotification.serviceRequest : req
+          )
+        )
+        setTechnicianJobs(prev => 
+          prev.map(req => 
+            req.id === latestNotification.serviceRequest.id ? latestNotification.serviceRequest : req
+          )
+        )
+        
+        // NUEVO: Forzar recarga para cambios importantes
+        setTimeout(() => {
+          fetchTechnicianData()
+        }, 500)
       }
     }
-  }, [user?.role, technicianNotifications.notifications])
+  }, [user?.role, technicianNotifications.notifications, fetchTechnicianData])
 
   // Escuchar eventos custom de WebSocket para actualizar datos automáticamente
   useEffect(() => {

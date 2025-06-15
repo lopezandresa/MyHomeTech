@@ -204,6 +204,53 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     }
   }, [calculateEventLatency])
 
+  // NUEVO: Callback para servicios cancelados por tickets de ayuda
+  const handleServiceCancelled = useCallback((data: { 
+    serviceRequest: ServiceRequest, 
+    helpTicket: any,
+    message: string,
+    timestamp: number 
+  }) => {
+    const eventLatency = calculateEventLatency(data.timestamp)
+    
+    const notification: ServiceRequestNotification = {
+      serviceRequest: data.serviceRequest,
+      message: data.message,
+      timestamp: new Date(),
+      type: 'removed',
+      latency: eventLatency
+    }
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 9)])
+    
+    // Disparar evento para actualizar dashboard
+    window.dispatchEvent(new CustomEvent('serviceCancelled', { 
+      detail: { serviceRequest: data.serviceRequest, helpTicket: data.helpTicket, latency: eventLatency } 
+    }))
+    
+    // Notificación del navegador para cancelación
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notif = new Notification('⚠️ Servicio Cancelado', {
+        body: `${data.message}`,
+        icon: '/favicon.ico',
+        tag: `service-cancelled-${data.serviceRequest.id}`,
+        requireInteraction: true
+      })
+      
+      notif.onclick = () => {
+        window.focus()
+        notif.close()
+      }
+    }
+
+    // Sonido de alerta para cancelación
+    try {
+      const audio = new Audio('/alert.mp3')
+      audio.volume = 0.5
+      audio.play().catch(() => {})
+    } catch {}
+  }, [calculateEventLatency])
+
   // Función optimizada para verificar conexión y actualizar estado
   const checkAndUpdateConnectionStatus = useCallback(() => {
     if (!token) return false
@@ -281,6 +328,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     webSocketService.onServiceRequestUpdated(handleServiceRequestUpdated)
     webSocketService.onServiceRequestRemoved(handleServiceRequestRemoved)
     webSocketService.onOfferRejected(handleOfferRejected)
+    webSocketService.onServiceCancelled(handleServiceCancelled)
 
     // Verificación de conexión menos frecuente para evitar loops
     if (checkIntervalRef.current) {
@@ -315,6 +363,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
       webSocketService.offServiceRequestUpdated(handleServiceRequestUpdated)
       webSocketService.offServiceRequestRemoved(handleServiceRequestRemoved)
       webSocketService.offOfferRejected(handleOfferRejected)
+      webSocketService.offServiceCancelled(handleServiceCancelled)
       
       if (checkIntervalRef.current) {
         window.clearInterval(checkIntervalRef.current)
@@ -334,6 +383,7 @@ export const useRealTimeServiceRequests = (technicianId?: number) => {
     handleServiceRequestUpdated, 
     handleServiceRequestRemoved,
     handleOfferRejected,
+    handleServiceCancelled,
     checkAndUpdateConnectionStatus
   ])
 

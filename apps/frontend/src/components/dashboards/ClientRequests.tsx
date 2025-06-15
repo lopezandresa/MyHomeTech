@@ -423,7 +423,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                             <p className="text-sm text-gray-600 mb-2">
                               <span className="font-medium">Motivo:</span> {request.cancellationReason}
                             </p>
-                            {request.cancelledByUser && (
+                            {/* {request.cancelledByUser && (
                               <p className="text-sm text-gray-600 mb-2">
                                 <span className="font-medium">Cancelado por:</span> {' '}
                                 {request.cancelledByUser.firstName} {request.cancelledByUser.firstLastName}
@@ -433,7 +433,7 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                                   </span>
                                 )}
                               </p>
-                            )}
+                            )} */}
                             {request.cancellationTicketCreatedAt && (
                               <p className="text-sm text-gray-600">
                                 <span className="font-medium">Ticket creado:</span> {' '}

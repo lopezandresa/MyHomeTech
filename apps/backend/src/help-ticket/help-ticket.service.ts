@@ -6,6 +6,7 @@ import { ServiceRequest, ServiceRequestStatus } from '../service-request/service
 import { Identity } from '../identity/identity.entity';
 import { CreateHelpTicketDto } from './dto/create-help-ticket.dto';
 import { RespondHelpTicketDto } from './dto/respond-help-ticket.dto';
+import { ServiceRequestGateway } from '../service-request/service-request.gateway';
 
 @Injectable()
 export class HelpTicketService {
@@ -15,7 +16,8 @@ export class HelpTicketService {
     @InjectRepository(ServiceRequest)
     private readonly serviceRequestRepo: Repository<ServiceRequest>,
     @InjectRepository(Identity)
-    private readonly identityRepo: Repository<Identity>
+    private readonly identityRepo: Repository<Identity>,
+    private readonly gateway: ServiceRequestGateway,
   ) {}
 
   /**
@@ -161,8 +163,15 @@ export class HelpTicketService {
       ticket.serviceRequest.cancelledAt = new Date();
       // Note: ServiceRequest entity doesn't have cancelReason field
       // The reason is stored in the ticket itself
-      
+
       await this.serviceRequestRepo.save(ticket.serviceRequest);
+      
+      // ⚡ NUEVA: Notificar al técnico sobre la cancelación
+      if (ticket.serviceRequest.technicianId) {
+        setImmediate(() => {
+          this.gateway.notifyTechnicianServiceCancelled(ticket.serviceRequest!, ticket);
+        });
+      }
     }
 
     // Actualizar el ticket
@@ -176,7 +185,14 @@ export class HelpTicketService {
       ticket.resolvedAt = new Date();
     }
 
-    return await this.helpTicketRepo.save(ticket);
+    const updatedTicket = await this.helpTicketRepo.save(ticket);
+    
+    // ⚡ NUEVA: Notificar al usuario que creó el ticket sobre la resolución
+    setImmediate(() => {
+      this.gateway.notifyUserTicketResolved(updatedTicket);
+    });
+
+    return updatedTicket;
   }
 
   /**
@@ -276,6 +292,13 @@ export class HelpTicketService {
         await this.serviceRequestRepo.save(ticket.serviceRequest);
         
         console.log(`Servicio #${ticket.serviceRequest.id} cancelado automáticamente por resolución del ticket #${ticket.id}`);
+        
+        // ⚡ NUEVA: Notificar al técnico sobre la cancelación por ticket resuelto
+        if (ticket.serviceRequest.technicianId) {
+          setImmediate(() => {
+            this.gateway.notifyTechnicianServiceCancelled(ticket.serviceRequest!, ticket);
+          });
+        }
       } else {
         console.warn(`No se pudo cancelar el servicio #${ticket.serviceRequest.id} porque está en estado: ${ticket.serviceRequest.status}`);
       }
@@ -296,7 +319,16 @@ export class HelpTicketService {
       ticket.assignedAdminId = adminId;
     }
 
-    return await this.helpTicketRepo.save(ticket);
+    const updatedTicket = await this.helpTicketRepo.save(ticket);
+    
+    // ⚡ NUEVA: Notificar sobre cambios de estado del ticket
+    if ([HelpTicketStatus.RESOLVED, HelpTicketStatus.APPROVED, HelpTicketStatus.REJECTED].includes(newStatus)) {
+      setImmediate(() => {
+        this.gateway.notifyUserTicketResolved(updatedTicket);
+      });
+    }
+
+    return updatedTicket;
   }
 
   /**

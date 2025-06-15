@@ -357,6 +357,12 @@ class WebSocketService {
     this.socket.on('offer-rejected', callback)
   }
 
+  // NUEVO: Listener para servicios cancelados por tickets de ayuda
+  onServiceCancelled(callback: (data: { serviceRequest: ServiceRequest, helpTicket: any, message: string, timestamp: number }) => void): void {
+    if (!this.socket) return
+    this.socket.on('service-cancelled-by-ticket', callback)
+  }
+
   // Listeners para clientes
   onServiceRequestAccepted(callback: (data: { serviceRequest: ServiceRequest, message: string, timestamp: number }) => void): void {
     if (!this.socket) return
@@ -388,6 +394,12 @@ class WebSocketService {
     this.socket.on('proposal-rejected', callback)
   }
 
+  // NUEVO: Listener para notificaciones de tickets de ayuda resueltos
+  onHelpTicketResolved(callback: (data: { helpTicket: any, message: string, timestamp: number }) => void): void {
+    if (!this.socket) return
+    this.socket.on('help-ticket-resolved', callback)
+  }
+
   // Métodos para remover listeners
   offNewServiceRequest(callback?: (...args: any[]) => void): void {
     if (!this.socket) return
@@ -407,6 +419,12 @@ class WebSocketService {
   offOfferRejected(callback?: (...args: any[]) => void): void {
     if (!this.socket) return
     this.socket.off('offer-rejected', callback)
+  }
+
+  // NUEVO: Método para remover listener de servicios cancelados
+  offServiceCancelled(callback?: (...args: any[]) => void): void {
+    if (!this.socket) return
+    this.socket.off('service-cancelled-by-ticket', callback)
   }
 
   // Métodos para remover listeners de clientes
@@ -438,6 +456,12 @@ class WebSocketService {
   offProposalRejected(callback?: (...args: any[]) => void): void {
     if (!this.socket) return
     this.socket.off('proposal-rejected', callback)
+  }
+
+  // NUEVO: Método para remover listener de tickets de ayuda resueltos
+  offHelpTicketResolved(callback?: (...args: any[]) => void): void {
+    if (!this.socket) return
+    this.socket.off('help-ticket-resolved', callback)
   }
 
   // Métodos de estado y diagnóstico
