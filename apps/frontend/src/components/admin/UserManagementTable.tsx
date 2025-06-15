@@ -1,6 +1,7 @@
 import React from 'react'
 import type { AdminUserManagement, UserFilters } from '../../types'
-import { FiSearch, FiFilter, FiToggleLeft, FiToggleRight, FiUser, FiMail, FiEdit2 } from 'react-icons/fi'
+import { FiSearch, FiFilter, FiToggleLeft, FiToggleRight, FiUser, FiMail, FiEdit2, FiUserPlus } from 'react-icons/fi'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface UserManagementTableProps {
   users: AdminUserManagement[]
@@ -8,6 +9,7 @@ interface UserManagementTableProps {
   onFilterChange: (filters: Partial<UserFilters>) => void
   onToggleStatus: (userId: number) => void
   onEditUser: (user: AdminUserManagement) => void
+  onCreateAdmin?: () => void
   loading: boolean
 }
 
@@ -20,8 +22,11 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
   onFilterChange,
   onToggleStatus,
   onEditUser,
+  onCreateAdmin,
   loading
 }) => {
+  const { user: currentUser } = useAuth()
+  const isCurrentUserAdmin = currentUser?.role === 'admin'
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -56,8 +61,23 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
     return date.toLocaleDateString('es-ES')
   }
 
-  return (
-    <div className="bg-white shadow rounded-lg">
+  return (    <div className="bg-white shadow rounded-lg">
+      {/* Header con título y botón crear admin */}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-medium text-gray-900">Gestión de Usuarios</h2>
+          {onCreateAdmin && isCurrentUserAdmin && (
+            <button
+              onClick={onCreateAdmin}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <FiUserPlus className="w-4 h-4" />
+              Crear Administrador
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4">

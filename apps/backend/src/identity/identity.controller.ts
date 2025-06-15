@@ -230,11 +230,33 @@ export class IdentityController {
    * @example
    * POST /api/identity/check-email
    * Body: { email: "test@example.com" }
-   */
-  @Post('check-email')
+   */  @Post('check-email')
   @ApiOperation({ summary: 'Verifica si un correo electrónico ya está registrado' })
   async checkEmail(@Body() dto: { email: string }): Promise<void> {
     await this.svc.checkEmail(dto.email);
     return;
+  }
+
+  /**
+   * Crea un nuevo administrador (solo para administradores existentes)
+   * 
+   * @param {CreateIdentityDto} dto - Datos del administrador a crear
+   * @returns {Promise<IdentityResponse>} Administrador creado sin contraseña
+   * 
+   * @example
+   * POST /api/identity/admin
+   * Body: { email: "admin@example.com", password: "pass123", firstName: "Admin", firstLastName: "User" }
+   */
+  @Post('admin')
+  @ApiOperation({ summary: 'Crea un nuevo administrador' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async createAdmin(
+    @Body() dto: CreateIdentityDto
+  ): Promise<IdentityResponse> {
+    // Forzar el rol a admin para seguridad
+    const adminDto = { ...dto, role: 'admin' as const };
+    return this.svc.register(adminDto);
   }
 }

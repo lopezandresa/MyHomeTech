@@ -346,8 +346,7 @@ class AdminService {
   }): Promise<AdminUserManagement> {
     const response = await api.patch(`${this.baseURL}/${userId}`, userData)
     return response.data
-  }
-  /**
+  }  /**
    * Crea un nuevo administrador
    */
   async createAdmin(adminData: any): Promise<AdminUserManagement> {

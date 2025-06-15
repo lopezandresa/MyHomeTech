@@ -4,18 +4,19 @@ import { adminService } from '../services/adminService'
 import type { AdminStats, AdminUserManagement, UserFilters } from '../types'
 import AdminStatsCard from '../components/admin/AdminStatsCard' 
 import UserManagementTable from '../components/admin/UserManagementTable'
+import CreateAdminModal from '../components/admin/CreateAdminModal'
 import { FiUsers, FiUserPlus, FiSettings, FiActivity } from 'react-icons/fi'
 
 /**
  * Página del panel de administrador
  */
-const AdminPage: React.FC = () => {
-  const { user } = useAuth()
+const AdminPage: React.FC = () => {  const { user } = useAuth()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUserManagement[]>([])
   const [filteredUsers, setFilteredUsers] = useState<AdminUserManagement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [filters, setFilters] = useState<UserFilters>({
     role: 'all',
     status: 'all',
@@ -80,9 +81,13 @@ const AdminPage: React.FC = () => {
       setError('Error al cambiar el estado del usuario')
     }
   }
-
   const handleFilterChange = (newFilters: Partial<UserFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
+  }
+
+  const handleCreateAdmin = async () => {
+    setShowCreateModal(false)
+    await loadData() // Recargar datos después de crear admin
   }
 
   if (loading) {
@@ -197,17 +202,24 @@ const AdminPage: React.FC = () => {
             <FiUsers className="text-blue-600" />
             Gestión de Usuarios
           </h2>
-          
-          <UserManagementTable
+            <UserManagementTable
             users={filteredUsers}
             filters={filters}
             onFilterChange={handleFilterChange}
             onToggleStatus={handleToggleUserStatus}
             onEditUser={() => {}} // Función vacía ya que AdminPage no implementa edición completa
+            onCreateAdmin={() => setShowCreateModal(true)}
             loading={loading}
-          />
-        </div>
+          />        </div>
       </div>
+
+      {/* Create Admin Modal */}
+      {showCreateModal && (
+        <CreateAdminModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleCreateAdmin}
+        />
+      )}
     </div>
   )
 }

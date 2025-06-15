@@ -17,6 +17,7 @@ import UserManagementTable from '../../components/admin/UserManagementTable'
 import TechnicianPerformanceTable from '../../components/admin/TechnicianPerformanceTable'
 import ServiceRequestChart from '../../components/admin/ServiceRequestChart'
 import EditUserModal from '../../components/admin/EditUserModal'
+import CreateAdminModal from '../../components/admin/CreateAdminModal'
 
 /**
  * Panel principal de administrador para MyHomeTech
@@ -37,10 +38,12 @@ const AdminDashboard: React.FC = () => {
     status: 'all',
     search: ''
   })
-
   // Estados para el modal de edición
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<AdminUserManagement | null>(null)
+  
+  // Estados para el modal de crear admin
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -122,10 +125,20 @@ const AdminDashboard: React.FC = () => {
       return true
     })
   }
-
   const handleEditUser = (user: AdminUserManagement) => {
     setSelectedUser(user)
     setShowEditUserModal(true)
+  }
+
+  const handleCreateAdmin = async () => {
+    setShowCreateAdminModal(false)
+    // Recargar usuarios después de crear admin
+    try {
+      const updatedUsers = await adminService.getAllUsers()
+      setUsers(updatedUsers)
+    } catch (error) {
+      console.error('Error al recargar usuarios:', error)
+    }
   }
 
   const handleUserUpdate = async (userId: number, userData: any) => {
@@ -314,9 +327,7 @@ const AdminDashboard: React.FC = () => {
                 )}
               </div>
             </div>
-          )}
-
-          {activeTab === 'users' && (
+          )}          {activeTab === 'users' && (
             <UserManagementTable
               users={getFilteredUsers()}
               filters={userFilters}
@@ -324,6 +335,7 @@ const AdminDashboard: React.FC = () => {
               onToggleStatus={handleUserStatusToggle}
               loading={false}
               onEditUser={handleEditUser}
+              onCreateAdmin={() => setShowCreateAdminModal(true)}
             />
           )}
 
@@ -333,9 +345,8 @@ const AdminDashboard: React.FC = () => {
               loading={false}
             />
           )}
-        </motion.div>
-
-        {/* Modal de edición de usuario */}
+        </motion.div>      {/* Modal de edición de usuario */}
+      {showEditUserModal && (
         <EditUserModal
           isOpen={showEditUserModal}
           user={selectedUser}
@@ -345,6 +356,15 @@ const AdminDashboard: React.FC = () => {
           }}
           onSave={handleUserUpdate}
         />
+      )}
+
+      {/* Modal Crear Administrador */}
+      {showCreateAdminModal && (
+        <CreateAdminModal
+          onClose={() => setShowCreateAdminModal(false)}
+          onSuccess={handleCreateAdmin}
+        />
+      )}
       </div>
     </AdminLayout>
   )

@@ -27,6 +27,7 @@ import AdminStatsCard from '../admin/AdminStatsCard'
 import UserManagementTable from '../admin/UserManagementTable'
 import TechnicianPerformanceTable from '../admin/TechnicianPerformanceTable'
 import ServiceRequestChart from '../admin/ServiceRequestChart'
+import CreateAdminModal from '../admin/CreateAdminModal'
 import { adminService } from '../../services/adminService'
 import EditUserModal from '../admin/EditUserModal'
 import { helpTicketService } from '../../services/helpTicketService'
@@ -64,10 +65,10 @@ const Dashboard: React.FC = () => {
     status: 'all',
     search: ''
   })
-
   // Estados para el modal de edición de usuario
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<any>(null)
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false)
 
   // Cargar datos de administrador
   const loadAdminData = useCallback(async () => {
@@ -110,7 +111,6 @@ const Dashboard: React.FC = () => {
       loadAdminData()
     }
   }, [dashboardData.user?.role, loadAdminData])
-
   // Manejar cambio de estado de usuario
   const handleToggleUserStatus = useCallback(async (userId: number) => {
     try {
@@ -120,6 +120,12 @@ const Dashboard: React.FC = () => {
       console.error('Error toggling user status:', err)
       setAdminError('Error al cambiar el estado del usuario')
     }
+  }, [loadAdminData])
+
+  // Manejar creación de admin
+  const handleCreateAdmin = useCallback(async () => {
+    setShowCreateAdminModal(false)
+    await loadAdminData() // Recargar datos después de crear admin
   }, [loadAdminData])
 
   // Filtrar usuarios para administrador
@@ -330,8 +336,7 @@ const Dashboard: React.FC = () => {
 
               {/* Gráficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {adminServiceData && (
-                  <ServiceRequestChart
+                {adminServiceData && (                  <ServiceRequestChart
                     data={adminServiceData.monthly}
                     totals={adminServiceData.totals}
                   />
@@ -350,6 +355,7 @@ const Dashboard: React.FC = () => {
                 setSelectedUserForEdit(user)
                 setShowEditUserModal(true)
               }}
+              onCreateAdmin={() => setShowCreateAdminModal(true)}
               loading={adminLoading}
             />
           )
@@ -862,8 +868,15 @@ const Dashboard: React.FC = () => {
             setAdminError('Error al actualizar el usuario')
             throw err // Re-throw para que el modal pueda manejar el error
           }
-        }}
-      />
+        }}      />
+
+      {/* Modal Crear Administrador */}
+      {showCreateAdminModal && (
+        <CreateAdminModal
+          onClose={() => setShowCreateAdminModal(false)}
+          onSuccess={handleCreateAdmin}
+        />
+      )}
     </>
   )
 }
