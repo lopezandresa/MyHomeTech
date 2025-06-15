@@ -4,6 +4,7 @@ import { Technician } from './technician.entity';
 import { In, Repository } from 'typeorm';
 import { CreateTechnicianProfileDto } from './dto/create-technician-profile.dto';
 import { ApplianceType } from '../appliance-type/appliance-type.entity';
+import { CloudinaryService } from '../common/cloudinary.service';
 
 /**
  * Servicio para la gestión de perfiles de técnicos
@@ -23,51 +24,58 @@ export class TechnicianService {
    * 
    * @param {Repository<Technician>} techRepo - Repositorio de técnicos
    * @param {Repository<ApplianceType>} appTypeRepo - Repositorio de tipos de electrodomésticos
+   * @param {CloudinaryService} cloudinaryService - Servicio de Cloudinary para manejo de imágenes
    */
   constructor(
     @InjectRepository(Technician)
     private readonly techRepo: Repository<Technician>,
     @InjectRepository(ApplianceType)
     private readonly appTypeRepo: Repository<ApplianceType>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   /**
    * Crea un perfil completo de técnico con especialidades
    * 
    * @param {CreateTechnicianProfileDto} dto - Datos del perfil del técnico
+   * @param {Express.Multer.File} idPhotoFile - Archivo de foto de cédula (opcional)
    * @returns {Promise<Technician>} Perfil de técnico creado
    * 
    * @description Crea un perfil de técnico incluyendo:
    * - Información personal (cédula, fecha de nacimiento)
    * - Experiencia laboral
-   * - Foto de identificación
+   * - Foto de identificación (subida a Cloudinary)
    * - Especialidades técnicas (tipos de electrodomésticos)
-   * 
-   * @example
-   * ```typescript
-   * const technicianProfile = await technicianService.createProfile({
-   *   identityId: 123,
-   *   cedula: '12345678',
-   *   birthDate: '1990-05-15',
-   *   experienceYears: 5,
-   *   idPhotoPath: '/uploads/id-photos/tech-123.jpg',
-   *   specialties: [1, 2, 3] // IDs de tipos: refrigeradores, lavadoras, aires
-   * });
-   * ```
    */
-  async createProfile(dto: CreateTechnicianProfileDto): Promise<Technician> {
+  async createProfile(dto: CreateTechnicianProfileDto, idPhotoFile?: Express.Multer.File): Promise<Technician> {
     // pre-carga las entidades de tipos de electrodomésticos
     const specialties = await this.appTypeRepo.find({
       where: { id: In(dto.specialties) }
     });
-    const tech = this.techRepo.create({
-      identityId: dto.identityId,
-      cedula: dto.cedula,
-      birthDate: new Date(dto.birthDate),
-      experienceYears: dto.experienceYears,
-      idPhotoPath: dto.idPhotoPath,
-      specialties: specialties,
-    });
+
+    let idPhotoUrl: string | null = null;
+    let idPhotoPublicId: string | null = null;
+
+    // Subir foto de cédula a Cloudinary si se proporciona
+    if (idPhotoFile) {
+      const uploadResult = await this.cloudinaryService.uploadImage(
+        idPhotoFile,
+        'id-photos',
+        `technician_${dto.identityId}_id`
+      );
+      idPhotoUrl = uploadResult.url;
+      idPhotoPublicId = uploadResult.publicId;
+    }
+
+    const tech = new Technician();
+    tech.identityId = dto.identityId;
+    tech.cedula = dto.cedula;
+    tech.birthDate = new Date(dto.birthDate);
+    tech.experienceYears = dto.experienceYears;
+    tech.idPhotoUrl = idPhotoUrl || '';
+    tech.idPhotoPublicId = idPhotoPublicId || '';
+    tech.specialties = specialties;
+    
     return this.techRepo.save(tech);
   }
 
@@ -166,22 +174,11 @@ export class TechnicianService {
    * 
    * @param {number} identityId - ID del usuario
    * @param {Partial<CreateTechnicianProfileDto>} dto - Datos a actualizar
+   * @param {Express.Multer.File} idPhotoFile - Archivo de foto de cédula (opcional)
    * @returns {Promise<Technician>} Perfil completamente actualizado
    * @throws {NotFoundException} Si el perfil de técnico no existe
-   * 
-   * @description Permite actualizar todos los campos del perfil,
-   * incluyendo especialidades técnicas
-   * 
-   * @example
-   * ```typescript
-   * const updatedProfile = await technicianService.updateFullProfile(123, {
-   *   experienceYears: 7,
-   *   specialties: [1, 2, 4], // Cambiar especialidades
-   *   cedula: '87654321'
-   * });
-   * ```
    */
-  async updateFullProfile(identityId: number, dto: Partial<CreateTechnicianProfileDto>): Promise<Technician> {
+  async updateFullProfile(identityId: number, dto: Partial<CreateTechnicianProfileDto>, idPhotoFile?: Express.Multer.File): Promise<Technician> {
     const tech = await this.techRepo.findOne({ 
       where: { identityId },
       relations: ['specialties']
@@ -192,7 +189,23 @@ export class TechnicianService {
     if (dto.cedula) tech.cedula = dto.cedula;
     if (dto.birthDate) tech.birthDate = new Date(dto.birthDate);
     if (dto.experienceYears !== undefined) tech.experienceYears = dto.experienceYears;
-    if (dto.idPhotoPath) tech.idPhotoPath = dto.idPhotoPath;
+
+    // Manejar actualización de foto de cédula
+    if (idPhotoFile) {
+      // Si ya tiene una foto, eliminar la anterior de Cloudinary
+      if (tech.idPhotoPublicId) {
+        await this.cloudinaryService.deleteImage(tech.idPhotoPublicId);
+      }
+
+      // Subir nueva foto a Cloudinary
+      const uploadResult = await this.cloudinaryService.uploadImage(
+        idPhotoFile,
+        'id-photos',
+        `technician_${identityId}_id`
+      );
+      tech.idPhotoUrl = uploadResult.url;
+      tech.idPhotoPublicId = uploadResult.publicId;
+    }
 
     // Actualizar especialidades si se proporcionan
     if (dto.specialties && dto.specialties.length > 0) {

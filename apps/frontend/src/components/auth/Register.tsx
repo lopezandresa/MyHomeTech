@@ -12,6 +12,7 @@ interface RegisterProps {
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
   const { showError, showSuccess } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [formData, setFormData] = useState<{
     firstName: string
     middleName: string
@@ -70,6 +71,18 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
       processedValue = parseInt(value) || 0
     } else if (type === 'file') {
       processedValue = e.target.files?.[0] || null
+      
+      // Crear preview URL para la foto de cédula
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
+      
+      if (processedValue) {
+        const newPreviewUrl = URL.createObjectURL(processedValue)
+        setPreviewUrl(newPreviewUrl)
+      }
+      
       setFormData(prev => ({
         ...prev,
         idPhotoFile: processedValue
@@ -208,6 +221,15 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
     performRegister()
     return false
   }
+
+  // Cleanup preview URL cuando se desmonta el componente
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   return (
     <motion.div
@@ -444,7 +466,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                </div>                <input
+                </div>
+                <input
                   type="date"
                   id="birthDate"
                   name="birthDate"
@@ -452,7 +475,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
                   onChange={handleInputChange}
                   required
                   className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="dd/mm/aaaa"
                 />
               </div>
             </div>
@@ -526,6 +548,39 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onClose }) => {
                     className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                
+                {/* Previsualización de la imagen */}
+                {previewUrl && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 mb-2">Vista previa de tu cédula:</p>
+                    <div className="relative">
+                      <img
+                        src={previewUrl}
+                        alt="Vista previa de cédula"
+                        className="max-w-full h-32 object-cover rounded-lg border border-gray-300 shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (previewUrl) {
+                            URL.revokeObjectURL(previewUrl)
+                            setPreviewUrl(null)
+                          }
+                          setFormData(prev => ({ ...prev, idPhotoFile: null }))
+                          // Limpiar el input file
+                          const fileInput = document.getElementById('idPhotoFile') as HTMLInputElement
+                          if (fileInput) fileInput.value = ''
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-xs text-gray-500 mt-1">
                   Sube una foto de tu cédula para verificar tu identidad. Formatos: JPG, PNG. Tamaño máximo: 5MB.
                 </p>

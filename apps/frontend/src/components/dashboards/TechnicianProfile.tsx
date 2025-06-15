@@ -572,12 +572,26 @@ const ProfessionalInfoTab: React.FC<ProfessionalInfoTabProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
-                <p className="text-lg text-gray-900 py-2 flex-1">
-                  {profile?.idPhotoPath ? 'Foto de cédula subida' : 'Sin foto de cédula'}
-                </p>
-                {profile?.idPhotoPath && (
-                  <span className="text-green-600 text-sm">✓ Archivo subido</span>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <p className="text-lg text-gray-900 py-2 flex-1">
+                    {profile?.idPhotoUrl ? 'Foto de cédula subida' : 'Sin foto de cédula'}
+                  </p>
+                  {profile?.idPhotoUrl && (
+                    <span className="text-green-600 text-sm">✓ Archivo subido</span>
+                  )}
+                </div>
+                
+                {/* Previsualización de la foto de cédula existente */}
+                {profile?.idPhotoUrl && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 mb-2">Foto de cédula actual:</p>
+                    <img
+                      src={profile.idPhotoUrl}
+                      alt="Foto de cédula"
+                      className="max-w-xs max-h-48 object-cover rounded-lg border border-gray-300 shadow-sm"
+                    />
+                  </div>
                 )}
               </div>
             )}

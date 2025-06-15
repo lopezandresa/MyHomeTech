@@ -1,8 +1,6 @@
 import { Controller, Post, Body, Get, Put, Param, UseGuards, Request, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { TechnicianService } from './technician.service';
 import { CreateTechnicianProfileDto } from './dto/create-technician-profile.dto';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt.guard';
@@ -12,17 +10,11 @@ import { Technician } from './technician.entity';
 @Controller('technicians')
 export class TechnicianController {
   constructor(private readonly svc: TechnicianService) {}
+  
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer-jwt')
   @Post('profile')
   @UseInterceptors(FileInterceptor('idPhoto', {
-    storage: diskStorage({
-      destination: './uploads/id-photos',
-      filename: (req, file, callback) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        callback(null, `id-photo-${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return callback(new Error('Solo se permiten archivos de imagen'), false);
@@ -45,23 +37,12 @@ export class TechnicianController {
       dto.specialties = JSON.parse(dto.specialties);
     }
 
-    if (idPhoto) {
-      dto.idPhotoPath = idPhoto.path;
-    }
-
     dto.identityId = req.user.id;
-    return this.svc.createProfile(dto);
+    return this.svc.createProfile(dto, idPhoto);
   }
 
   @Post('create-profile')
   @UseInterceptors(FileInterceptor('idPhoto', {
-    storage: diskStorage({
-      destination: './uploads/id-photos',
-      filename: (req, file, callback) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        callback(null, `id-photo-${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return callback(new Error('Solo se permiten archivos de imagen'), false);
@@ -83,11 +64,7 @@ export class TechnicianController {
       dto.specialties = JSON.parse(dto.specialties);
     }
 
-    if (idPhoto) {
-      dto.idPhotoPath = idPhoto.path;
-    }
-
-    return this.svc.createProfile(dto);
+    return this.svc.createProfile(dto, idPhoto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -102,13 +79,6 @@ export class TechnicianController {
   @ApiBearerAuth('bearer-jwt')
   @Put('me')
   @UseInterceptors(FileInterceptor('idPhoto', {
-    storage: diskStorage({
-      destination: './uploads/id-photos',
-      filename: (req, file, callback) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        callback(null, `id-photo-${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return callback(new Error('Solo se permiten archivos de imagen'), false);
@@ -131,11 +101,7 @@ export class TechnicianController {
       updateData.specialties = JSON.parse(updateData.specialties);
     }
 
-    if (idPhoto) {
-      updateData.idPhotoPath = idPhoto.path;
-    }
-
-    return this.svc.updateFullProfile(req.user.id, updateData);
+    return this.svc.updateFullProfile(req.user.id, updateData, idPhoto);
   }
 
   @UseGuards(JwtAuthGuard)

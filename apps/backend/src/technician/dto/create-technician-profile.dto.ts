@@ -30,8 +30,13 @@ import {
     @ArrayUnique()
     specialties: number[];
 
-    @ApiProperty({ description: 'Ruta del archivo de foto de cédula', required: false })
+    @ApiProperty({ description: 'URL de Cloudinary para la foto de cédula', required: false })
     @IsOptional()
     @IsString()
-    idPhotoPath?: string;
+    idPhotoUrl?: string;
+
+    @ApiProperty({ description: 'Public ID de Cloudinary para la foto de cédula', required: false })
+    @IsOptional()
+    @IsString()
+    idPhotoPublicId?: string;
   }

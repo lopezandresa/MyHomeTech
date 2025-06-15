@@ -103,7 +103,8 @@ export interface TechnicianProfile {
   cedula: string
   birthDate: string
   experienceYears: number
-  idPhotoPath: string
+  idPhotoUrl: string
+  idPhotoPublicId: string
   specialties: ApplianceType[]
 }
 
