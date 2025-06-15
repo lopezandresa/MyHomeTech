@@ -153,14 +153,16 @@ export class IdentityController {
    * @example
    * POST /api/identity/123/toggle-status
    * Headers: { Authorization: "Bearer <admin_token>" }
-   */
-  @UseGuards(JwtAuthGuard, RolesGuard)
+   */  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')
   @Roles('admin')
   @Post(':id/toggle-status')
   @ApiOperation({ summary: 'Activa o inactiva un usuario por ID' })
-  async toggleStatus(@Param('id') id: number): Promise<IdentityResponse> {
-    return this.svc.toggleStatus(id);
+  async toggleStatus(
+    @Param('id') id: number,
+    @Request() req: any
+  ): Promise<IdentityResponse> {
+    return this.svc.toggleStatus(id, req.user.id);
   }
 
   /**

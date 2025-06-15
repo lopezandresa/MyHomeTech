@@ -163,25 +163,32 @@ export class IdentityService {
     const saved = await this.repo.save(user);
     return this.excludePassword(saved);
   }
-
   /**
    * Alterna el estado activo/inactivo de un usuario
    * 
    * @param {number} id - ID del usuario
+   * @param {number} adminId - ID del administrador que realiza la acción
    * @returns {Promise<Omit<Identity, 'password'>>} Usuario con estado actualizado
    * @throws {NotFoundException} Si el usuario no existe
+   * @throws {BadRequestException} Si un administrador trata de desactivarse a sí mismo
    * 
    * @example
    * ```typescript
-   * const user = await identityService.toggleStatus(1);
+   * const user = await identityService.toggleStatus(1, 2);
    * ```
    */
-  async toggleStatus(id: number): Promise<Omit<Identity, 'password'>> {
+  async toggleStatus(id: number, adminId: number): Promise<Omit<Identity, 'password'>> {
     const user = await this.repo.findOne({ 
       where: { id },
       relations: ['addresses', 'primaryAddress']
     });
     if (!user) throw new NotFoundException('User not found');
+    
+    // Validar que un administrador no pueda desactivarse a sí mismo
+    if (id === adminId && user.status === true) {
+      throw new BadRequestException('Los administradores no pueden desactivarse a sí mismos');
+    }
+    
     user.status = !user.status;
     const saved = await this.repo.save(user);
     return this.excludePassword(saved);

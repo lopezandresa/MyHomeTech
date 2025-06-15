@@ -255,10 +255,8 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
                           <FiToggleLeft className="w-4 h-4" />
                           Activar
                         </button>
-                      )}
-
-                      {/* Botón de Desactivar */}
-                      {user.status && (
+                      )}                      {/* Botón de Desactivar */}
+                      {user.status && user.id !== currentUser?.id && (
                         <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -271,6 +269,14 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
                           <FiToggleRight className="w-4 h-4" />
                           Desactivar
                         </button>
+                      )}
+
+                      {/* Mensaje informativo para el usuario actual */}
+                      {user.status && user.id === currentUser?.id && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-600">
+                          <FiToggleRight className="w-4 h-4" />
+                          Tu cuenta
+                        </span>
                       )}
                     </div>
                   </td>
