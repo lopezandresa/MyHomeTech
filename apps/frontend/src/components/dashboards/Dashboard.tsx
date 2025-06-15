@@ -10,7 +10,8 @@ import {
   CalendarIcon,
   ClockIcon,
   ChevronDownIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
 import DashboardLayout from './DashboardLayout'
 import ServiceRequestForm from '../ServiceRequestForm'
@@ -23,10 +24,19 @@ import { TechnicianJobs } from './TechnicianJobs'
 import RatingModal from '../RatingModal'
 import { formatDate } from '../../utils/dateUtils'
 
+// Importar componentes de administrador
+import AdminStatsCard from '../admin/AdminStatsCard'
+import UserManagementTable from '../admin/UserManagementTable'
+import TechnicianPerformanceTable from '../admin/TechnicianPerformanceTable'
+import ServiceRequestChart from '../admin/ServiceRequestChart'
+import { adminService } from '../../services/adminService'
+
 // Utility function to format date
 import { useDashboardData } from '../../hooks/useDashboardData'
 import { useDashboardActions } from '../../hooks/useDashboardActions'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
+import type { AdminStats, UserFilters } from '../../types'
+import { FiUsers, FiSettings, FiTool, FiCheckCircle } from 'react-icons/fi'
 
 const Dashboard: React.FC = () => {
   // Hook personalizado para datos del dashboard
@@ -38,6 +48,100 @@ const Dashboard: React.FC = () => {
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showRecentJobAlert, setShowRecentJobAlert] = useState(false)
+
+  // Estados específicos para administrador
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null)
+  const [adminUsers, setAdminUsers] = useState<any[]>([])
+  const [adminTechnicianPerformance, setAdminTechnicianPerformance] = useState<any[]>([])
+  const [adminServiceData, setAdminServiceData] = useState<any>(null)
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [adminError, setAdminError] = useState<string | null>(null)
+  const [userFilters, setUserFilters] = useState<UserFilters>({
+    role: 'all',
+    status: 'all',
+    search: ''
+  })
+
+  // Cargar datos de administrador
+  const loadAdminData = useCallback(async () => {
+    if (dashboardData.user?.role !== 'admin') return
+    
+    try {
+      setAdminLoading(true)
+      setAdminError(null)
+      
+      const [
+        systemStats,
+        serviceStats,
+        techPerformance,
+        allUsers
+      ] = await Promise.all([
+        adminService.getSystemStats(),
+        adminService.getServiceRequestStats(),
+        adminService.getTechnicianPerformance(),
+        adminService.getAllUsers()
+      ])
+      
+      setAdminStats(systemStats)
+      setAdminServiceData(serviceStats)
+      setAdminTechnicianPerformance(techPerformance)
+      setAdminUsers(allUsers)
+    } catch (err: any) {
+      console.error('Error loading admin data:', err)
+      setAdminError('Error al cargar los datos del administrador')
+    } finally {
+      setAdminLoading(false)
+    }
+  }, [dashboardData.user?.role])
+
+  // Cargar datos de administrador cuando el usuario sea admin
+  useEffect(() => {
+    if (dashboardData.user?.role === 'admin') {
+      loadAdminData()
+    }
+  }, [dashboardData.user?.role, loadAdminData])
+
+  // Manejar cambio de estado de usuario
+  const handleToggleUserStatus = useCallback(async (userId: number) => {
+    try {
+      await adminService.toggleUserStatus(userId)
+      await loadAdminData() // Recargar datos después del cambio
+    } catch (err: any) {
+      console.error('Error toggling user status:', err)
+      setAdminError('Error al cambiar el estado del usuario')
+    }
+  }, [loadAdminData])
+
+  // Filtrar usuarios para administrador
+  const getFilteredUsers = useCallback(() => {
+    return adminUsers.filter(user => {
+      // Filtro por rol
+      if (userFilters.role && userFilters.role !== 'all' && user.role !== userFilters.role) {
+        return false
+      }
+      
+      // Filtro por estado
+      if (userFilters.status && userFilters.status !== 'all') {
+        const isActive = userFilters.status === 'active'
+        if (user.status !== isActive) {
+          return false
+        }
+      }
+      
+      // Filtro por búsqueda
+      if (userFilters.search) {
+        const searchTerm = userFilters.search.toLowerCase()
+        const fullName = `${user.firstName} ${user.firstLastName}`.toLowerCase()
+        const email = user.email.toLowerCase()
+        
+        if (!fullName.includes(searchTerm) && !email.includes(searchTerm)) {
+          return false
+        }
+      }
+      
+      return true
+    })
+  }, [adminUsers, userFilters])
 
   // Funciones wrapper para ajustar firmas de función
   const handleCompleteServiceWrapper = useCallback((requestId: number) => {
@@ -167,6 +271,104 @@ const Dashboard: React.FC = () => {
               handleProposeAlternativeDate={handleProposeAlternativeDateWrapper}
             />
           )
+      }
+    } else if (dashboardData.user?.role === 'admin') {
+      switch (activeTab) {
+        case 'main':
+          return (
+            <div className="space-y-6">
+              {adminError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800">{adminError}</p>
+                  <button
+                    onClick={loadAdminData}
+                    className="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
+              {/* Tarjetas de estadísticas principales */}
+              {adminStats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AdminStatsCard
+                    title="Total de Usuarios"
+                    value={adminStats.totalUsers}
+                    icon={<FiUsers className="h-6 w-6" />}
+                    color="blue"
+                  />
+                  <AdminStatsCard
+                    title="Técnicos Activos"
+                    value={adminStats.totalTechnicians}
+                    icon={<FiTool className="h-6 w-6" />}
+                    color="green"
+                  />
+                  <AdminStatsCard
+                    title="Servicios Completados"
+                    value={adminStats.completedRequests}
+                    icon={<FiCheckCircle className="h-6 w-6" />}
+                    color="purple"
+                  />
+                </div>
+              )}
+
+              {/* Gráficos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {adminServiceData && (
+                  <ServiceRequestChart
+                    data={adminServiceData.monthly}
+                    totals={adminServiceData.totals}
+                  />
+                )}
+              </div>
+            </div>
+          )
+        case 'users':
+          return (
+            <UserManagementTable
+              users={getFilteredUsers()}
+              filters={userFilters}
+              onFilterChange={(newFilters) => setUserFilters(prev => ({ ...prev, ...newFilters }))}
+              onToggleStatus={handleToggleUserStatus}
+              loading={adminLoading}
+            />
+          )
+        case 'technicians':
+          return (
+            <TechnicianPerformanceTable
+              technicians={adminTechnicianPerformance}
+              loading={adminLoading}
+            />
+          )
+        case 'analytics':
+          return (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">Análisis y Reportes</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {adminServiceData && (
+                  <div className="bg-white p-6 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Solicitudes de Servicio</h3>
+                    <ServiceRequestChart
+                      data={adminServiceData.monthly}
+                      totals={adminServiceData.totals}
+                    />
+                  </div>
+                )}
+                {adminTechnicianPerformance.length > 0 && (
+                  <div className="bg-white p-6 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Rendimiento de Técnicos</h3>
+                    <TechnicianPerformanceTable
+                      technicians={adminTechnicianPerformance}
+                      loading={adminLoading}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        default:
+          return null
       }
     }
     return null
@@ -390,8 +592,18 @@ const Dashboard: React.FC = () => {
   return (
     <>
       <DashboardLayout 
-        title={dashboardData.isClient ? "Dashboard Cliente" : "Dashboard Técnico"}
-        subtitle={dashboardData.isClient ? "Gestiona tus solicitudes de servicio" : "Gestiona tus trabajos y ofertas"}
+        title={
+          dashboardData.isClient ? "Dashboard Cliente" : 
+          dashboardData.isTechnician ? "Dashboard Técnico" : 
+          dashboardData.user?.role === 'admin' ? "Panel de Administrador" : 
+          "Dashboard"
+        }
+        subtitle={
+          dashboardData.isClient ? "Gestiona tus solicitudes de servicio" : 
+          dashboardData.isTechnician ? "Gestiona tus trabajos y ofertas" : 
+          dashboardData.user?.role === 'admin' ? "Administra el sistema MyHomeTech" : 
+          "Bienvenido al sistema"
+        }
         rightContent={getRightContent()}
       >
         {({ activeTab }) => renderContent(activeTab)}

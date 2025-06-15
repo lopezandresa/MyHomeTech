@@ -383,6 +383,22 @@ export class ServiceRequestService {
   }
 
   /**
+   * Obtiene TODAS las solicitudes de servicio (para administradores)
+   * 
+   * @returns {Promise<ServiceRequest[]>} Lista completa de solicitudes en todos los estados
+   * 
+   * @description Incluye solicitudes pendientes, programadas, completadas y canceladas.
+   * Usado para generar estadísticas administrativas.
+   */
+  async findAll(): Promise<ServiceRequest[]> {
+    await this.markExpiredRequests();
+    return this.srRepo.find({
+      relations: ['client', 'appliance', 'address', 'technician'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  /**
    * Técnico acepta una solicitud de servicio
    * 
    * @param {number} id - ID de la solicitud

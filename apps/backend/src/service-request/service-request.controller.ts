@@ -47,11 +47,21 @@ export class ServiceRequestController {
     return this.svc.findPending();
   }
 
+  // 2c) Administrador ve TODAS las solicitudes (para estadísticas)
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  @Get('all')
+  @ApiOperation({ summary: 'Administrador obtiene todas las solicitudes para estadísticas' })
+  findAll(): Promise<ServiceRequest[]> {
+    return this.svc.findAll();
+  }
+
   // 2b) Técnico ve solicitudes disponibles para él (filtradas por especialidad y disponibilidad)
   @UseGuards(JwtAuthGuard)
   @Roles('technician')
   @Get('available-for-me')
-  @ApiOperation({ summary: 'Técnico lista solicitudes disponibles para él (por especialidad y horario)' })  findAvailableForMe(@Request() req): Promise<ServiceRequest[]> {
+  @ApiOperation({ summary: 'Técnico lista solicitudes disponibles para él (por especialidad y horario)' })
+  findAvailableForMe(@Request() req): Promise<ServiceRequest[]> {
     return this.svc.findPendingForTechnician(req.user.id);
   }
 

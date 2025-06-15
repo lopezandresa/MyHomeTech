@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { seedAppliances } from './seed-appliances';
 import { seedApplianceStructure } from './seed-appliance-structure';
 import { seedServiceRequestTypes } from './seed-service-request-types';
+import { seedAdmin } from './seed-admin';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -12,7 +13,10 @@ async function bootstrap() {
   console.log('Starting seeding...');
   
   try {
-    // First seed the appliance structure
+    // First seed the admin user
+    await seedAdmin(dataSource);
+    
+    // Then seed the appliance structure
     await seedApplianceStructure(dataSource);
     
     // Then seed the appliances

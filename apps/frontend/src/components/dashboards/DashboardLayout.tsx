@@ -69,6 +69,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           icon: UserCircleIcon
         }
       ]
+    } else if (user.role === 'admin') {
+      return [
+        {
+          id: 'main',
+          label: 'Dashboard',
+          description: 'Vista general del sistema',
+          icon: HomeIcon
+        },
+        {
+          id: 'users',
+          label: 'Gestión de Usuarios',
+          description: 'Administrar usuarios',
+          icon: UserCircleIcon
+        },
+        {
+          id: 'technicians',
+          label: 'Técnicos',
+          description: 'Rendimiento y estadísticas',
+          icon: WrenchScrewdriverIcon
+        },
+        {
+          id: 'analytics',
+          label: 'Análisis y Reportes',
+          description: 'Estadísticas del sistema',
+          icon: ClipboardDocumentListIcon
+        }
+      ]
     }
     return []
   }

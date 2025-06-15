@@ -278,3 +278,47 @@ export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
 }
+
+// Tipos específicos para administradores
+export interface AdminUserManagement {
+  id: number
+  firstName: string
+  middleName?: string
+  firstLastName: string
+  secondLastName?: string
+  email: string
+  role: 'client' | 'technician' | 'admin'
+  status: boolean
+  profilePhotoUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateAdminUserRequest {
+  firstName: string
+  middleName?: string
+  firstLastName: string
+  secondLastName?: string
+  email: string
+  password: string
+  role: 'admin'
+}
+
+export interface AdminStats {
+  totalUsers: number
+  totalClients: number
+  totalTechnicians: number
+  totalAdmins: number
+  activeUsers: number
+  inactiveUsers: number
+  totalServiceRequests: number
+  pendingRequests: number
+  completedRequests: number
+  averageRating: number
+}
+
+export interface UserFilters {
+  role?: 'client' | 'technician' | 'admin' | 'all'
+  status?: 'active' | 'inactive' | 'all'
+  search?: string
+}
