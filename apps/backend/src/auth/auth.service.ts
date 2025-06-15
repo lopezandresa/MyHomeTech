@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { IdentityService } from 'src/identity/identity.service';
@@ -31,29 +31,60 @@ export class AuthService {
    *
    * @param {string} email - Email del usuario
    * @param {string} password - Contraseña en texto plano
-   * @returns {Promise<any>} Usuario sin contraseña si las credenciales son válidas
-   * @throws {UnauthorizedException} Si las credenciales son inválidas
+   * @returns {Promise<{hasError: boolean, codeError?: string, message?: string, user?: any}>} Resultado de la validación
    *
-   * @description Busca al usuario por email y compara la contraseña
-   * usando bcrypt. Excluye la contraseña del resultado
+   * @description Busca al usuario por email, verifica que esté activo y compara la contraseña
+   * usando bcrypt. Devuelve un objeto estructurado con el resultado de la validación
    *
    * @example
    * ```typescript
-   * try {
-   *   const user = await authService.validateUser('user@example.com', 'password123');
-   *   console.log('Usuario válido:', user.email);
-   * } catch (error) {
-   *   console.log('Credenciales inválidas');
+   * const result = await authService.validateUser('user@example.com', 'password123');
+   * if (!result.hasError) {
+   *   console.log('Usuario válido:', result.user.email);
+   * } else {
+   *   console.log('Error:', result.message);
    * }
    * ```
    */
   async validateUser(email: string, password: string) {
-    const user = await this.userService.findByEmail(email);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
-      return result;
+    // Buscar usuario sin lanzar excepción
+    let user;
+    try {
+      user = await this.userService.findByEmail(email);
+    } catch (error) {
+      // Si no se encuentra el usuario, devolver error estructurado
+      return {
+        hasError: true,
+        codeError: 'USER_NOT_FOUND',
+        message: 'Credenciales inválidas'
+      };
     }
-    throw new UnauthorizedException('Invalid credentials');
+    
+    // Verificar que la contraseña es correcta
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return {
+        hasError: true,
+        codeError: 'INVALID_CREDENTIALS',
+        message: 'Credenciales inválidas'
+      };
+    }
+    
+    // Verificar que el usuario esté activo
+    if (!user.status) {
+      return {
+        hasError: true,
+        codeError: 'USER_INACTIVE',
+        message: 'Tu cuenta ha sido desactivada. Por favor, contacta al administrador para más información.'
+      };
+    }
+    
+    // Usuario válido, excluir la contraseña del resultado
+    const { password: userPassword, ...result } = user;
+    return {
+      hasError: false,
+      user: result
+    };
   }
 
   /**

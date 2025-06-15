@@ -49,7 +49,7 @@ interface RedirectIfAuthenticatedProps {
  * ```
  */
 const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, isProcessingLogin } = useAuth()
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
@@ -61,6 +61,11 @@ const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ child
         </div>
       </div>
     )
+  }
+
+  // NO redirigir si se está procesando un login (prevenir interferencia con modal de login)
+  if (isProcessingLogin) {
+    return <>{children}</>
   }
 
   // Si está autenticado, redirigir al dashboard

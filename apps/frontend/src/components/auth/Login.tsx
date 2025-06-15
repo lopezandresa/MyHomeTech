@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '../../contexts/AuthContext'
+import { authService } from '../../services/authService'
 
 interface LoginProps {
   onSwitchToRegister: () => void
@@ -10,7 +10,6 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
-  const { login, isLoading } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
@@ -18,6 +17,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -28,18 +28,37 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
     if (error) setError(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const performLogin = async () => {
     setError(null)
-
+    setIsLoading(true)
+    
     try {
-      await login(formData.email, formData.password)
+      // Llamar directamente al authService sin usar el contexto
+      const result = await authService.login({ 
+        email: formData.email, 
+        password: formData.password 
+      })
+      
+      // Si llegamos aquí, el login fue exitoso
+      // Forzar actualización inmediata del localStorage para que ProtectedRoute funcione
+      localStorage.setItem('authToken', result.token)
+      localStorage.setItem('user', JSON.stringify(result.user))
+      
+      // Actualizar el contexto manualmente
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { user: result.user, token: result.token } 
+      }))
+      
       onClose()
-      // Redirigir al dashboard después del login exitoso
-      navigate('/dashboard', { replace: true })
+      // Usar window.location.href para forzar navegación
+      window.location.href = '/dashboard'
+      
     } catch (error: any) {
-      console.error('Login error:', error)
-      setError(error.response?.data?.message || 'Error al iniciar sesión')
+      // Mostrar error SOLO en el modal
+      const errorMessage = error.message || 'Error al iniciar sesión'
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -75,7 +94,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
         </motion.div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
             Correo electrónico
@@ -86,7 +105,6 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            required
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             placeholder="tu@email.com"
           />
@@ -103,9 +121,14 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              required
               className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               placeholder="••••••••"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  performLogin()
+                }
+              }}
             />
             <button
               type="button"
@@ -122,7 +145,8 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
         </div>
 
         <button
-          type="submit"
+          type="button"
+          onClick={performLogin}
           disabled={isLoading}
           className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
@@ -135,7 +159,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onClose }) => {
             'Iniciar Sesión'
           )}
         </button>
-      </form>
+      </div>
 
       <div className="mt-6 text-center">
         <p className="text-gray-600">

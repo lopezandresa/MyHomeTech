@@ -42,23 +42,15 @@ api.interceptors.response.use(
       // También verificar que no sea un error de credenciales incorrectas en login
       const isLoginEndpoint = error.config?.url?.includes('/auth/login')
       const isPasswordChange = error.config?.url?.includes('/change-password')
+      const isRegisterEndpoint = error.config?.url?.includes('/identity/register')
 
-      if (isTokenExpired && !isLoginEndpoint && !isPasswordChange) {
-        console.warn('Token expirado o inválido, cerrando sesión...', errorMessage)
+      // NO hacer logout ni redirección si es login, registro o cambio de contraseña
+      if (isTokenExpired && !isLoginEndpoint && !isPasswordChange && !isRegisterEndpoint) {
         localStorage.removeItem('authToken')
         localStorage.removeItem('user')
 
-        // Solo redirigir si no estamos ya en la página de login o auth
-        if (
-          !window.location.pathname.includes('/login') &&
-          !window.location.pathname.includes('/auth') &&
-          !window.location.pathname.includes('/register')
-        ) {
-          // Usar un pequeño delay para evitar loops de redirección
-          setTimeout(() => {
-            window.location.href = '/login'
-          }, 100)
-        }
+        // NO hacer redirección automática para evitar recargas
+        // Solo limpiar el localStorage y dejar que el componente maneje el estado
       }
     }
     return Promise.reject(error)

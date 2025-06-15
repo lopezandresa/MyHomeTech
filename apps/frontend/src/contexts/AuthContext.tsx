@@ -25,6 +25,7 @@ import { authService } from '../services/authService'
  * @property {string | null} token - Token JWT de autenticación
  * @property {boolean} isAuthenticated - Estado de autenticación
  * @property {boolean} isLoading - Estado de carga
+ * @property {boolean} isProcessingLogin - Flag para prevenir redirecciones durante el login
  * @property {Function} login - Función para iniciar sesión
  * @property {Function} register - Función para registrar usuario
  * @property {Function} logout - Función para cerrar sesión
@@ -36,6 +37,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isProcessingLogin: boolean; // Nuevo flag para prevenir redirecciones durante login
   login: (email: string, password: string) => Promise<void>;
   register: (
     firstName: string, 
@@ -83,6 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isProcessingLogin, setIsProcessingLogin] = useState(false) // Estado inicial para el flag de procesamiento de login
 
   // Verificar autenticación al cargar
   useEffect(() => {
@@ -104,7 +107,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const currentUser = await authService.getProfile()
               setUser(currentUser)
             } catch (error) {
-              console.warn('No se pudo refrescar el perfil del usuario:', error)
               // Mantener los datos del localStorage si el refresh falla
             }
           } else {
@@ -115,7 +117,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (error) {
-        console.error('Error verificando autenticación:', error)
         authService.logout()
         setUser(null)
         setToken(null)
@@ -124,7 +125,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
+    // Listener para actualizar el contexto cuando el login sea exitoso
+    const handleAuthStateChange = (event: CustomEvent) => {
+      const { user, token } = event.detail
+      setUser(user)
+      setToken(token)
+    }
+
     checkAuth()
+    
+    // Agregar listener para el evento personalizado
+    window.addEventListener('authStateChanged', handleAuthStateChange as EventListener)
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('authStateChanged', handleAuthStateChange as EventListener)
+    }
   }, [])
 
   /**
@@ -149,7 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = await authService.getProfile()
       setUser(currentUser)
     } catch (error) {
-      console.error('Error refrescando usuario:', error)
+      //console.error('Error refrescando usuario:', error)
       throw error
     }
   }
@@ -170,21 +186,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    *   await login('user@example.com', 'password123');
    *   navigate('/dashboard');
    * } catch (error) {
-   *   console.error('Error en login:', error);
+   *   //console.error('Error en login:', error);
    * }
    * ```
    */
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true)
+      setIsProcessingLogin(true) // Iniciar el procesamiento de login
       const result = await authService.login({ email, password })
       setUser(result.user)
       setToken(result.token)
     } catch (error) {
-      console.error('Error en login:', error)
+      // No hacer console.error, dejar que el componente maneje el error
       throw error
     } finally {
       setIsLoading(false)
+      setIsProcessingLogin(false) // Finalizar el procesamiento de login
     }
   }
 
@@ -211,9 +229,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    *     'Juan', 'Carlos', 'Pérez', 'García',
    *     'juan@example.com', 'password123', 'client'
    *   );
-   *   console.log('Usuario registrado:', newUser.email);
+   *   //console.log('Usuario registrado:', newUser.email);
    * } catch (error) {
-   *   console.error('Error en registro:', error);
+   *   //console.error('Error en registro:', error);
    * }
    * ```
    */
@@ -239,7 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return user
     } catch (error) {
-      console.error('Error en registro:', error)
+      //console.error('Error en registro:', error)
       throw error
     } finally {
       setIsLoading(false)
@@ -285,7 +303,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedUser = await authService.updateProfile(data)
       setUser(updatedUser)
     } catch (error) {
-      console.error('Error actualizando perfil:', error)
+      //console.error('Error actualizando perfil:', error)
       throw error
     }
   }
@@ -295,6 +313,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     isAuthenticated: !!user && !!token && authService.isAuthenticated(),
     isLoading,
+    isProcessingLogin, // Incluir el nuevo estado en el contexto
     login,
     register,
     logout,

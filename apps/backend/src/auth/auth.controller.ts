@@ -11,7 +11,23 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Obtiene un JWT a partir de credenciales' })
   async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+    // Validar las credenciales y estado del usuario
+    const validationResult = await this.authService.validateUser(dto.email, dto.password);
+    
+    // Si hay error en la validación, devolver el resultado con error
+    if (validationResult.hasError) {
+      return validationResult;
+    }
+    
+    // Si la validación es exitosa, generar el token
+    const tokenResult = await this.authService.login(validationResult.user);
+    
+    // Devolver respuesta exitosa con el token
+    return {
+      hasError: false,
+      message: 'Inicio de sesión exitoso',
+      ...tokenResult
+    };
   }
 
   @Post('logout')

@@ -3,14 +3,20 @@ import type {
   User, 
   LoginRequest, 
   RegisterRequest, 
-  AuthResponse, 
   UpdateProfileRequest 
 } from '../types'
 
 class AuthService {
   // Login
   async login(data: LoginRequest): Promise<{ user: User; token: string }> {
-    const response = await api.post<AuthResponse>('/auth/login', data)
+    const response = await api.post('/auth/login', data)
+    
+    // Verificar si hay error en la respuesta
+    if (response.data.hasError) {
+      // Lanzar error con el mensaje específico del backend
+      throw new Error(response.data.message || 'Error en el inicio de sesión')
+    }
+    
     const token = response.data.access_token
     
     // Guardar token
@@ -37,7 +43,7 @@ class AuthService {
       })
       return loginResult.user
     } catch (error) {
-      console.error('Error en login automático tras registro:', error)
+      //console.error('Error en login automático tras registro:', error)
       return response.data
     }
   }
@@ -50,11 +56,11 @@ class AuthService {
       if (token) {
         // Llamar al endpoint de logout del backend de forma asíncrona
         api.post('/auth/logout').catch((error) => {
-          console.warn('Error en logout del backend (ignorado):', error)
+          //console.warn('Error en logout del backend (ignorado):', error)
         })
       }
     } catch (error) {
-      console.warn('Error iniciando logout del backend:', error)
+      //console.warn('Error iniciando logout del backend:', error)
     }
     
     // Siempre limpiar localStorage
@@ -77,14 +83,14 @@ class AuthService {
       const currentTime = Date.now() / 1000
       
       if (payload.exp && payload.exp < currentTime) {
-        console.warn('Token expirado, limpiando sesión...')
+        //console.warn('Token expirado, limpiando sesión...')
         this.logout()
         return false
       }
       
       return true
     } catch (error) {
-      console.error('Error verificando token:', error)
+      //console.error('Error verificando token:', error)
       this.logout()
       return false
     }
@@ -103,12 +109,12 @@ class AuthService {
     } catch (error: any) {
       // Si es error 401, podría ser token expirado
       if (error.response?.status === 401) {
-        console.warn('Error 401 al obtener perfil, posible token expirado')
+        //console.warn('Error 401 al obtener perfil, posible token expirado')
         throw error // Dejar que el interceptor maneje el logout
       }
       
       // Para otros errores, no hacer logout automático
-      console.error('Error obteniendo perfil:', error)
+      //console.error('Error obteniendo perfil:', error)
       throw error
     }
   }
@@ -124,7 +130,7 @@ class AuthService {
       
       return updatedUser
     } catch (error: any) {
-      console.error('Error actualizando perfil:', error)
+      //console.error('Error actualizando perfil:', error)
       throw error
     }
   }
@@ -141,7 +147,7 @@ class AuthService {
         newPassword
       })
     } catch (error: any) {
-      console.error('Error cambiando contraseña:', error)
+      //console.error('Error cambiando contraseña:', error)
       throw new Error(error.response?.data?.message || 'Error al cambiar la contraseña')
     }
   }
@@ -195,7 +201,7 @@ class AuthService {
       const userStr = localStorage.getItem('user')
       return userStr ? JSON.parse(userStr) : null
     } catch (error) {
-      console.error('Error parsing user from localStorage:', error)
+      //console.error('Error parsing user from localStorage:', error)
       localStorage.removeItem('user') // Limpiar datos corruptos
       return null
     }

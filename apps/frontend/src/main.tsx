@@ -3,6 +3,17 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Prevenir errores no manejados que causen recarga de página
+window.addEventListener('error', (event) => {
+  event.preventDefault()
+  return false
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  event.preventDefault()
+  return false
+})
+
 /**
  * @fileoverview Punto de entrada principal de la aplicación MyHomeTech Frontend
  * 
