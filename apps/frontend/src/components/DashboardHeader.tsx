@@ -1,7 +1,5 @@
 import React from 'react'
 import { BellIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '../contexts/AuthContext'
-import UserAvatar from './common/UserAvatar'
 
 interface DashboardHeaderProps {
   title: string
@@ -10,7 +8,6 @@ interface DashboardHeaderProps {
 }
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle, rightContent }) => {
-  const { user } = useAuth()
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
@@ -36,16 +33,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitle, righ
                 <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-400 ring-2 ring-white"></span>
               </button>
 
-              {/* Default User Profile */}
-              <div className="flex items-center space-x-3">
-                <div className="hidden md:block text-right">
-                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.firstLastName}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user?.role === 'client' ? 'Cliente' : 'Técnico'}
-                  </p>
-                </div>
-                {user && <UserAvatar user={user} size="md" />}
-              </div>
             </>
           )}
         </div>
