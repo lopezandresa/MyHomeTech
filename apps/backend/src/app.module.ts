@@ -1,3 +1,17 @@
+/**
+ * @fileoverview Módulo principal de la aplicación MyHomeTech Backend
+ * 
+ * @description Define la configuración raíz de la aplicación NestJS, incluyendo:
+ * - Configuración de base de datos PostgreSQL con TypeORM
+ * - Importación de todos los módulos funcionales
+ * - Configuración de variables de entorno
+ * - Carga automática de entidades
+ * 
+ * @version 1.0.0
+ * @author Equipo MyHomeTech
+ * @since 2024
+ */
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
@@ -16,6 +30,22 @@ import { AddressModule } from './address/address.module';
 import { HelpTicketModule } from './help-ticket/help-ticket.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+/**
+ * Módulo raíz de la aplicación MyHomeTech
+ * 
+ * @description Configura y conecta todos los módulos de la aplicación:
+ * - Módulos de autenticación y usuarios (Auth, Identity, Client, Technician)
+ * - Módulos de negocio (ServiceRequest, Rating, Notification)
+ * - Módulos de catálogo (Appliance, ApplianceType, ApplianceBrand, ApplianceModel)
+ * - Módulos de soporte (Address, HelpTicket)
+ * - Configuración de base de datos y variables de entorno
+ * 
+ * @example
+ * ```typescript
+ * // El módulo se importa automáticamente en main.ts
+ * const app = await NestFactory.create(AppModule);
+ * ```
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({ 
