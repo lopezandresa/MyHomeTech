@@ -290,7 +290,6 @@ export class ServiceRequestService {
 
     return { available: true };
   }
-
   /**
    * Marca solicitudes expiradas automáticamente
    * 
@@ -301,16 +300,18 @@ export class ServiceRequestService {
    */
   async markExpiredRequests(): Promise<void> {
     const now = new Date();
-    await this.srRepo.update(
-      {
-        status: ServiceRequestStatus.PENDING,
-        expiresAt: LessThan(now),
-      },
-      {
+    
+    // Use query builder to properly handle the LessThan condition
+    await this.srRepo
+      .createQueryBuilder()
+      .update(ServiceRequest)
+      .set({
         status: ServiceRequestStatus.EXPIRED,
         expiredAt: now,
-      }
-    );
+      })
+      .where('status = :status', { status: ServiceRequestStatus.PENDING })
+      .andWhere('expiresAt < :now', { now })
+      .execute();
   }
 
   /**

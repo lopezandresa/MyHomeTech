@@ -71,12 +71,12 @@ export const dashboardStyles = {
     titleText: 'text-lg font-semibold text-gray-900',
     subtitle: 'text-sm text-gray-600'
   },
-  
-  // Form styles
+    // Form styles
   form: {
     grid: 'grid grid-cols-1 md:grid-cols-2 gap-6',
     field: 'space-y-2',
     label: 'flex items-center space-x-2 text-sm font-medium text-gray-700',
+    required: 'text-red-500 ml-1',
     input: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
     textarea: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none',
     select: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',

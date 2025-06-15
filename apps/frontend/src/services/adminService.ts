@@ -347,13 +347,19 @@ class AdminService {
     const response = await api.patch(`${this.baseURL}/${userId}`, userData)
     return response.data
   }
-
   /**
    * Crea un nuevo administrador
    */
   async createAdmin(adminData: any): Promise<AdminUserManagement> {
     const response = await api.post(`${this.baseURL}/admin`, adminData)
     return response.data
+  }
+
+  /**
+   * Cancela una solicitud de servicio
+   */
+  async cancelServiceRequest(requestId: number, reason: string): Promise<void> {
+    await api.patch(`${this.serviceRequestURL}/${requestId}/cancel`, { reason })
   }
 }
 

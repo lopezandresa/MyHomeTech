@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Users, UserPlus, BarChart3, Shield, Search, Filter } from 'lucide-react'
+import { Users, UserPlus, BarChart3 } from 'lucide-react'
 import { adminService } from '../../services/adminService'
-import { AdminStats, AdminUserManagement, UserFilters } from '../../types'
+import { type AdminUserManagement, type AdminStats } from '../../types'
+import AdminStatsComponent from './AdminStats'
 import UserManagement from './UserManagement'
-import AdminStats as AdminStatsComponent from './AdminStats'
 import CreateAdminModal from './CreateAdminModal'
 
 /**
@@ -126,10 +126,8 @@ const AdminPanel: React.FC = () => {
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
           </div>
-        )}
-
-        {activeTab === 'dashboard' && stats && (
-          <AdminStatsComponent stats={stats} />
+        )}        {activeTab === 'dashboard' && stats && (
+          <AdminStatsComponent stats={stats} loading={loading} />
         )}
 
         {activeTab === 'users' && (

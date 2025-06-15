@@ -980,6 +980,7 @@ export interface RespondHelpTicketRequest {
  * @property {number} approved - Tickets aprobados
  * @property {number} rejected - Tickets rechazados
  * @property {number} resolved - Tickets resueltos
+ * @property {Record<string, number>} byType - Tickets agrupados por tipo
  */
 export interface HelpTicketStats {
   total: number
@@ -988,4 +989,5 @@ export interface HelpTicketStats {
   approved: number
   rejected: number
   resolved: number
+  byType: Record<string, number>
 }

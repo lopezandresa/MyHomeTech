@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { adminService, type AdminStats } from '../services/adminService'
+import { adminService } from '../services/adminService'
 import { useAuth } from '../contexts/AuthContext'
-import type { User, ServiceRequest } from '../types'
+import type { User, ServiceRequest, AdminStats } from '../types'
 
 /**
  * @fileoverview Hook personalizado para gestionar datos del dashboard de administrador
@@ -62,9 +62,8 @@ export const useAdminDashboard = () => {
     
     setIsLoadingStats(true)
     setError(null)
-    
-    try {
-      const statsData = await adminService.getStats()
+      try {
+      const statsData = await adminService.getSystemStats()
       setStats(statsData)
     } catch (err: any) {
       console.error('Error loading admin stats:', err)
