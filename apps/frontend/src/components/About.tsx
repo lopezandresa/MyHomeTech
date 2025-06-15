@@ -1,28 +1,21 @@
-import { CheckIcon, SparklesIcon, ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
+import { CheckIcon, ShieldCheckIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import { useMemo } from 'react'
 
 const About = () => {
-  const benefits = [
-    'Técnicos verificados y certificados',
-    'Especialistas en electrodomésticos del hogar',
-    'Servicio a domicilio profesional',
-    'Soporte técnico especializado',
-    'Garantía en todas las reparaciones',
-    'Presupuestos gratuitos y transparentes'
-  ]
-
-  const features = [
+  // Memoized data to prevent recreating on each render
+  const features = useMemo(() => [
     {
       icon: ShieldCheckIcon,
       title: 'Técnicos Verificados',
-      description: 'Todos nuestros técnicos pasan por un riguroso proceso de verificación y certificación.',
+      description: 'Todos nuestros técnicos pasan por un riguroso proceso de verificación.',
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: ClockIcon,
-      title: 'Servicio Oportuno',
-      description: 'Respuesta rápida y programación flexible para adaptarnos a tu horario.',
-      color: 'from-indigo-500 to-indigo-600'
+      title: 'Respuesta Rápida',
+      description: 'Conectamos con técnicos disponibles en tu zona en minutos.',
+      color: 'from-green-500 to-green-600'
     },
     {
       icon: SparklesIcon,
@@ -30,24 +23,64 @@ const About = () => {
       description: 'Especialistas en reparación de neveras, lavadoras, aires acondicionados y más.',
       color: 'from-purple-500 to-purple-600'
     }
-  ]
+  ], [])
+
+  const benefits = useMemo(() => [
+    'Técnicos certificados y verificados',
+    'Precios transparentes y justos',
+    'Disponibilidad 24/7',
+    'Garantía en todos los trabajos'
+  ], [])
+
+  // Memoized animation variants for better performance
+  const animationVariants = useMemo(() => ({
+    fadeInUp: {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: (delay = 0) => ({
+        duration: 0.6,
+        delay,
+        ease: "easeOut"
+      })
+    },
+    scaleIn: {
+      initial: { scale: 0, opacity: 0 },
+      animate: { scale: 1, opacity: 1 },
+      transition: (delay = 0) => ({
+        duration: 0.5,
+        delay,
+        type: "spring",
+        stiffness: 100
+      })
+    },
+    slideInLeft: {
+      initial: { opacity: 0, x: -30 },
+      animate: { opacity: 1, x: 0 },
+      transition: { duration: 0.6 }
+    },
+    slideInRight: {
+      initial: { opacity: 0, x: 30 },
+      animate: { opacity: 1, x: 0 },
+      transition: { duration: 0.6 }
+    }
+  }), [])
 
   return (
-    <section id="about" className="py-32 bg-gray-50 overflow-hidden">
+    <section id="about" className="py-24 bg-gray-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         {/* Section header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          initial={animationVariants.fadeInUp.initial}
+          whileInView={animationVariants.fadeInUp.animate}
+          transition={animationVariants.fadeInUp.transition(0)}
           viewport={{ once: true }}
-          className="text-center mb-20"
+          className="text-center mb-16"
         >
           <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            initial={animationVariants.scaleIn.initial}
+            whileInView={animationVariants.scaleIn.animate}
+            transition={animationVariants.scaleIn.transition(0.2)}
             viewport={{ once: true }}
             className="inline-block bg-white px-6 py-2 rounded-full text-sm font-medium text-gray-600 shadow-sm border border-gray-200 mb-6"
           >
@@ -55,9 +88,9 @@ const About = () => {
           </motion.span>
           
           <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            initial={animationVariants.fadeInUp.initial}
+            whileInView={animationVariants.fadeInUp.animate}
+            transition={animationVariants.fadeInUp.transition(0.3)}
             viewport={{ once: true }}
             className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight"
           >
@@ -65,17 +98,18 @@ const About = () => {
             <motion.span
               initial={{ backgroundPosition: "0% 50%" }}
               animate={{ backgroundPosition: "100% 50%" }}
-              transition={{ duration: 4, repeat: Infinity, repeatType: "reverse" }}
+              transition={{ duration: 5, repeat: Infinity, repeatType: "reverse" }}
               className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent"
+              style={{ willChange: 'background-position' }}
             >
               técnicos especializados
             </motion.span>
           </motion.h2>
           
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
+            initial={animationVariants.fadeInUp.initial}
+            whileInView={animationVariants.fadeInUp.animate}
+            transition={animationVariants.fadeInUp.transition(0.5)}
             viewport={{ once: true }}
             className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
           >
@@ -88,9 +122,9 @@ const About = () => {
           
           {/* Left column - Benefits */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={animationVariants.slideInLeft.initial}
+            whileInView={animationVariants.slideInLeft.animate}
+            transition={animationVariants.slideInLeft.transition}
             viewport={{ once: true }}
             className="space-y-8"
           >
@@ -98,17 +132,19 @@ const About = () => {
               {benefits.map((benefit, index) => (
                 <motion.div
                   key={benefit}
-                  initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  initial={animationVariants.fadeInUp.initial}
+                  whileInView={animationVariants.fadeInUp.animate}
+                  transition={animationVariants.fadeInUp.transition(index * 0.1)}
                   viewport={{ once: true }}
-                  whileHover={{ x: 10 }}
+                  whileHover={{ x: 5 }}
                   className="flex items-center space-x-4 group cursor-pointer"
+                  style={{ willChange: 'transform' }}
                 >
                   <motion.div
-                    whileHover={{ scale: 1.2, rotate: 360 }}
+                    whileHover={{ scale: 1.1, rotate: 180 }}
                     transition={{ duration: 0.3 }}
                     className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center"
+                    style={{ willChange: 'transform' }}
                   >
                     <CheckIcon className="h-5 w-5 text-white" />
                   </motion.div>
@@ -119,27 +155,27 @@ const About = () => {
               ))}
             </div>
 
-            {/* Animated statistics */}
+            {/* Simplified statistics */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
+              initial={animationVariants.fadeInUp.initial}
+              whileInView={animationVariants.fadeInUp.animate}
+              transition={animationVariants.fadeInUp.transition(0.6)}
               viewport={{ once: true }}
               className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100"
             >
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center">
                   <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    transition={{ duration: 0.8, delay: 0.8, type: "spring" }}
+                    initial={animationVariants.scaleIn.initial}
+                    whileInView={animationVariants.scaleIn.animate}
+                    transition={animationVariants.scaleIn.transition(0.8)}
                     viewport={{ once: true }}
                     className="text-3xl font-bold text-gray-900 mb-2"
                   >
                     <motion.span
                       initial={{ opacity: 0 }}
                       whileInView={{ opacity: 1 }}
-                      transition={{ duration: 2, delay: 1 }}
+                      transition={{ duration: 1.5, delay: 1 }}
                       viewport={{ once: true }}
                     >
                       100%
@@ -149,16 +185,16 @@ const About = () => {
                 </div>
                 <div className="text-center">
                   <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    transition={{ duration: 0.8, delay: 1, type: "spring" }}
+                    initial={animationVariants.scaleIn.initial}
+                    whileInView={animationVariants.scaleIn.animate}
+                    transition={animationVariants.scaleIn.transition(1)}
                     viewport={{ once: true }}
                     className="text-3xl font-bold text-gray-900 mb-2"
                   >
                     <motion.span
                       initial={{ opacity: 0 }}
                       whileInView={{ opacity: 1 }}
-                      transition={{ duration: 2, delay: 1.2 }}
+                      transition={{ duration: 1.5, delay: 1.2 }}
                       viewport={{ once: true }}
                     >
                       24/7
@@ -172,27 +208,29 @@ const About = () => {
 
           {/* Right column - Features */}
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={animationVariants.slideInRight.initial}
+            whileInView={animationVariants.slideInRight.animate}
+            transition={animationVariants.slideInRight.transition}
             viewport={{ once: true }}
             className="space-y-6"
           >
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
+                initial={animationVariants.fadeInUp.initial}
+                whileInView={animationVariants.fadeInUp.animate}
+                transition={animationVariants.fadeInUp.transition(index * 0.2)}
                 viewport={{ once: true }}
-                whileHover={{ y: -5, scale: 1.02 }}
+                whileHover={{ y: -3, scale: 1.01 }}
                 className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 group cursor-pointer"
+                style={{ willChange: 'transform' }}
               >
                 <div className="flex items-start space-x-6">
                   <motion.div
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.5 }}
+                    whileHover={{ rotate: 180, scale: 1.1 }}
+                    transition={{ duration: 0.4 }}
                     className={`w-14 h-14 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center shadow-lg`}
+                    style={{ willChange: 'transform' }}
                   >
                     <feature.icon className="h-7 w-7 text-white" />
                   </motion.div>
@@ -206,20 +244,21 @@ const About = () => {
                   </div>
                 </div>
 
-                {/* Animated progress bar */}
+                {/* Simplified progress bar */}
                 <motion.div
                   initial={{ width: 0 }}
                   whileInView={{ width: "100%" }}
-                  transition={{ duration: 1.5, delay: 0.5 + index * 0.2 }}
+                  transition={{ duration: 1, delay: 0.5 + index * 0.2 }}
                   viewport={{ once: true }}
                   className="mt-6 h-1 bg-gray-100 rounded-full overflow-hidden"
                 >
                   <motion.div
                     initial={{ x: "-100%" }}
                     whileInView={{ x: "0%" }}
-                    transition={{ duration: 1, delay: 1 + index * 0.2 }}
+                    transition={{ duration: 0.8, delay: 1 + index * 0.2 }}
                     viewport={{ once: true }}
                     className={`h-full bg-gradient-to-r ${feature.color} rounded-full`}
+                    style={{ willChange: 'transform' }}
                   />
                 </motion.div>
               </motion.div>
@@ -227,23 +266,25 @@ const About = () => {
           </motion.div>
         </div>
 
-        {/* Bottom floating elements */}
+        {/* Simplified bottom floating element */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
+          initial={animationVariants.fadeInUp.initial}
+          whileInView={animationVariants.fadeInUp.animate}
+          transition={animationVariants.fadeInUp.transition(0.8)}
           viewport={{ once: true }}
           className="mt-20 text-center"
         >
           <motion.div
-            animate={{ y: [0, -10, 0] }}
+            animate={{ y: [0, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             className="inline-flex items-center space-x-2 bg-white px-6 py-3 rounded-full shadow-lg border border-gray-100"
+            style={{ willChange: 'transform' }}
           >
             <motion.span
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              animate={{ rotate: [0, 180, 360] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
               className="text-lg"
+              style={{ willChange: 'transform' }}
             >
               ⚡
             </motion.span>
