@@ -21,6 +21,7 @@ interface UserInfoPanelProps {
     firstLastName: string
     secondLastName: string
     email: string
+    newPassword?: string // Nuevo campo para cambio de contraseña por admin
     [key: string]: any // Para permitir campos adicionales
   }
   error: string | null
@@ -35,6 +36,8 @@ interface UserInfoPanelProps {
   refreshUser?: () => Promise<void>
   title?: string
   subtitle?: string
+  allowEmailEdit?: boolean // Nueva prop para permitir edición de email (solo admin)
+  allowPasswordChange?: boolean // Nueva prop para permitir cambio de contraseña (solo admin)
 }
 
 const UserInfoPanel: React.FC<UserInfoPanelProps> = ({
@@ -51,7 +54,9 @@ const UserInfoPanel: React.FC<UserInfoPanelProps> = ({
   setShowChangePassword,
   refreshUser,
   title = "Información Personal",
-  subtitle = "Gestiona tu información personal"
+  subtitle = "Gestiona tu información personal",
+  allowEmailEdit = false, // Por defecto false (usuarios normales)
+  allowPasswordChange = false // Por defecto false (usuarios normales)
 }) => {
   // Estados para manejo de foto de perfil
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
@@ -276,15 +281,56 @@ const UserInfoPanel: React.FC<UserInfoPanelProps> = ({
           )}
         </div>
 
-        {/* Email (readonly) */}
+        {/* Email - Editable solo cuando allowEmailEdit es true (admin) */}
         <div>
           <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
             <span>📧</span>
             <span>Correo Electrónico</span>
+            {allowEmailEdit && <span className="text-red-500">*</span>}
           </label>
-          <p className="text-lg text-gray-500 py-2">{user?.email}</p>
-          <p className="text-xs text-gray-400">No se puede modificar</p>
+          {isEditing && allowEmailEdit ? (
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={onInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Correo electrónico"
+              required
+            />
+          ) : (
+            <>
+              <p className="text-lg text-gray-900 py-2">{user?.email}</p>
+              {!allowEmailEdit && (
+                <p className="text-xs text-gray-400">No se puede modificar</p>
+              )}
+            </>
+          )}
         </div>
+
+        {/* Nueva Contraseña - Solo visible para administradores editando */}
+        {isEditing && allowPasswordChange && (
+          <div className="md:col-span-2">
+            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+              <LockClosedIcon className="h-4 w-4" />
+              <span>Nueva Contraseña</span>
+              <span className="text-sm text-gray-500">(Opcional - Dejar vacío para mantener la actual)</span>
+            </label>
+            <div className="max-w-md">
+              <input
+                type="password"
+                name="newPassword"
+                value={formData.newPassword || ''}
+                onChange={onInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Nueva contraseña"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Mínimo 6 caracteres. Si no especificas una nueva contraseña, se mantendrá la actual.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -334,6 +380,32 @@ const UserInfoPanel: React.FC<UserInfoPanelProps> = ({
               <span>Cambiar Contraseña</span>
             </button>
           </div>
+
+          {/* Solo mostrar para admin: formulario de cambio de contraseña */}
+          {allowPasswordChange && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <h4 className="text-md font-semibold text-gray-800 mb-3">
+                Cambiar Contraseña de Usuario
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nueva Contraseña
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={formData.newPassword}
+                    onChange={onInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Nueva contraseña"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

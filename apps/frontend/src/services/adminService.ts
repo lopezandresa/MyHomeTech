@@ -336,6 +336,19 @@ class AdminService {
   }
 
   /**
+   * Actualiza información de un usuario específico
+   */
+  async updateUser(userId: number, userData: {
+    firstName?: string
+    middleName?: string | null
+    firstLastName?: string
+    secondLastName?: string | null
+  }): Promise<AdminUserManagement> {
+    const response = await api.patch(`${this.baseURL}/${userId}`, userData)
+    return response.data
+  }
+
+  /**
    * Crea un nuevo administrador
    */
   async createAdmin(adminData: any): Promise<AdminUserManagement> {

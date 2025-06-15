@@ -1,12 +1,13 @@
 import React from 'react'
 import type { AdminUserManagement, UserFilters } from '../../types'
-import { FiSearch, FiFilter, FiToggleLeft, FiToggleRight, FiUser, FiMail } from 'react-icons/fi'
+import { FiSearch, FiFilter, FiToggleLeft, FiToggleRight, FiUser, FiMail, FiEdit2 } from 'react-icons/fi'
 
 interface UserManagementTableProps {
   users: AdminUserManagement[]
   filters: UserFilters
   onFilterChange: (filters: Partial<UserFilters>) => void
   onToggleStatus: (userId: number) => void
+  onEditUser: (user: AdminUserManagement) => void
   loading: boolean
 }
 
@@ -18,6 +19,7 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
   filters,
   onFilterChange,
   onToggleStatus,
+  onEditUser,
   loading
 }) => {
   const getRoleBadgeColor = (role: string) => {
@@ -171,26 +173,41 @@ const UserManagementTable: React.FC<UserManagementTableProps> = ({
                     {formatDate(user.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => onToggleStatus(user.id)}
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm ${
-                        user.status
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                    >
-                      {user.status ? (
-                        <>
-                          <FiToggleRight />
-                          Desactivar
-                        </>
-                      ) : (
-                        <>
-                          <FiToggleLeft />
+                    <div className="flex items-center space-x-2">
+                      {/* Botón de Editar */}
+                      <button
+                        onClick={() => onEditUser(user)}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        title="Editar usuario"
+                      >
+                        <FiEdit2 className="w-4 h-4" />
+                        Editar
+                      </button>
+
+                      {/* Botón de Activar */}
+                      {!user.status && (
+                        <button
+                          onClick={() => onToggleStatus(user.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                          title="Activar usuario"
+                        >
+                          <FiToggleLeft className="w-4 h-4" />
                           Activar
-                        </>
+                        </button>
                       )}
-                    </button>
+
+                      {/* Botón de Desactivar */}
+                      {user.status && (
+                        <button
+                          onClick={() => onToggleStatus(user.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                          title="Desactivar usuario"
+                        >
+                          <FiToggleRight className="w-4 h-4" />
+                          Desactivar
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

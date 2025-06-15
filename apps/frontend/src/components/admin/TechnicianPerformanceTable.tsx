@@ -99,16 +99,6 @@ const TechnicianPerformanceTable: React.FC<TechnicianPerformanceTableProps> = ({
     return 'bg-red-100 text-red-800'
   }
 
-  // Formatear moneda colombiana
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
-
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">

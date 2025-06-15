@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import AdminLayout from '../../components/admin/AdminLayout'
-import AdminStatsCard from '../../components/admin/AdminStatsCard'
-import ServiceRequestChart from '../../components/admin/ServiceRequestChart'
-import TechnicianPerformanceTable from '../../components/admin/TechnicianPerformanceTable'
-import UserManagementTable from '../../components/admin/UserManagementTable'
-import { adminService } from '../../services/adminService'
-import type { AdminStats, UserFilters } from '../../types'
 import { 
   FiUsers, 
   FiTool, 
-  FiCheckCircle, 
-  FiClock, 
-  FiCalendar,
   FiTrendingUp,
+  FiCheckCircle,
+  FiClock,
+  FiCalendar,
   FiAlertCircle
 } from 'react-icons/fi'
+import { adminService } from '../../services/adminService'
+import type { AdminStats, AdminUserManagement, UserFilters } from '../../types'
+import AdminLayout from '../../components/admin/AdminLayout'
+import AdminStatsCard from '../../components/admin/AdminStatsCard'
+import UserManagementTable from '../../components/admin/UserManagementTable'
+import TechnicianPerformanceTable from '../../components/admin/TechnicianPerformanceTable'
+import ServiceRequestChart from '../../components/admin/ServiceRequestChart'
+import EditUserModal from '../../components/admin/EditUserModal'
 
 /**
  * Panel principal de administrador para MyHomeTech
@@ -36,6 +37,10 @@ const AdminDashboard: React.FC = () => {
     status: 'all',
     search: ''
   })
+
+  // Estados para el modal de edición
+  const [showEditUserModal, setShowEditUserModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<AdminUserManagement | null>(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -116,6 +121,31 @@ const AdminDashboard: React.FC = () => {
       
       return true
     })
+  }
+
+  const handleEditUser = (user: AdminUserManagement) => {
+    setSelectedUser(user)
+    setShowEditUserModal(true)
+  }
+
+  const handleUserUpdate = async (userId: number, userData: any) => {
+    try {
+      await adminService.updateUser(userId, userData)
+      // Recargar usuarios después del cambio
+      const updatedUsers = await adminService.getAllUsers()
+      setUsers(updatedUsers)
+      
+      // Actualizar estadísticas si es necesario
+      const updatedStats = await adminService.getSystemStats()
+      setStats(updatedStats)
+      
+      setShowEditUserModal(false)
+      setSelectedUser(null)
+    } catch (err: any) {
+      console.error('Error updating user:', err)
+      setError('Error al actualizar el usuario.')
+      throw err // Re-throw para que el modal pueda manejar el error
+    }
   }
 
   if (loading) {
@@ -293,6 +323,7 @@ const AdminDashboard: React.FC = () => {
               onFilterChange={(newFilters) => setUserFilters(prev => ({ ...prev, ...newFilters }))}
               onToggleStatus={handleUserStatusToggle}
               loading={false}
+              onEditUser={handleEditUser}
             />
           )}
 
@@ -303,6 +334,17 @@ const AdminDashboard: React.FC = () => {
             />
           )}
         </motion.div>
+
+        {/* Modal de edición de usuario */}
+        <EditUserModal
+          isOpen={showEditUserModal}
+          user={selectedUser}
+          onClose={() => {
+            setShowEditUserModal(false)
+            setSelectedUser(null)
+          }}
+          onSave={handleUserUpdate}
+        />
       </div>
     </AdminLayout>
   )

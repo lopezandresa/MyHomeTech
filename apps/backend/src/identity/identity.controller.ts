@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Request, Param, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, Param, UseInterceptors, UploadedFile, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -121,6 +121,27 @@ export class IdentityController {
   @ApiOperation({ summary: 'Obtiene un usuario por ID' })
   findById(@Param('id') id: number): Promise<IdentityResponse | null> {
     return this.svc.findById(id);
+  }
+
+  /**
+   * Actualiza un usuario específico por ID (solo admin)
+   * 
+   * @param {number} id - ID del usuario a actualizar
+   * @param {UpdateIdentityDto} dto - Datos a actualizar
+   * @returns {Promise<IdentityResponse>} Usuario actualizado
+   * 
+   * @example
+   * PATCH /api/identity/123
+   * Headers: { Authorization: "Bearer <admin_token>" }
+   * Body: { firstName: "Nuevo Nombre" }
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
+  @Roles('admin')
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualiza un usuario por ID (solo admin)' })
+  async updateUser(@Param('id') id: number, @Body() dto: UpdateIdentityDto): Promise<IdentityResponse> {
+    return this.svc.updateUser(id, dto);
   }
 
   /**

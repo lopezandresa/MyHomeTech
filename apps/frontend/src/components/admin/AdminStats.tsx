@@ -7,8 +7,6 @@ import {
   FiCheckCircle,
   FiClock,
   FiTrendingUp,
-  FiTrendingDown,
-  FiMinus
 } from 'react-icons/fi'
 
 interface AdminStatsProps {
@@ -21,31 +19,6 @@ interface AdminStatsProps {
  * Enfocado en métricas operativas sin componentes financieros
  */
 const AdminStats: React.FC<AdminStatsProps> = ({ stats, loading }) => {
-  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
-    switch (trend) {
-      case 'up':
-        return <FiTrendingUp className="w-4 h-4 text-green-500" />
-      case 'down':
-        return <FiTrendingDown className="w-4 h-4 text-red-500" />
-      case 'stable':
-        return <FiMinus className="w-4 h-4 text-gray-500" />
-      default:
-        return null
-    }
-  }
-
-  const getTrendColor = (trend: 'up' | 'down' | 'stable') => {
-    switch (trend) {
-      case 'up':
-        return 'text-green-600'
-      case 'down':
-        return 'text-red-600'
-      case 'stable':
-        return 'text-gray-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
 
   if (loading) {
     return (

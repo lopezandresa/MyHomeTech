@@ -6,12 +6,10 @@ import {
   WifiIcon,
   ArrowPathIcon,
   XMarkIcon,
-  WrenchScrewdriverIcon,
   CalendarIcon,
   ClockIcon,
   ChevronDownIcon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import DashboardLayout from './DashboardLayout'
 import ServiceRequestForm from '../ServiceRequestForm'
@@ -30,13 +28,14 @@ import UserManagementTable from '../admin/UserManagementTable'
 import TechnicianPerformanceTable from '../admin/TechnicianPerformanceTable'
 import ServiceRequestChart from '../admin/ServiceRequestChart'
 import { adminService } from '../../services/adminService'
+import EditUserModal from '../admin/EditUserModal'
 
 // Utility function to format date
 import { useDashboardData } from '../../hooks/useDashboardData'
 import { useDashboardActions } from '../../hooks/useDashboardActions'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import type { AdminStats, UserFilters } from '../../types'
-import { FiUsers, FiSettings, FiTool, FiCheckCircle } from 'react-icons/fi'
+import { FiUsers, FiTool, FiCheckCircle } from 'react-icons/fi'
 
 const Dashboard: React.FC = () => {
   // Hook personalizado para datos del dashboard
@@ -61,6 +60,10 @@ const Dashboard: React.FC = () => {
     status: 'all',
     search: ''
   })
+
+  // Estados para el modal de edición de usuario
+  const [showEditUserModal, setShowEditUserModal] = useState(false)
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<any>(null)
 
   // Cargar datos de administrador
   const loadAdminData = useCallback(async () => {
@@ -331,6 +334,10 @@ const Dashboard: React.FC = () => {
               filters={userFilters}
               onFilterChange={(newFilters) => setUserFilters(prev => ({ ...prev, ...newFilters }))}
               onToggleStatus={handleToggleUserStatus}
+              onEditUser={(user) => {
+                setSelectedUserForEdit(user)
+                setShowEditUserModal(true)
+              }}
               loading={adminLoading}
             />
           )
@@ -766,7 +773,7 @@ const Dashboard: React.FC = () => {
                           return options
                         })()}
                       </select>
-                      <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                      <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1-2 h-5 w-5 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
                 </div>                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -821,6 +828,28 @@ const Dashboard: React.FC = () => {
           onSubmit={dashboardActions.handleSubmitRating}
         />
       )}
+
+      {/* Modal de edición de usuario - ACTUALIZADO para usar EditUserModal */}
+      <EditUserModal
+        isOpen={showEditUserModal}
+        user={selectedUserForEdit}
+        onClose={() => {
+          setShowEditUserModal(false)
+          setSelectedUserForEdit(null)
+        }}
+        onSave={async (userId: number, userData: any) => {
+          try {
+            await adminService.updateUser(userId, userData)
+            setShowEditUserModal(false)
+            setSelectedUserForEdit(null)
+            await loadAdminData()
+          } catch (err: any) {
+            console.error('Error updating user:', err)
+            setAdminError('Error al actualizar el usuario')
+            throw err // Re-throw para que el modal pueda manejar el error
+          }
+        }}
+      />
     </>
   )
 }

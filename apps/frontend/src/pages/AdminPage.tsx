@@ -203,6 +203,7 @@ const AdminPage: React.FC = () => {
             filters={filters}
             onFilterChange={handleFilterChange}
             onToggleStatus={handleToggleUserStatus}
+            onEditUser={() => {}} // Función vacía ya que AdminPage no implementa edición completa
             loading={loading}
           />
         </div>
