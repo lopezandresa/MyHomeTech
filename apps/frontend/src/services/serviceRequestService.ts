@@ -96,6 +96,14 @@ class ServiceRequestService {
     return response.data
   }
 
+  // Validar disponibilidad del cliente para una fecha específica
+  async validateClientAvailability(proposedDateTime: Date): Promise<{ isAvailable: boolean; message?: string }> {
+    const response = await api.get<{ isAvailable: boolean; message?: string }>(
+      `/service-requests/validate-availability?proposedDateTime=${proposedDateTime.toISOString()}`
+    )
+    return response.data
+  }
+
   // Convertir solicitudes a eventos de calendario
   convertToCalendarEvents(requests: ServiceRequest[]): CalendarEvent[] {
     return requests.map(request => ({

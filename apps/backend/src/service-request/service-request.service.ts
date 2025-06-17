@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, In } from 'typeorm';
 import { ServiceRequest, ServiceRequestStatus, ServiceType } from './service-request.entity';
 import { AlternativeDateProposal, AlternativeDateProposalStatus } from './alternative-date-proposal.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
@@ -55,7 +55,6 @@ export class ServiceRequestService {
     private readonly applianceRepo: Repository<Appliance>,
     private readonly gateway: ServiceRequestGateway,
   ) {}
-
   /**
    * Crea una nueva solicitud de servicio técnico
    * 
@@ -63,6 +62,7 @@ export class ServiceRequestService {
    * @param {CreateServiceRequestDto} dto - Datos de la solicitud
    * @returns {Promise<ServiceRequest>} Solicitud creada
    * @throws {BadRequestException} Si la dirección no pertenece al cliente, horario inválido o fecha pasada
+   * @throws {ConflictException} Si el cliente ya tiene una solicitud activa en esa fecha
    * 
    * @example
    * ```typescript
@@ -97,6 +97,12 @@ export class ServiceRequestService {
     // Validar que la fecha sea futura
     if (proposedDate <= new Date()) {
       throw new BadRequestException('La fecha propuesta debe ser futura');
+    }
+
+    // 🔒 VALIDAR DISPONIBILIDAD DEL CLIENTE
+    const availability = await this.validateClientAvailability(clientId, proposedDate);
+    if (!availability.isAvailable) {
+      throw new ConflictException(availability.message);
     }
 
     // Usar valor por defecto de 24 horas si no se especifica
@@ -1265,6 +1271,77 @@ export class ServiceRequestService {
     }
 
     return { available: true };
+  }
+  /**
+   * Valida la disponibilidad del cliente para una fecha específica
+   * 
+   * @param {number} clientId - ID del cliente
+   * @param {Date} proposedDateTime - Fecha y hora propuesta
+   * @returns {Promise<{ isAvailable: boolean, message?: string }>} Estado de disponibilidad
+   * @throws {ConflictException} Si el cliente ya tiene una solicitud activa en la ventana de 3 horas
+   * 
+   * @description Usa una ventana de 3 horas (1.5 antes y 1.5 después) para evitar solapamientos
+   * 
+   * @example
+   * ```typescript
+   * const availability = await serviceRequestService.validateClientAvailability(1, new Date('2024-12-20T10:00:00Z'));
+   * if (!availability.isAvailable) {
+   *   throw new ConflictException(availability.message);
+   * }
+   * ```
+   */
+  async validateClientAvailability(
+    clientId: number, 
+    proposedDateTime: Date  ): Promise<{ isAvailable: boolean; message?: string }> {
+    this.logger.log(`🔍 Validating client availability for clientId: ${clientId}, date: ${proposedDateTime.toISOString()}`);
+    
+    try {      const proposedDate = new Date(proposedDateTime);
+      
+      // Crear ventana de 3 horas alrededor del horario propuesto para evitar solapamientos
+      // 1.5 horas antes y 1.5 horas después = ventana total de 3 horas
+      const startWindow = new Date(proposedDate.getTime() - 1.5 * 60 * 60 * 1000); // 1.5 horas antes
+      const endWindow = new Date(proposedDate.getTime() + 1.5 * 60 * 60 * 1000);   // 1.5 horas después
+
+      this.logger.log(`📅 Time window: ${startWindow.toISOString()} to ${endWindow.toISOString()}`);
+
+      // Verificar conflictos en la ventana de 3 horas
+      const conflictingRequest = await this.srRepo
+        .createQueryBuilder('sr')
+        .where('sr.clientId = :clientId', { clientId })
+        .andWhere('sr.proposedDateTime >= :startWindow', { startWindow })
+        .andWhere('sr.proposedDateTime <= :endWindow', { endWindow })
+        .andWhere('sr.status IN (:...activeStatuses)', { 
+          activeStatuses: [
+            ServiceRequestStatus.PENDING,
+            ServiceRequestStatus.OFFERED,
+            ServiceRequestStatus.ACCEPTED,
+            ServiceRequestStatus.SCHEDULED,
+            ServiceRequestStatus.IN_PROGRESS
+          ]
+        })
+        .getOne();
+
+      if (conflictingRequest) {
+        this.logger.log(`⚠️ Found conflicting request within 3-hour window: ${conflictingRequest.id}`);
+        const conflictTime = conflictingRequest.proposedDateTime.toLocaleTimeString('es-CO', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const conflictDate = conflictingRequest.proposedDateTime.toLocaleDateString('es-CO');
+        
+        return {
+          isAvailable: false,
+          message: `Ya tienes una solicitud activa el ${conflictDate} a las ${conflictTime} (ID: ${conflictingRequest.id}). Los servicios deben tener al menos 3 horas de separación.`
+        };
+      }
+
+    this.logger.log(`✅ Client is available for the requested date/time`);
+    return { isAvailable: true };
+    
+    } catch (error) {
+      this.logger.error(`❌ Error validating client availability:`, error);
+      throw error;
+    }
   }
 
   /**

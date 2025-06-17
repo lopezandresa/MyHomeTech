@@ -45,10 +45,10 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
   const [description, setDescription] = useState('')
   const [proposedDate, setProposedDate] = useState('')
   const [proposedTime, setProposedTime] = useState('')
-  
-  // Estados de la UI
+    // Estados de la UI
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isValidatingAvailability, setIsValidatingAvailability] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Cargar tipos de solicitud al montar el componente
@@ -147,14 +147,13 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
   const findAppliance = async (type: string, brand: string, model: string) => {
     try {
       const appliance = await applianceService.findByTypeAndBrandAndModel(type, brand, model)
-      setSelectedAppliance(appliance)
-    } catch (error) {
+      setSelectedAppliance(appliance)    } catch (error) {
       console.error('Error finding appliance:', error)
       setError('Error al buscar el electrodoméstico')
     }
   }
 
-  const validateDateTime = () => {
+  const validateDateTime = async () => {
     if (!proposedDate || !proposedTime) {
       setError('Debes seleccionar fecha y hora para el servicio')
       return false
@@ -176,6 +175,22 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
       return false
     }
 
+    // 🔒 VALIDAR DISPONIBILIDAD DEL CLIENTE
+    try {      setIsValidatingAvailability(true)
+      
+      const availability = await serviceRequestService.validateClientAvailability(proposedDateTime)
+      if (!availability.isAvailable) {
+        showError('Conflicto de Horario', availability.message!)
+        return false
+      }
+    } catch (error) {
+      console.error('Error validating client availability:', error)
+      showError('Error de Validación', 'Error al validar la disponibilidad. Inténtalo de nuevo.')
+      return false
+    } finally {
+      setIsValidatingAvailability(false)
+    }
+
     return true
   }
 
@@ -195,14 +210,12 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
     if (!selectedAddressId) {
       setError('Debes seleccionar una dirección para el servicio')
       return
-    }
-
-    if (!description.trim()) {
+    }    if (!description.trim()) {
       setError('Debes describir el problema')
       return
     }
 
-    if (!validateDateTime()) {
+    if (!(await validateDateTime())) {
       return
     }
 
@@ -510,13 +523,12 @@ const ServiceRequestForm: React.FC<ServiceRequestFormProps> = ({ onSuccess, onCa
         </div>
 
         {/* Botones */}
-        <div className="flex space-x-4">
-          <button
+        <div className="flex space-x-4">          <button
             type="submit"
-            disabled={!selectedAppliance || !selectedAddressId || !description.trim() || !proposedDate || !proposedTime || isSubmitting}
+            disabled={!selectedAppliance || !selectedAddressId || !description.trim() || !proposedDate || !proposedTime || isSubmitting || isValidatingAvailability}
             className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? 'Creando solicitud...' : 'Crear Solicitud'}
+            {isValidatingAvailability ? 'Validando disponibilidad...' : isSubmitting ? 'Creando solicitud...' : 'Crear Solicitud'}
           </button>
           
           {onCancel && (
