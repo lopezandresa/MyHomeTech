@@ -106,11 +106,10 @@ class ServiceRequestService {
       serviceRequest: request
     }))
   }
-
-  // Calcular hora de fin (6 horas después)
+  // Calcular hora de fin (3 horas después)
   private calculateEndTime(startTime: string): string {
     const start = new Date(startTime)
-    const end = new Date(start.getTime() + 6 * 60 * 60 * 1000) // 6 horas
+    const end = new Date(start.getTime() + 3 * 60 * 60 * 1000) // 3 horas
     return end.toISOString()
   }
 

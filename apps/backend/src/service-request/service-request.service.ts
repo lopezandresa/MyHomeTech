@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, Not } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { ServiceRequest, ServiceRequestStatus, ServiceType } from './service-request.entity';
 import { AlternativeDateProposal, AlternativeDateProposalStatus } from './alternative-date-proposal.entity';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
@@ -195,7 +195,7 @@ export class ServiceRequestService {
    * @param {Date} proposedDateTime - Fecha y hora propuesta
    * @returns {Promise<boolean>} true si hay conflicto, false si está disponible
    * 
-   * @description Usa una ventana de 6 horas (3 antes y 3 después) para evitar solapamientos
+   * @description Usa una ventana de 3 horas (1.5 antes y 1.5 después) para evitar solapamientos
    * 
    * @example
    * ```typescript
@@ -209,10 +209,9 @@ export class ServiceRequestService {
    * ```
    */  async checkTechnicianAvailability(technicianId: number, proposedDateTime: Date): Promise<boolean> {
     const proposedDate = new Date(proposedDateTime);
-    
-    // Crear ventana de 6 horas alrededor del horario propuesto para evitar solapamientos
-    const startWindow = new Date(proposedDate.getTime() - 3 * 60 * 60 * 1000); // 3 horas antes
-    const endWindow = new Date(proposedDate.getTime() + 3 * 60 * 60 * 1000);   // 3 horas después
+      // Crear ventana de 3 horas alrededor del horario propuesto para evitar solapamientos
+    const startWindow = new Date(proposedDate.getTime() - 1.5 * 60 * 60 * 1000); // 1.5 horas antes
+    const endWindow = new Date(proposedDate.getTime() + 1.5 * 60 * 60 * 1000);   // 1.5 horas después
 
     // Buscar si el técnico ya tiene algo agendado en esa ventana de tiempo
     const conflictingRequest = await this.srRepo
@@ -375,12 +374,11 @@ export class ServiceRequestService {
    * @returns {Promise<ServiceRequest[]>} Lista de todas las solicitudes pendientes
    * 
    * @description Actualiza solicitudes expiradas antes de retornar la lista
-   */
-  async findPending(): Promise<ServiceRequest[]> {
+   */  async findPending(): Promise<ServiceRequest[]> {
     await this.markExpiredRequests();
     return this.srRepo.find({
       where: { status: ServiceRequestStatus.PENDING },
-      relations: ['client', 'appliance', 'address'],
+      relations: ['client', 'appliance', 'address', 'alternativeDateProposals', 'alternativeDateProposals.technician'],
       order: { createdAt: 'DESC' }
     });
   }
@@ -392,11 +390,10 @@ export class ServiceRequestService {
    * 
    * @description Incluye solicitudes pendientes, programadas, completadas y canceladas.
    * Usado para generar estadísticas administrativas.
-   */
-  async findAll(): Promise<ServiceRequest[]> {
+   */  async findAll(): Promise<ServiceRequest[]> {
     await this.markExpiredRequests();
     return this.srRepo.find({
-      relations: ['client', 'appliance', 'address', 'technician', 'cancelledByUser'],
+      relations: ['client', 'appliance', 'address', 'technician', 'cancelledByUser', 'alternativeDateProposals', 'alternativeDateProposals.technician'],
       order: { createdAt: 'DESC' }
     });
   }
@@ -1137,21 +1134,31 @@ export class ServiceRequestService {
    * @returns {Promise<void>} Void cuando se completen las notificaciones
    * 
    * @description Optimizado para enviar notificaciones paralelas a múltiples técnicos
-   */
-  private async notifyRejectedProposalsAndOffers(serviceRequestId: number, acceptedProposalId: number): Promise<void> {
+   */  private async notifyRejectedProposalsAndOffers(serviceRequestId: number, acceptedProposalId: number): Promise<void> {
     try {
-      // Obtener todas las propuestas rechazadas de forma asíncrona
-      const rejectedProposals = await this.proposalRepo.find({
-        where: { 
-          serviceRequestId,
-          status: AlternativeDateProposalStatus.REJECTED,
-          id: Not(acceptedProposalId)
-        },
-        relations: ['technician']
-      });
+      // Obtener todas las propuestas pendientes que NO son la aceptada (para rechazarlas)
+      const proposalsToReject = await this.proposalRepo
+        .createQueryBuilder('proposal')
+        .leftJoinAndSelect('proposal.technician', 'technician')
+        .where('proposal.serviceRequestId = :serviceRequestId', { serviceRequestId })
+        .andWhere('proposal.status = :status', { status: AlternativeDateProposalStatus.PENDING })
+        .andWhere('proposal.id != :acceptedProposalId', { acceptedProposalId })
+        .getMany();
+
+      // Actualizar el estado de las propuestas a REJECTED
+      if (proposalsToReject.length > 0) {
+        await this.proposalRepo
+          .createQueryBuilder()
+          .update()
+          .set({ status: AlternativeDateProposalStatus.REJECTED })
+          .where('serviceRequestId = :serviceRequestId', { serviceRequestId })
+          .andWhere('status = :status', { status: AlternativeDateProposalStatus.PENDING })
+          .andWhere('id != :acceptedProposalId', { acceptedProposalId })
+          .execute();
+      }
 
       // Notificar a técnicos en paralelo para máxima velocidad
-      const notifications = rejectedProposals.map(proposal => {
+      const notifications = proposalsToReject.map(proposal => {
         if (proposal.technician) {
           // CORREGIDO: usar id del Identity (que corresponde al technicianId en el contexto de notificaciones)
           return this.gateway.notifyTechnicianRequestUnavailable(proposal.technician.id, serviceRequestId);

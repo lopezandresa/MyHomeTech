@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Address } from './address.entity';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
@@ -181,18 +181,16 @@ export class AddressService {
    */
   async remove(id: number, userId: number): Promise<void> {
     const address = await this.findOne(id, userId);
-    
-    // Verificar si es la dirección principal
+      // Verificar si es la dirección principal
     const user = await this.identityRepository.findOne({ where: { id: userId } });
     if (user?.primaryAddressId === id) {
       // Buscar otra dirección para establecer como principal
-      const otherAddress = await this.addressRepository.findOne({
-        where: { 
-          userId, 
-          id: Not(id) 
-        },
-        order: { createdAt: 'ASC' }
-      });
+      const otherAddress = await this.addressRepository
+        .createQueryBuilder('address')
+        .where('address.userId = :userId', { userId })
+        .andWhere('address.id != :id', { id })
+        .orderBy('address.createdAt', 'ASC')
+        .getOne();
 
       if (otherAddress) {
         await this.setPrimaryAddress(userId, otherAddress.id);

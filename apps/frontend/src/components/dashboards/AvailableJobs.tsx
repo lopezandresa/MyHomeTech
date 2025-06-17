@@ -48,6 +48,13 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
 }) => {  const [conflictDetails, setConflictDetails] = useState<{[key: number]: string}>({})
 
   // Función simplificada - ahora los toasts se manejan en useDashboardActions
+  
+  // Función para verificar si hay una propuesta de fecha alternativa pendiente
+  const hasPendingAlternativeDateProposal = (request: ServiceRequest): boolean => {
+    return request.alternativeDateProposals?.some(
+      proposal => proposal.status === 'pending'
+    ) || false
+  }
   const handleAcceptWithErrorHandling = async (requestId: number) => {
     try {
       setConflictDetails(prev => ({ ...prev, [requestId]: '' }))
@@ -386,14 +393,31 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                 >
                   <CalendarDaysIcon className="h-4 w-4" />
                   Aceptar fecha propuesta
-                </button>
-                <button
+                </button>                <button
                   onClick={() => setSelectedRequest(request)}
-                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center gap-2"
-                >
-                  <ClockIcon className="h-4 w-4" />
+                  disabled={hasPendingAlternativeDateProposal(request)}
+                  className={`px-4 py-2 rounded-lg transition-colors text-sm flex items-center gap-2 ${
+                    hasPendingAlternativeDateProposal(request)
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-orange-600 text-white hover:bg-orange-700'
+                  }`}
+                  title={hasPendingAlternativeDateProposal(request) ? 'Ya tienes una propuesta de fecha alternativa pendiente' : ''}
+                >                  <ClockIcon className="h-4 w-4" />
                   Proponer fecha alternativa                </button>
               </div>
+              
+              {/* Mensaje informativo si hay propuesta pendiente */}
+              {hasPendingAlternativeDateProposal(request) && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mr-2" />
+                    <p className="text-sm text-yellow-800">
+                      Ya tienes una propuesta de fecha alternativa pendiente para esta solicitud. 
+                      Espera la respuesta del cliente antes de enviar otra propuesta.
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
             )
           })}

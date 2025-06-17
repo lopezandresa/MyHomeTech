@@ -64,10 +64,16 @@ const Dashboard: React.FC = () => {
     role: 'all',
     status: 'all',
     search: ''
-  })
-  // Estados para el modal de edición de usuario
+  })  // Estados para el modal de edición de usuario
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<any>(null)
+
+  // Función para verificar si hay una propuesta de fecha alternativa pendiente
+  const hasPendingAlternativeDateProposal = (request: any): boolean => {
+    return request?.alternativeDateProposals?.some(
+      (proposal: any) => proposal.status === 'pending'
+    ) || false
+  }
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false)
 
   // Cargar datos de administrador
@@ -809,14 +815,30 @@ const Dashboard: React.FC = () => {
               {/* Información adicional */}
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800">
-                  <strong>¿Qué sucede después?</strong> El cliente verá tu propuesta de fecha alternativa y podrá aceptarla o cancelar la solicitud. Si la acepta, el servicio quedará programado automáticamente.
-                </p>
-              </div>              {/* Botones */}
-              <div className="flex space-x-4">
-                <button
+                  <strong>¿Qué sucede después?</strong> El cliente verá tu propuesta de fecha alternativa y podrá aceptarla o cancelar la solicitud. Si la acepta, el servicio quedará programado automáticamente.                </p>
+              </div>
+
+              {/* Advertencia si hay propuesta pendiente */}
+              {hasPendingAlternativeDateProposal(dashboardActions.selectedRequest) && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mr-2" />
+                    <p className="text-sm text-yellow-800">
+                      <strong>Aviso:</strong> Ya tienes una propuesta de fecha alternativa pendiente para esta solicitud. 
+                      Espera la respuesta del cliente antes de enviar otra propuesta.
+                    </p>
+                  </div>
+                </div>
+              )}              {/* Botones */}
+              <div className="flex space-x-4"><button
                   onClick={() => handleProposeAlternativeDateWrapper(dashboardActions.selectedRequest!.id, dashboardActions.alternativeDate)}
-                  disabled={!dashboardActions.alternativeDate}
-                  className="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={!dashboardActions.alternativeDate || hasPendingAlternativeDateProposal(dashboardActions.selectedRequest)}
+                  className={`flex-1 py-3 px-6 rounded-lg transition-colors ${
+                    (!dashboardActions.alternativeDate || hasPendingAlternativeDateProposal(dashboardActions.selectedRequest))
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-orange-600 text-white hover:bg-orange-700'
+                  }`}
+                  title={hasPendingAlternativeDateProposal(dashboardActions.selectedRequest) ? 'Ya tienes una propuesta de fecha alternativa pendiente para esta solicitud' : ''}
                 >
                   Proponer Fecha Alternativa
                 </button>
