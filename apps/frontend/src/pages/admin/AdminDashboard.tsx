@@ -31,13 +31,38 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'technicians'>('overview')
-
   // Filtros para gestión de usuarios
   const [userFilters, setUserFilters] = useState<UserFilters>({
     role: 'all',
     status: 'all',
     search: ''
-  })
+  })  // Estados para el gráfico de solicitudes de servicio
+  const [currentServiceRequestData, setCurrentServiceRequestData] = useState<any[]>([])
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+
+  // Manejo de cambio de período para el gráfico de solicitudes
+  const handleServiceRequestPeriodChange = (period: 'month' | 'year') => {
+    if (serviceRequestData) {
+      const data = period === 'month' ? serviceRequestData.monthly : serviceRequestData.yearly
+      setCurrentServiceRequestData(data)
+    }
+  }
+
+  // Manejo de cambio de año
+  const handleYearChange = async (year: number) => {
+    setSelectedYear(year)
+    setLoading(true)
+    try {
+      const serviceStats = await adminService.getServiceRequestStats(year)
+      setServiceRequestData(serviceStats)
+      setCurrentServiceRequestData(serviceStats.monthly)
+    } catch (error) {
+      console.error('Error loading data for year:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
   // Estados para el modal de edición
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<AdminUserManagement | null>(null)
@@ -64,13 +89,24 @@ const AdminDashboard: React.FC = () => {
         adminService.getSystemStats(),
         adminService.getServiceRequestStats(),
         adminService.getTechnicianPerformance(),
-        adminService.getAllUsers()
-      ])
+        adminService.getAllUsers()      ])
 
       setStats(systemStats)
       setServiceRequestData(serviceStats)
       setTechnicianPerformance(techPerformance)
-      setUsers(allUsers)
+      setUsers(allUsers)      // Inicializar los datos del gráfico con los datos mensuales por defecto
+      if (serviceStats?.monthly) {
+        setCurrentServiceRequestData(serviceStats.monthly)
+        setSelectedYear(serviceStats.currentYear)
+        
+        // Generar años disponibles (últimos 5 años desde el año actual)
+        const currentYear = new Date().getFullYear()
+        const years = []
+        for (let i = 0; i < 5; i++) {
+          years.push(currentYear - i)
+        }
+        setAvailableYears(years)
+      }
 
     } catch (err: any) {
       console.error('Error loading dashboard data:', err)
@@ -315,14 +351,16 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Gráficos */}
+              )}              {/* Gráficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {serviceRequestData && (
+                {serviceRequestData && currentServiceRequestData.length > 0 && (
                   <ServiceRequestChart
-                    data={serviceRequestData.monthly}
+                    data={currentServiceRequestData}
                     totals={serviceRequestData.totals}
+                    onPeriodChange={handleServiceRequestPeriodChange}
+                    onYearChange={handleYearChange}
+                    currentYear={selectedYear}
+                    availableYears={availableYears}
                   />
                 )}
               </div>
