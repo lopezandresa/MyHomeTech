@@ -20,7 +20,7 @@ import { ClientRequests } from './ClientRequests'
 import { AvailableJobs } from './AvailableJobs'
 import { TechnicianJobs } from './TechnicianJobs'
 import RatingModal from '../RatingModal'
-import { formatDate } from '../../utils/dateUtils'
+import { formatDateTime } from '../../utils/dateUtils'
 
 // Importar componentes de administrador
 import AdminStatsCard from '../admin/AdminStatsCard'
@@ -697,14 +697,10 @@ const Dashboard: React.FC = () => {
                 <div className="flex items-center mb-2">
                   <CalendarIcon className="h-5 w-5 text-blue-600 mr-2" />
                   <h4 className="font-medium text-blue-800">Fecha solicitada por el cliente:</h4>
-                </div>
-                <div className="flex items-center">
+                </div>                <div className="flex items-center">
                   <ClockIcon className="h-4 w-4 text-blue-600 mr-2" />
                   <p className="text-lg font-semibold text-blue-800">
-                    {formatDate(dashboardActions.selectedRequest.proposedDateTime)} a las {new Date(dashboardActions.selectedRequest.proposedDateTime).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDateTime(dashboardActions.selectedRequest.proposedDateTime)}
                   </p>
                 </div>
               </div>              {/* Información sobre conflicto */}

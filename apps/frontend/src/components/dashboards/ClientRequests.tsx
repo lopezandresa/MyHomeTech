@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText, getStatusIcon } from '../../utils/statusUtils'
 import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
-import { formatDate } from '../../utils/dateUtils'
+import { formatDate, formatDateTime } from '../../utils/dateUtils'
 import DashboardPanel from '../common/DashboardPanel'
 import ConfirmModal from '../common/ConfirmModal'
 import AlternativeDateProposalCard from '../AlternativeDateProposalCard'
@@ -246,14 +246,13 @@ export const ClientRequests: React.FC<ClientRequestsProps> = ({
                     </span>
                   </div>
 
-                  <div className="mt-4 text-gray-700">
-                    <p>{request.description}</p>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="mt-4 text-gray-700 text-sm">
+                    <p className="font-medium text-gray-500">Descripción:</p>
+                    <p className="text-gray-900">{request.description}</p>
+                  </div>                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="font-medium text-gray-500">Fecha Propuesta:</p>
-                      <p className="text-gray-900">{formatDate(request.proposedDateTime)}</p>
+                      <p className="font-medium text-gray-500">Fecha y Hora Propuesta:</p>
+                      <p className="text-gray-900">{formatDateTime(request.proposedDateTime)}</p>
                     </div>
                     {request.technician && (
                       <div>

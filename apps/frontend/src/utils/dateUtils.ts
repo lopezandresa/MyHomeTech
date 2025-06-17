@@ -71,3 +71,33 @@ export const toInputDateFormat = (date: Date | string | null | undefined): strin
     return ''
   }
 }
+
+/**
+ * Formats a date string or Date object to include both date and time 'dd/MM/yyyy HH:mm'
+ */
+export const formatDateTime = (date: Date | string | null | undefined): string => {
+  if (!date) return ''
+  
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return format(dateObj, 'dd/MM/yyyy HH:mm', { locale: es })
+  } catch (error) {
+    console.error('Error formatting datetime:', error)
+    return ''
+  }
+}
+
+/**
+ * Formats only the time part 'HH:mm'
+ */
+export const formatTime = (date: Date | string | null | undefined): string => {
+  if (!date) return ''
+  
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return format(dateObj, 'HH:mm', { locale: es })
+  } catch (error) {
+    console.error('Error formatting time:', error)
+    return ''
+  }
+}
