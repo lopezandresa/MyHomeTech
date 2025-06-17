@@ -417,8 +417,7 @@ export class ServiceRequestService {
    * ```typescript
    * const acceptedRequest = await serviceRequestService.acceptByTechnician(456, 123);
    * ```
-   */
-  async acceptByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
+   */  async acceptByTechnician(id: number, technicianId: number): Promise<ServiceRequest> {
     const req = await this.srRepo.findOne({
       where: { id, status: ServiceRequestStatus.PENDING },
       relations: ['client', 'appliance', 'address']
@@ -426,25 +425,15 @@ export class ServiceRequestService {
     
     if (!req) {
       throw new NotFoundException('Solicitud no disponible para aceptar');
-    }
-
-    // Verificar disponibilidad del técnico con información detallada
-    const availabilityCheck = await this.checkTechnicianAvailabilityDetailed(
-      technicianId, 
+    }    // Verificar disponibilidad tanto del técnico como del cliente
+    const availabilityValidation = await this.validateAvailabilityForBoth(
+      technicianId,
+      req.clientId,
       req.proposedDateTime
-    );
-
-    if (!availabilityCheck.available) {
-      let errorMessage = availabilityCheck.reason || 'Ya tienes un servicio agendado para ese horario';
-      
-      if (availabilityCheck.conflictingService) {
-        const conflictTime = new Date(availabilityCheck.conflictingService.scheduledAt).toLocaleString('es-ES', {
-          dateStyle: 'short',
-          timeStyle: 'short'
-        });
-        errorMessage += `. Servicio conflictivo: ${availabilityCheck.conflictingService.appliance} para ${availabilityCheck.conflictingService.clientName} programado el ${conflictTime}`;
-      }
-      
+    );    if (!availabilityValidation.isAvailable) {
+      const errorMessage = availabilityValidation.errors.length > 1 
+        ? `Conflictos de horario detectados: ${availabilityValidation.errors.join(' | ')}`
+        : availabilityValidation.errors[0];
       throw new ConflictException(errorMessage);
     }
 
@@ -783,16 +772,16 @@ export class ServiceRequestService {
 
     if (!proposal) {
       throw new NotFoundException('Propuesta de fecha alternativa no encontrada o ya fue procesada');
-    }
-
-    // Verificar disponibilidad del técnico una vez más
-    const hasConflict = await this.checkTechnicianAvailability(
+    }    // Verificar disponibilidad tanto del técnico como del cliente para la nueva fecha
+    const availabilityValidation = await this.validateAvailabilityForBoth(
       proposal.technicianId,
+      clientId,
       proposal.proposedDateTime
-    );
-
-    if (hasConflict) {
-      throw new ConflictException('El técnico ya no está disponible para esa fecha');
+    );    if (!availabilityValidation.isAvailable) {
+      const errorMessage = availabilityValidation.errors.length > 1 
+        ? `Conflictos de horario detectados: ${availabilityValidation.errors.join(' | ')}`
+        : availabilityValidation.errors[0];
+      throw new ConflictException(errorMessage);
     }
 
     // Actualizar la solicitud con la nueva fecha y técnico
@@ -1169,5 +1158,165 @@ export class ServiceRequestService {
     } catch (error) {
       this.logger.error('Error in parallel rejection notifications:', error);
     }
+  }
+
+  /**
+   * Función auxiliar para formatear mensajes de error de disponibilidad
+   * 
+   * @param {object} availability - Objeto de disponibilidad
+   * @param {string} defaultMessage - Mensaje por defecto
+   * @param {string} entityType - Tipo de entidad (técnico/cliente)
+   * @returns {string} Mensaje de error formateado
+   */
+  private formatAvailabilityError(
+    availability: { 
+      available: boolean; 
+      reason?: string; 
+      conflictingService?: any 
+    },
+    defaultMessage: string,
+    entityType: 'técnico' | 'cliente'
+  ): string {
+    let errorMessage = availability.reason || defaultMessage;
+    
+    if (availability.conflictingService) {
+      const conflictTime = new Date(availability.conflictingService.scheduledAt).toLocaleString('es-ES', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
+      
+      if (entityType === 'técnico') {
+        errorMessage += `. Servicio conflictivo: ${availability.conflictingService.appliance} para ${availability.conflictingService.clientName} programado el ${conflictTime}`;
+      } else {
+        errorMessage += `. Servicio conflictivo: ${availability.conflictingService.appliance} con técnico ${availability.conflictingService.technicianName} programado el ${conflictTime}`;
+      }
+    }
+    
+    return errorMessage;
+  }
+
+  /**
+   * Verifica disponibilidad del cliente con información detallada para el usuario
+   * 
+   * @param {number} clientId - ID del cliente
+   * @param {Date} proposedDateTime - Fecha y hora propuesta
+   * @returns {Promise<object>} Objeto con disponibilidad y detalles del conflicto
+   * 
+   * @description Usa una ventana de 3 horas (1.5 antes y 1.5 después) para evitar solapamientos
+   * 
+   * @example
+   * ```typescript
+   * const availability = await serviceRequestService.checkClientAvailabilityDetailed(
+   *   456, 
+   *   new Date('2024-12-20T10:00:00Z')
+   * );
+   * if (!availability.available) {
+   *   console.log(availability.reason);
+   * }
+   * ```
+   */
+  async checkClientAvailabilityDetailed(clientId: number, proposedDateTime: Date): Promise<{
+    available: boolean;
+    reason?: string;
+    conflictingService?: {
+      id: number;
+      scheduledAt: Date;
+      appliance: string;
+      technicianName: string;
+    }
+  }> {
+    const proposedDate = new Date(proposedDateTime);
+    
+    // Crear ventana de 3 horas alrededor del horario propuesto para evitar solapamientos
+    const startWindow = new Date(proposedDate.getTime() - 1.5 * 60 * 60 * 1000); // 1.5 horas antes
+    const endWindow = new Date(proposedDate.getTime() + 1.5 * 60 * 60 * 1000);   // 1.5 horas después
+
+    // Buscar servicios conflictivos del cliente con información detallada
+    const conflictingRequest = await this.srRepo
+      .createQueryBuilder('serviceRequest')
+      .leftJoinAndSelect('serviceRequest.technician', 'technician')
+      .leftJoinAndSelect('serviceRequest.appliance', 'appliance')
+      .where('serviceRequest.clientId = :clientId', { clientId })
+      .andWhere('serviceRequest.status = :status', { status: ServiceRequestStatus.SCHEDULED })
+      .andWhere('serviceRequest.scheduledAt BETWEEN :startWindow AND :endWindow', {
+        startWindow,
+        endWindow
+      })
+      .getOne();
+
+    if (conflictingRequest) {
+      const scheduledTime = new Date(conflictingRequest.scheduledAt!);
+      const proposedTime = new Date(proposedDateTime);
+        const timeDiff = Math.abs(scheduledTime.getTime() - proposedTime.getTime());
+      const hoursDiff = Math.round(timeDiff / (1000 * 60 * 60)); // Convertir a horas
+      
+      return {
+        available: false,
+        reason: `El cliente ya tiene un servicio programado ${hoursDiff === 0 ? 'a la misma hora' : `${hoursDiff} hora(s) ${scheduledTime < proposedTime ? 'antes' : 'después'}`}`,
+        conflictingService: {
+          id: conflictingRequest.id,
+          scheduledAt: conflictingRequest.scheduledAt!,
+          appliance: conflictingRequest.appliance.name,
+          technicianName: conflictingRequest.technician 
+            ? `${conflictingRequest.technician.firstName} ${conflictingRequest.technician.firstLastName}`
+            : 'Técnico no asignado'
+        }
+      };
+    }
+
+    return { available: true };
+  }
+
+  /**
+   * Valida la disponibilidad tanto del técnico como del cliente para una fecha específica
+   * 
+   * @param {number} technicianId - ID del técnico
+   * @param {number} clientId - ID del cliente
+   * @param {Date} proposedDateTime - Fecha y hora propuesta
+   * @returns {Promise<{isAvailable: boolean, errors: string[]}>} Resultado de la validación
+   * 
+   * @description Verifica disponibilidad de ambas partes simultáneamente
+   * 
+   * @example
+   * ```typescript
+   * const validation = await serviceRequestService.validateAvailabilityForBoth(123, 456, new Date());
+   * if (!validation.isAvailable) {
+   *   console.log('Conflictos:', validation.errors);
+   * }
+   * ```
+   */
+  async validateAvailabilityForBoth(
+    technicianId: number, 
+    clientId: number, 
+    proposedDateTime: Date
+  ): Promise<{isAvailable: boolean, errors: string[]}> {
+    // Ejecutar verificaciones en paralelo para mejor rendimiento
+    const [technicianAvailability, clientAvailability] = await Promise.all([
+      this.checkTechnicianAvailabilityDetailed(technicianId, proposedDateTime),
+      this.checkClientAvailabilityDetailed(clientId, proposedDateTime)
+    ]);
+
+    const errors: string[] = [];
+
+    if (!technicianAvailability.available) {
+      errors.push(this.formatAvailabilityError(
+        technicianAvailability,
+        'El técnico ya tiene un servicio agendado para ese horario',
+        'técnico'
+      ));
+    }
+
+    if (!clientAvailability.available) {
+      errors.push(this.formatAvailabilityError(
+        clientAvailability,
+        'El cliente ya tiene un servicio agendado para ese horario',
+        'cliente'
+      ));
+    }
+
+    return {
+      isAvailable: errors.length === 0,
+      errors
+    };
   }
 }
