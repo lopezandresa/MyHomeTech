@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { getStatusColor, getStatusText } from '../../utils/statusUtils'
 import { getServiceTypeText, getServiceTypeColor, getServiceTypeIcon } from '../../utils/serviceTypeUtils'
-import { formatDate } from '../../utils/dateUtils'
+import { formatDate, formatDateTime } from '../../utils/dateUtils'
 import { ConnectionState } from '../../hooks/useRealTimeServiceRequests'
 import DashboardPanel from '../common/DashboardPanel'
 import type { ServiceRequest } from '../../types/index'
@@ -282,14 +282,10 @@ export const AvailableJobs: React.FC<AvailableJobsProps> = ({
                 <div className="flex items-center mb-2">
                   <CalendarDaysIcon className="h-5 w-5 text-blue-600 mr-2" />
                   <h4 className="font-medium text-blue-800">Fecha y hora solicitada:</h4>
-                </div>
-                <div className="flex items-center">
+                </div>                <div className="flex items-center">
                   <ClockIcon className="h-4 w-4 text-blue-600 mr-2" />
                   <p className="text-lg font-semibold text-blue-800">
-                    {formatDate(request.proposedDateTime)} a las {new Date(request.proposedDateTime).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDateTime(request.proposedDateTime)}
                   </p>
                 </div>
               </div>

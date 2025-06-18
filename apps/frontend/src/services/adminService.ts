@@ -107,14 +107,19 @@ class AdminService {
       console.error('Error al obtener solicitudes de servicio:', error)
       return []
     }
-  }
-
-  /**
-   * Obtiene estadísticas de solicitudes de servicio por mes
+  }  /**
+   * Obtiene estadísticas de solicitudes de servicio por mes y año
    */
-  async getServiceRequestStats(): Promise<{
+  async getServiceRequestStats(year?: number): Promise<{
     monthly: Array<{
-      month: string
+      period: string
+      pending: number
+      scheduled: number
+      completed: number
+      cancelled: number
+    }>
+    yearly: Array<{
+      period: string
       pending: number
       scheduled: number
       completed: number
@@ -126,12 +131,17 @@ class AdminService {
       completed: number
       cancelled: number
     }
+    currentYear: number
   }> {
     try {
       const requests = await this.getAllServiceRequests()
+      const currentYear = year || new Date().getFullYear()
       
-      // Agrupar por mes (últimos 12 meses)
-      const monthlyStats = this.groupRequestsByMonth(requests)
+      // Agrupar por mes del año especificado
+      const monthlyStats = this.groupRequestsByMonth(requests, currentYear)
+      
+      // Agrupar por año (últimos 5 años)
+      const yearlyStats = this.groupRequestsByYear(requests)
       
       // Calcular totales
       const totals = {
@@ -141,10 +151,15 @@ class AdminService {
         cancelled: requests.filter(r => r.status === 'cancelled').length
       }
 
-      return { monthly: monthlyStats, totals }
+      return { monthly: monthlyStats, yearly: yearlyStats, totals, currentYear }
     } catch (error) {
       console.error('Error al obtener estadísticas de solicitudes:', error)
-      return { monthly: [], totals: { pending: 0, scheduled: 0, completed: 0, cancelled: 0 } }
+      return { 
+        monthly: [], 
+        yearly: [], 
+        totals: { pending: 0, scheduled: 0, completed: 0, cancelled: 0 },
+        currentYear: new Date().getFullYear()
+      }
     }
   }
 
@@ -225,22 +240,20 @@ class AdminService {
       
       return true
     })
-  }
-
-  /**
+  }  /**
    * Métodos auxiliares para agrupación de datos
    */
-  private groupRequestsByMonth(requests: ServiceRequest[]) {
+  private groupRequestsByMonth(requests: ServiceRequest[], year: number) {
     const months = this.getLast12Months()
     
     return months.map(month => {
       const monthRequests = requests.filter(r => {
         const requestDate = new Date(r.createdAt)
-        return requestDate.getFullYear() === month.year && requestDate.getMonth() === month.month
+        return requestDate.getFullYear() === year && requestDate.getMonth() === month.month
       })
 
       return {
-        month: month.name,
+        period: month.name, // Solo el nombre del mes
         pending: monthRequests.filter(r => r.status === 'pending').length,
         scheduled: monthRequests.filter(r => r.status === 'scheduled').length,
         completed: monthRequests.filter(r => r.status === 'completed').length,
@@ -249,20 +262,56 @@ class AdminService {
     })
   }
 
+  private groupRequestsByYear(requests: ServiceRequest[]) {
+    const years = this.getLast5Years()
+    
+    return years.map(year => {
+      const yearRequests = requests.filter(r => {
+        const requestDate = new Date(r.createdAt)
+        return requestDate.getFullYear() === year.year
+      })
+
+      return {
+        period: year.name,
+        pending: yearRequests.filter(r => r.status === 'pending').length,
+        scheduled: yearRequests.filter(r => r.status === 'scheduled').length,
+        completed: yearRequests.filter(r => r.status === 'completed').length,
+        cancelled: yearRequests.filter(r => r.status === 'cancelled').length
+      }
+    })
+  }
   private getLast12Months() {
     const months = []
     const now = new Date()
+    const currentYear = now.getFullYear()
     
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    // Generar los 12 meses del año actual en orden cronológico
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentYear, i, 1)
       months.push({
-        name: date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }),
+        name: date.toLocaleDateString('es-ES', { month: 'long' }).charAt(0).toUpperCase() + 
+               date.toLocaleDateString('es-ES', { month: 'long' }).slice(1),
         month: date.getMonth(),
         year: date.getFullYear()
       })
     }
     
     return months
+  }
+
+  private getLast5Years() {
+    const years = []
+    const currentYear = new Date().getFullYear()
+    
+    for (let i = 4; i >= 0; i--) {
+      const year = currentYear - i
+      years.push({
+        name: year.toString(),
+        year: year
+      })
+    }
+    
+    return years
   }
 
   /**

@@ -20,7 +20,7 @@ import { ClientRequests } from './ClientRequests'
 import { AvailableJobs } from './AvailableJobs'
 import { TechnicianJobs } from './TechnicianJobs'
 import RatingModal from '../RatingModal'
-import { formatDate } from '../../utils/dateUtils'
+import { formatDateTime } from '../../utils/dateUtils'
 
 // Importar componentes de administrador
 import AdminStatsCard from '../admin/AdminStatsCard'
@@ -74,7 +74,33 @@ const Dashboard: React.FC = () => {
       (proposal: any) => proposal.status === 'pending'
     ) || false
   }
-  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false)
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false)  // Estados para el gráfico de solicitudes de servicio
+  const [currentServiceRequestData, setCurrentServiceRequestData] = useState<any[]>([])
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+
+  // Manejo de cambio de período para el gráfico de solicitudes
+  const handleServiceRequestPeriodChange = (period: 'month' | 'year') => {
+    if (adminServiceData) {
+      const data = period === 'month' ? adminServiceData.monthly : adminServiceData.yearly
+      setCurrentServiceRequestData(data)
+    }
+  }
+
+  // Manejo de cambio de año
+  const handleYearChange = async (year: number) => {
+    setSelectedYear(year)
+    setAdminLoading(true)
+    try {
+      const serviceStats = await adminService.getServiceRequestStats(year)
+      setAdminServiceData(serviceStats)
+      setCurrentServiceRequestData(serviceStats.monthly)
+    } catch (error) {
+      console.error('Error loading data for year:', error)
+    } finally {
+      setAdminLoading(false)
+    }
+  }
 
   // Cargar datos de administrador
   const loadAdminData = useCallback(async () => {
@@ -97,12 +123,24 @@ const Dashboard: React.FC = () => {
         adminService.getAllUsers(),
         helpTicketService.getTicketStats()
       ])
-      
-      setAdminStats(systemStats)
+        setAdminStats(systemStats)
       setAdminServiceData(serviceStats)
       setAdminTechnicianPerformance(techPerformance)
       setAdminUsers(allUsers)
       setHelpTicketStats(helpStats)
+        // Inicializar los datos del gráfico con los datos mensuales por defecto
+      if (serviceStats?.monthly) {
+        setCurrentServiceRequestData(serviceStats.monthly)
+        setSelectedYear(serviceStats.currentYear)
+        
+        // Generar años disponibles (últimos 5 años desde el año actual)
+        const currentYear = new Date().getFullYear()
+        const years = []
+        for (let i = 0; i < 5; i++) {
+          years.push(currentYear - i)
+        }
+        setAvailableYears(years)
+      }
     } catch (err: any) {
       console.error('Error loading admin data:', err)
       setAdminError('Error al cargar los datos del administrador')
@@ -338,14 +376,27 @@ const Dashboard: React.FC = () => {
                     />
                   )}
                 </div>
-              )}
-
-              {/* Gráficos */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {adminServiceData && (                  <ServiceRequestChart
-                    data={adminServiceData.monthly}
+              )}              {/* Gráficos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">                {adminServiceData && currentServiceRequestData.length > 0 && (
+                  <ServiceRequestChart
+                    data={currentServiceRequestData}
                     totals={adminServiceData.totals}
+                    onPeriodChange={handleServiceRequestPeriodChange}
+                    onYearChange={handleYearChange}
+                    currentYear={selectedYear}
+                    availableYears={availableYears}
                   />
+                )}
+                
+                {/* Tabla de Rendimiento de Técnicos */}
+                {adminTechnicianPerformance.length > 0 && (
+                  <div className="bg-white p-6 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Rendimiento de Técnicos</h3>
+                    <TechnicianPerformanceTable
+                      technicians={adminTechnicianPerformance}
+                      loading={adminLoading}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -361,42 +412,8 @@ const Dashboard: React.FC = () => {
                 setSelectedUserForEdit(user)
                 setShowEditUserModal(true)
               }}
-              onCreateAdmin={() => setShowCreateAdminModal(true)}
-              loading={adminLoading}
+              onCreateAdmin={() => setShowCreateAdminModal(true)}              loading={adminLoading}
             />
-          )
-        case 'technicians':
-          return (
-            <TechnicianPerformanceTable
-              technicians={adminTechnicianPerformance}
-              loading={adminLoading}
-            />
-          )
-        case 'analytics':
-          return (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Análisis y Reportes</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {adminServiceData && (
-                  <div className="bg-white p-6 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Solicitudes de Servicio</h3>
-                    <ServiceRequestChart
-                      data={adminServiceData.monthly}
-                      totals={adminServiceData.totals}
-                    />
-                  </div>
-                )}
-                {adminTechnicianPerformance.length > 0 && (
-                  <div className="bg-white p-6 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Rendimiento de Técnicos</h3>
-                    <TechnicianPerformanceTable
-                      technicians={adminTechnicianPerformance}
-                      loading={adminLoading}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
           )
         case 'help-tickets':
           return <AdminHelpTickets />
@@ -697,14 +714,10 @@ const Dashboard: React.FC = () => {
                 <div className="flex items-center mb-2">
                   <CalendarIcon className="h-5 w-5 text-blue-600 mr-2" />
                   <h4 className="font-medium text-blue-800">Fecha solicitada por el cliente:</h4>
-                </div>
-                <div className="flex items-center">
+                </div>                <div className="flex items-center">
                   <ClockIcon className="h-4 w-4 text-blue-600 mr-2" />
                   <p className="text-lg font-semibold text-blue-800">
-                    {formatDate(dashboardActions.selectedRequest.proposedDateTime)} a las {new Date(dashboardActions.selectedRequest.proposedDateTime).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDateTime(dashboardActions.selectedRequest.proposedDateTime)}
                   </p>
                 </div>
               </div>              {/* Información sobre conflicto */}

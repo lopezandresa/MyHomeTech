@@ -24,6 +24,7 @@ import {
   Put,
   Query,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ServiceRequestService } from './service-request.service';
@@ -273,6 +274,61 @@ export class ServiceRequestController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ServiceRequest> {
     return this.svc.cancelByClient(id, req.user.id);
+  }
+
+  /**
+   * Validar disponibilidad del cliente para una fecha específica
+   * 
+   * @description Permite al frontend verificar si un cliente puede crear
+   * una solicitud para una fecha específica antes de enviar el formulario
+   * 
+   * @param {Request} req - Request con información del usuario autenticado
+   * @param {string} proposedDateTime - Fecha y hora propuesta en formato ISO
+   * @returns {Promise<{ isAvailable: boolean, message?: string }>} Estado de disponibilidad
+   * 
+   * @example
+   * ```typescript
+   * // GET /api/service-requests/validate-availability?proposedDateTime=2024-12-20T10:00:00Z
+   * const availability = await fetch('/api/service-requests/validate-availability?proposedDateTime=2024-12-20T10:00:00Z');
+   * ```
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('validate-availability')
+  @ApiOperation({ summary: 'Validar disponibilidad del cliente para una fecha específica' })
+  @ApiQuery({ 
+    name: 'proposedDateTime', 
+    description: 'Fecha y hora propuesta en formato ISO',
+    example: '2024-12-20T10:00:00Z'
+  })
+  validateAvailability(
+    @Request() req,
+    @Query('proposedDateTime') proposedDateTime: string,
+  ): Promise<{ isAvailable: boolean; message?: string }> {
+    console.log('🔍 validateAvailability called with:', {
+      proposedDateTime,
+      userId: req.user?.id,
+      userExists: !!req.user
+    });
+
+    // Validar que se proporcione el parámetro
+    if (!proposedDateTime) {
+      console.log('❌ Missing proposedDateTime parameter');
+      throw new BadRequestException('El parámetro proposedDateTime es requerido');
+    }
+
+    // Validar que sea una fecha válida
+    const proposedDate = new Date(proposedDateTime);
+    if (isNaN(proposedDate.getTime())) {
+      console.log('❌ Invalid date format:', proposedDateTime);
+      throw new BadRequestException('El parámetro proposedDateTime debe ser una fecha válida en formato ISO');
+    }
+
+    console.log('✅ Calling service with valid parameters:', {
+      clientId: req.user.id,
+      proposedDate: proposedDate.toISOString()
+    });
+
+    return this.svc.validateClientAvailability(req.user.id, proposedDate);
   }
 
   /**
@@ -595,7 +651,6 @@ export class ServiceRequestController {
   @ApiOperation({ summary: 'Técnico obtiene sus propuestas de fechas alternativas' })
   getTechnicianAlternativeDateProposals(
     @Request() req,
-  ): Promise<AlternativeDateProposal[]> {
-    return this.svc.getTechnicianAlternativeDateProposals(req.user.id);
+  ): Promise<AlternativeDateProposal[]> {    return this.svc.getTechnicianAlternativeDateProposals(req.user.id);
   }
 }

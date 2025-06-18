@@ -69,8 +69,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           description: 'Configurar cuenta',
           icon: UserCircleIcon
         }
-      ]
-    } else if (user.role === 'admin') {
+      ]    } else if (user.role === 'admin') {
       return [
         {
           id: 'main',
@@ -85,22 +84,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           icon: UserCircleIcon
         },
         {
-          id: 'technicians',
-          label: 'Técnicos',
-          description: 'Rendimiento y estadísticas',
-          icon: WrenchScrewdriverIcon
-        },
-        {
           id: 'help-tickets',
           label: 'Tickets de Ayuda',
           description: 'Gestionar tickets de soporte',
           icon: QuestionMarkCircleIcon
-        },
-        {
-          id: 'analytics',
-          label: 'Análisis y Reportes',
-          description: 'Estadísticas del sistema',
-          icon: ClipboardDocumentListIcon
         }
       ]
     }
