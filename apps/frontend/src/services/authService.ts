@@ -265,10 +265,9 @@ class AuthService {
    *   phone: '+57 300 123 4567'
    * });
    * ```
-   */
-  async updateProfile(data: UpdateProfileRequest): Promise<User> {
+   */  async updateProfile(data: UpdateProfileRequest): Promise<User> {
     try {
-      const response = await api.patch<User>('/identity/profile', data)
+      const response = await api.post<User>('/identity/me/update', data)
       const updatedUser = response.data
       
       // Actualizar usuario en localStorage
